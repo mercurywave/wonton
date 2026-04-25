@@ -10,10 +10,6 @@ out/
 .env
 .env.local
 
-# Neutralino
-neutralino/
-assets/
-
 # OS
 .DS_Store
 Thumbs.db
@@ -31,6 +27,7 @@ logs/
 # Neutralinojs binaries and builds
 /bin
 /dist
+/.tmp
 
 # Neutralinojs client (minified)
 neutralino.js
