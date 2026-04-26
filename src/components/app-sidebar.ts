@@ -72,8 +72,8 @@ export class AppSidebar extends HTMLElement {
         .sidebar-header {
           display: flex;
           align-items: center;
-          justify-content: space-between;
-          padding: 12px 16px;
+          justify-content: ${this.collapsed ? 'center' : 'space-between'};
+          padding: 12px ${this.collapsed ? '8px' : '16px'};
           border-bottom: 1px solid #313244;
           min-height: 48px;
         }
@@ -86,8 +86,7 @@ export class AppSidebar extends HTMLElement {
           text-transform: uppercase;
           color: #a6adc8;
           white-space: nowrap;
-          opacity: ${this.collapsed ? '0' : '1'};
-          transition: opacity 0.2s ease;
+          ${this.collapsed ? 'display: none;' : 'display: block;'}
         }
 
         .collapse-btn {
@@ -125,8 +124,9 @@ export class AppSidebar extends HTMLElement {
         .nav-item {
           display: flex;
           align-items: center;
+          justify-content: ${this.collapsed ? 'center' : 'flex-start'};
           gap: 12px;
-          padding: 10px 12px;
+          padding: ${this.collapsed ? '10px' : '10px 12px'};
           border-radius: 8px;
           cursor: pointer;
           transition: background 0.15s ease;
@@ -162,16 +162,17 @@ export class AppSidebar extends HTMLElement {
         }
 
         .nav-item-label {
-          opacity: ${this.collapsed ? '0' : '1'};
-          transition: opacity 0.2s ease;
+          ${this.collapsed ? 'display: none;' : ''}
         }
 
         .sidebar-footer {
-          padding: 12px 16px;
+          padding: 12px ${this.collapsed ? '8px' : '16px'};
           border-top: 1px solid #313244;
           font-size: 11px;
           color: #585b70;
           white-space: nowrap;
+          opacity: ${this.collapsed ? '0' : '1'};
+          transition: opacity 0.2s ease;
         }
       </style>
 
@@ -179,7 +180,7 @@ export class AppSidebar extends HTMLElement {
         <div class="sidebar-header">
           <h2>Wonton</h2>
           <button class="collapse-btn" aria-label="Toggle sidebar">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(${this.collapsed ? '180deg' : '0deg'})">
               <polyline points="15 18 9 12 15 6"></polyline>
             </svg>
           </button>
