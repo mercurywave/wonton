@@ -33,6 +33,18 @@ class App {
       }
     });
 
+    // Auto-collapse sidebar on narrow screens
+    const handleResize = () => {
+      const shouldCollapse = window.innerWidth < 500;
+      const sb = document.querySelector('app-sidebar') as HTMLElement;
+      if (sb) {
+        sb.setAttribute('collapsed', String(shouldCollapse));
+      }
+      this.sidebarCollapsed = shouldCollapse;
+    };
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
     // Listen for page changes from sidebar
     document.addEventListener('page-change', (e: Event) => {
       const detail = (e as CustomEvent).detail;

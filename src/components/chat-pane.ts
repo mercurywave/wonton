@@ -63,7 +63,9 @@ export class ChatPane extends HTMLElement {
       <style>
         :host {
           display: block;
+          flex: 1 1 800px;
           height: 100%;
+          min-width: 0;
         }
 
         .chat-pane {
@@ -72,6 +74,7 @@ export class ChatPane extends HTMLElement {
           height: 100%;
           background: #1e1e2e;
           color: #cdd6f4;
+          width: 100%;
         }
 
         .chat-messages {
@@ -115,6 +118,7 @@ export class ChatPane extends HTMLElement {
           max-width: 720px;
           margin: 0 auto;
           width: 100%;
+          padding: 0 24px;
         }
 
         .message-avatar {
@@ -156,9 +160,10 @@ export class ChatPane extends HTMLElement {
 
         .chat-input-area {
           padding: 16px 24px 24px;
-          max-width: 720px;
           margin: 0 auto;
           width: 100%;
+          max-width: 720px;
+          box-sizing: border-box;
         }
 
         .chat-input-wrapper {
