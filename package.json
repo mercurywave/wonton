@@ -1,0 +1,15 @@
+{
+  "name": "wonton",
+  "version": "1.0.0",
+  "description": "Wonton - Local-first AI agent",
+  "type": "module",
+  "scripts": {
+    "build": "tsc && npm run copy-assets",
+    "copy-assets": "node scripts/copy-assets.mjs",
+    "neu": "neu run",
+    "start": "npm run build && npm run neu"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  }
+}
