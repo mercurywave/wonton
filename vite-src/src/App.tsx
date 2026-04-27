@@ -1,49 +1,81 @@
-import { useEffect, useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "/vite.svg";
-import neuLogo from "/neutralino.png";
+import { useState, useEffect, useCallback } from "react";
+import { Page } from "./types/chat";
+import { useChatSettings } from "./hooks/useChatSettings";
+import { useChatApi } from "./hooks/useChatApi";
+import Sidebar from "./components/Sidebar";
+import ChatPanel from "./components/ChatPanel";
+import Settings from "./components/Settings";
 import "./App.css";
 
-import { filesystem } from "@neutralinojs/lib";
+const MOBILE_BREAKPOINT = 768;
 
 function App() {
-	const [count, setCount] = useState(0);
+  const [settings, updateSettings] = useChatSettings();
+  const { messages, isLoading, sendMessage, clearChat, stopGeneration } = useChatApi(settings);
+  const [currentPage, setCurrentPage] = useState<Page>("chat");
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT);
 
-	// Log current directory or error after component is mounted
-	useEffect(() => {
-		filesystem
-			.readDirectory("./")
-			.then((data) => {
-				console.log(data);
-			})
-			.catch((err) => {
-				console.log(err);
-			});
-	}, []);
+  useEffect(() => {
+    const handleResize = () => {
+      const mobile = window.innerWidth <= MOBILE_BREAKPOINT;
+      setIsMobile(mobile);
+    };
 
-	return (
-		<>
-			<div>
-				<a href="https://vitejs.dev" target="_blank">
-					<img src={viteLogo} className="logo" alt="Vite logo" />
-				</a>
-				<a href="https://react.dev" target="_blank">
-					<img src={reactLogo} className="logo react" alt="React logo" />
-				</a>
-				<a href="https://neutralino.js.org/" target="_blank">
-					<img src={neuLogo} className="logo" alt="Neutralino logo" />
-				</a>
-			</div>
-			<h1>Vite + React + Neutralino</h1>
-			<div className="card">
-				<button onClick={() => setCount((count) => count + 1)}>count is {count}</button>
-				<p>
-					Edit <code>src/App.tsx</code> and save to test HMR
-				</p>
-			</div>
-			<p className="read-the-docs">Click on the Vite and React logos to learn more</p>
-		</>
-	);
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const handleNewChat = () => {
+    clearChat();
+    setCurrentPage("chat");
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  };
+
+  const handleClearChat = () => {
+    clearChat();
+  };
+
+  const handleNavigate = useCallback(
+    (page: Page) => {
+      setCurrentPage(page);
+      if (isMobile) {
+        setSidebarOpen(false);
+      }
+    },
+    [isMobile]
+  );
+
+  return (
+    <div className="app">
+      <Sidebar
+        isOpen={sidebarOpen}
+        onToggle={() => setSidebarOpen((prev) => !prev)}
+        onOverlayClick={() => setSidebarOpen(false)}
+        currentPage={currentPage}
+        onNavigate={handleNavigate}
+        onNewChat={handleNewChat}
+        onClearChat={handleClearChat}
+        messageCount={messages.length}
+      />
+      <div className={`main ${isMobile ? "" : sidebarOpen ? "expanded" : ""}`}>
+        {currentPage === "chat" && (
+          <ChatPanel
+            messages={messages}
+            isLoading={isLoading}
+            onSend={sendMessage}
+            onStop={stopGeneration}
+          />
+        )}
+        {currentPage === "settings" && (
+          <Settings settings={settings} onUpdate={updateSettings} />
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default App;
