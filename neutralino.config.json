@@ -19,7 +19,7 @@
       "height": 500,
       "minWidth": 400,
       "minHeight": 200,
-      "icon": "/vite-src/public/neutralino.png",
+      "icon": "/vite-src/public/takeout.png",
       "enableInspector": true
     }
   },

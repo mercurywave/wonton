@@ -44,12 +44,17 @@ export default function Sidebar({
       <div
         className={`${styles.sidebar} ${isOpen ? styles.open : ""}`}
       >
-        <div className={styles.header}>
-          <button className={styles.toggle} onClick={onToggle} title="Toggle sidebar">
-            <Menu size={18} />
-          </button>
-          <span className={styles.title}>Wonton</span>
-        </div>
+     <div className={styles.header}>
+        <button className={styles.toggle} onClick={onToggle} title="Toggle sidebar">
+          <Menu size={18} />
+        </button>
+        <span className={styles.title}>Wonton</span>
+        <img
+          className={`${styles.logo} ${isOpen ? styles.visible : ""}`}
+          src="/takeout.svg"
+          alt="Takeout"
+        />
+      </div>
 
         <div className={styles.actions}>
           <button className={styles.action} onClick={onNewChat} title="New chat">
@@ -71,14 +76,19 @@ export default function Sidebar({
           ))}
         </nav>
 
-        <div className={styles.footer}>
-          {messageCount > 0 && (
-            <button className={styles.action} onClick={onClearChat} title="Clear chat">
-              <Trash2 size={16} />
-              <span>Clear Chat</span>
-            </button>
-          )}
-        </div>
+     <div className={styles.footer}>
+        <img
+          className={`${styles.logo} ${!isOpen ? styles.visible : ""}`}
+          src="/takeout.svg"
+          alt="Takeout"
+        />
+        {messageCount > 0 && (
+          <button className={styles.action} onClick={onClearChat} title="Clear chat">
+            <Trash2 size={16} />
+            <span>Clear Chat</span>
+          </button>
+        )}
+      </div>
       </div>
     </>
   );

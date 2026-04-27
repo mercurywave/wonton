@@ -40,6 +40,30 @@
   width: 0;
 }
 
+.logo {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  pointer-events: none;
+}
+
+.logo.visible {
+  opacity: 1;
+}
+
+.sidebar:not(.open) .header .logo {
+  display: none;
+}
+
+.sidebar:not(.open) .footer .logo {
+  width: 28px;
+  height: 28px;
+  margin: 0 auto;
+  display: block;
+}
+
 .toggle {
   background: none;
   border: none;
