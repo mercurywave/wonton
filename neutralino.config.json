@@ -4,7 +4,7 @@
   "defaultMode": "window",
   "documentRoot": "/vite-src/dist/",
   "url": "/",
-  "port": 3000,
+  "port": 3219,
   "enableServer": true,
   "enableNativeAPI": true,
   "nativeAllowList": [
