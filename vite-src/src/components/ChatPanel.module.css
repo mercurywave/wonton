@@ -12,6 +12,9 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .empty {
@@ -121,6 +124,9 @@
   border-top: 1px solid #2a2a4a;
   padding: 16px 20px;
   background: #16162a;
+  max-width: 800px;
+  width: 100%;
+  margin: 0 auto;
 }
 
 .inputWrapper {
@@ -203,6 +209,14 @@
 }
 
 @media (max-width: 768px) {
+  .messages {
+    max-width: 100%;
+  }
+
+  .inputArea {
+    max-width: 100%;
+  }
+
   .bubble {
     max-width: 90%;
   }
