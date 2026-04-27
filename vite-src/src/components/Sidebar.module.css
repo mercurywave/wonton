@@ -83,7 +83,7 @@
 }
 
 .actions {
-  padding: 12px;
+  padding: 8px;
 }
 
 .action {
@@ -112,6 +112,12 @@
 .sidebar:not(.open) .nav span,
 .sidebar:not(.open) .footer .action span {
   display: none;
+}
+
+.sidebar:not(.open) .actions .action {
+  width: auto;
+  padding: 8px;
+  justify-content: center;
 }
 
 .nav {
