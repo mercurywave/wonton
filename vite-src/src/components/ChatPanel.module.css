@@ -131,7 +131,7 @@
 
 .inputWrapper {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
   background: #1a1a2e;
   border: 1px solid #2a2a4a;
