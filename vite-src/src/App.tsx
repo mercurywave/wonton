@@ -1,7 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { Page } from "./types/chat";
 import { useChatSettings } from "./hooks/useChatSettings";
 import { useChatApi } from "./hooks/useChatApi";
+import { useServerModels } from "./hooks/useServerModels";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
 import Settings from "./components/Settings";
@@ -11,10 +12,17 @@ const MOBILE_BREAKPOINT = 768;
 
 function App() {
   const [settings, updateSettings] = useChatSettings();
-  const { messages, isLoading, sendMessage, clearChat, stopGeneration } = useChatApi(settings);
+  const { models, isLoading: modelsLoading, error: modelsError, refetch: refetchModels } = useServerModels(
+    settings.serverUrl,
+    settings.apiKey
+  );
+  const { messages, isLoading, sendMessage, clearChat, stopGeneration } = useChatApi(
+    settings
+  );
   const [currentPage, setCurrentPage] = useState<Page>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT);
+  const [perChatModel, setPerChatModel] = useState<string | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -27,8 +35,16 @@ function App() {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  const visibleModels = useMemo(
+    () => models.filter((m) => !settings.hiddenModels.includes(m.id)),
+    [models, settings.hiddenModels]
+  );
+
+  const activeModel = perChatModel ?? settings.defaultModel;
+
   const handleNewChat = () => {
     clearChat();
+    setPerChatModel(null);
     setCurrentPage("chat");
     if (isMobile) {
       setSidebarOpen(false);
@@ -68,10 +84,20 @@ function App() {
             isLoading={isLoading}
             onSend={sendMessage}
             onStop={stopGeneration}
+            models={visibleModels}
+            activeModel={activeModel}
+            onModelChange={setPerChatModel}
           />
         )}
         {currentPage === "settings" && (
-          <Settings settings={settings} onUpdate={updateSettings} />
+          <Settings
+            settings={settings}
+            onUpdate={updateSettings}
+            models={visibleModels}
+            modelsLoading={modelsLoading}
+            modelsError={modelsError}
+            onRefetch={refetchModels}
+          />
         )}
       </div>
     </div>

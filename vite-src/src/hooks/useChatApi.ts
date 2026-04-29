@@ -8,7 +8,7 @@ export function useChatApi(settings: ChatSettings) {
   const abortRef = useRef<AbortController | null>(null);
 
   const sendMessage = useCallback(
-    async (content: string) => {
+    async (content: string, modelId: string) => {
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
@@ -46,7 +46,7 @@ export function useChatApi(settings: ChatSettings) {
             Authorization: `Bearer ${settings.apiKey}`,
           },
           body: JSON.stringify({
-            model: settings.model,
+            model: modelId,
             messages: allMessages,
             stream: false,
           }),

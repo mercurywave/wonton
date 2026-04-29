@@ -5,7 +5,7 @@
   min-width: 0;
 }
 
-.messages {
+.mainContent {
   flex: 1;
   overflow-y: auto;
   padding: 20px;
@@ -120,6 +120,12 @@
   }
 }
 
+.footer {
+  background: #16162a;
+  border-top: 1px solid #2a2a4a;
+  flex-shrink: 0;
+}
+
 .inputArea {
   border-top: 1px solid #2a2a4a;
   padding: 16px 20px;
@@ -191,20 +197,20 @@
   color: #6a8cf7;
 }
 
-.messages::-webkit-scrollbar {
+.mainContent::-webkit-scrollbar {
   width: 6px;
 }
 
-.messages::-webkit-scrollbar-track {
+.mainContent::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.messages::-webkit-scrollbar-thumb {
+.mainContent::-webkit-scrollbar-thumb {
   background: #2a2a4a;
   border-radius: 3px;
 }
 
-.messages::-webkit-scrollbar-thumb:hover {
+.mainContent::-webkit-scrollbar-thumb:hover {
   background: #3a3a5a;
 }
 

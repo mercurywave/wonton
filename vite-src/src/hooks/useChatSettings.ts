@@ -5,22 +5,31 @@ const STORAGE_KEY = "wonton_settings";
 export interface ChatSettings {
   serverUrl: string;
   apiKey: string;
-  model: string;
+  defaultModel: string;
   systemPrompt: string;
+  hiddenModels: string[];
 }
 
 const DEFAULT_SETTINGS: ChatSettings = {
   serverUrl: "https://api.openai.com",
   apiKey: "",
-  model: "gpt-3.5-turbo",
+  defaultModel: "",
   systemPrompt: "You are a helpful assistant.",
+  hiddenModels: [],
 };
 
 function loadSettings(): ChatSettings {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      return { ...DEFAULT_SETTINGS, ...JSON.parse(stored) };
+      const parsed: Partial<ChatSettings> = JSON.parse(stored);
+      // Migrate old 'model' field to 'defaultModel'
+      if (parsed.model && !parsed.defaultModel) {
+        parsed.defaultModel = parsed.model;
+      }
+      // Remove deprecated 'model' field
+      delete parsed.model;
+      return { ...DEFAULT_SETTINGS, ...parsed };
     }
   } catch {
     // ignore parse errors

@@ -2,12 +2,16 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, StopCircle } from "lucide-react";
 import styles from "../components/ChatPanel.module.css";
 import { ChatMessage as ChatMessageType } from "../types/chat";
+import ModelPicker from "./ModelPicker";
 
 interface ChatPanelProps {
   messages: ChatMessageType[];
   isLoading: boolean;
-  onSend: (content: string) => void;
+  onSend: (content: string, modelId: string) => void;
   onStop: () => void;
+  models: Array<{ id: string }>;
+  activeModel: string;
+  onModelChange: (modelId: string) => void;
 }
 
 function MessageBubble({ message }: { message: ChatMessageType }) {
@@ -23,7 +27,15 @@ function MessageBubble({ message }: { message: ChatMessageType }) {
   );
 }
 
-export default function ChatPanel({ messages, isLoading, onSend, onStop }: ChatPanelProps) {
+export default function ChatPanel({
+  messages,
+  isLoading,
+  onSend,
+  onStop,
+  models,
+  activeModel,
+  onModelChange,
+}: ChatPanelProps) {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -44,13 +56,13 @@ export default function ChatPanel({ messages, isLoading, onSend, onStop }: ChatP
       e.preventDefault();
       const trimmed = input.trim();
       if (!trimmed || isLoading) return;
-      onSend(trimmed);
+      onSend(trimmed, activeModel);
       setInput("");
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
     },
-    [input, isLoading, onSend]
+    [input, isLoading, onSend, activeModel]
   );
 
   const handleKeyDown = useCallback(
@@ -65,7 +77,7 @@ export default function ChatPanel({ messages, isLoading, onSend, onStop }: ChatP
 
   return (
     <div className={styles.container}>
-      <div className={styles.messages}>
+      <div className={styles.mainContent}>
         {messages.length === 0 && (
           <div className={styles.empty}>
             <p>Start a conversation by typing a message below.</p>
@@ -121,6 +133,14 @@ export default function ChatPanel({ messages, isLoading, onSend, onStop }: ChatP
           )}
         </div>
       </form>
+
+      <div className={styles.footer}>
+        <ModelPicker
+          models={models}
+          activeModel={activeModel}
+          onModelChange={onModelChange}
+        />
+      </div>
     </div>
   );
 }
