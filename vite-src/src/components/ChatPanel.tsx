@@ -78,27 +78,29 @@ export default function ChatPanel({
   return (
     <div className={styles.container}>
       <div className={styles.mainContent}>
-        {messages.length === 0 && (
-          <div className={styles.empty}>
-            <p>Start a conversation by typing a message below.</p>
-          </div>
-        )}
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
-        ))}
-        {isLoading && (
-          <div className={`${styles.message} ${styles.assistant}`}>
-            <div className={styles.bubble}>
-              <div className={styles.role}>Assistant</div>
-              <div className={styles.typing}>
-                <span></span>
-                <span></span>
-                <span></span>
+        <div className={styles.messages}>
+          {messages.length === 0 && (
+            <div className={styles.empty}>
+              <p>Start a conversation by typing a message below.</p>
+            </div>
+          )}
+          {messages.map((msg) => (
+            <MessageBubble key={msg.id} message={msg} />
+          ))}
+          {isLoading && (
+            <div className={`${styles.message} ${styles.assistant}`}>
+              <div className={styles.bubble}>
+                <div className={styles.role}>Assistant</div>
+                <div className={styles.typing}>
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-        <div ref={messagesEndRef} />
+          )}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       <form className={styles.inputArea} onSubmit={handleSubmit}>
