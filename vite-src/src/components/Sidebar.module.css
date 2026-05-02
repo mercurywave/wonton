@@ -4,8 +4,7 @@
   left: 0;
   height: 100vh;
   width: 260px;
-  background: #1a1a2e;
-  border-right: 1px solid #2a2a4a;
+  background: #0f0f1a;
   display: flex;
   flex-direction: column;
   z-index: 100;
@@ -22,7 +21,7 @@
   align-items: center;
   padding: 12px;
   gap: 8px;
-  border-bottom: 1px solid #2a2a4a;
+  border-bottom: none;
   min-height: 48px;
 }
 
@@ -67,7 +66,7 @@
 .toggle {
   background: none;
   border: none;
-  color: #888;
+  color: #9090a0;
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -78,8 +77,8 @@
 }
 
 .toggle:hover {
-  color: #e0e0e0;
-  background: #2a2a4a;
+  color: #d0d0e0;
+  background: #1a1a2e;
 }
 
 .actions {
@@ -92,8 +91,8 @@
   gap: 8px;
   width: 100%;
   background: none;
-  border: 1px solid #2a2a4a;
-  color: #b0b0b0;
+  border: 1px solid #1a1a2e;
+  color: #9090a0;
   cursor: pointer;
   padding: 8px 12px;
   border-radius: 6px;
@@ -103,9 +102,9 @@
 }
 
 .action:hover {
-  background: #2a2a4a;
-  color: #e0e0e0;
-  border-color: #3a3a5a;
+  background: #1a1a2e;
+  color: #d0d0e0;
+  border-color: #2a2a3e;
 }
 
 .sidebar:not(.open) .actions .action span,
@@ -143,18 +142,18 @@
 }
 
 .navItem:hover {
-  background: #2a2a4a;
-  color: #e0e0e0;
+  background: #1a1a2e;
+  color: #d0d0e0;
 }
 
 .navItem.active {
-  background: #16213e;
+  background: #16162a;
   color: #e0e0e0;
 }
 
 .footer {
   padding: 12px;
-  border-top: 1px solid #2a2a4a;
+  border-top: none;
 }
 
 .sidebar:not(.open) .footer {
@@ -181,9 +180,9 @@
   top: 10px;
   left: 10px;
   z-index: 98;
-  background: #1a1a2e;
-  border: 1px solid #2a2a4a;
-  color: #888;
+  background: #0f0f1a;
+  border: 1px solid #1a1a2e;
+  color: #9090a0;
   cursor: pointer;
   padding: 8px;
   border-radius: 6px;
@@ -194,8 +193,8 @@
 }
 
 .mobileToggle:hover {
-  color: #e0e0e0;
-  background: #2a2a4a;
+  color: #d0d0e0;
+  background: #1a1a2e;
 }
 
 @media (max-width: 768px) {

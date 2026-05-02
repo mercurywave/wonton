@@ -41,11 +41,11 @@
 .field label {
   font-size: 13px;
   font-weight: 500;
-  color: #b0b0b0;
+  color: #9090a0;
 }
 
 .input {
-  background: #1a1a2e;
+  background: #16162a;
   border: 1px solid #2a2a4a;
   color: #e0e0e0;
   padding: 10px 12px;
@@ -65,7 +65,7 @@
 }
 
 .textarea {
-  background: #1a1a2e;
+  background: #16162a;
   border: 1px solid #2a2a4a;
   color: #e0e0e0;
   padding: 10px 12px;
@@ -95,7 +95,7 @@
 .modelsSection > label {
   font-size: 13px;
   font-weight: 500;
-  color: #b0b0b0;
+  color: #9090a0;
 }
 
 .modelsPrompt {
@@ -106,7 +106,7 @@
 
 .modelsLoading {
   font-size: 13px;
-  color: #b0b0b0;
+  color: #9090a0;
 }
 
 .modelsError {
@@ -122,7 +122,7 @@
 }
 
 .retryButton {
-  background: #1a1a2e;
+  background: #16162a;
   border: 1px solid #2a2a4a;
   color: #4a6cf7;
   padding: 6px 14px;
@@ -242,10 +242,10 @@
 }
 
 .modelsList::-webkit-scrollbar-thumb {
-  background: #2a2a4a;
+  background: #1a1a2e;
   border-radius: 3px;
 }
 
 .modelsList::-webkit-scrollbar-thumb:hover {
-  background: #3a3a5a;
+  background: #2a2a3e;
 }

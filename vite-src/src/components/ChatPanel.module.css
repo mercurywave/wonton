@@ -65,15 +65,15 @@
 }
 
 .message.user .bubble {
-  background: #4a6cf7;
-  color: #fff;
+  background: #1a1a2e;
+  color: #e0e0e0;
+  border: 1px solid #2a2a4a;
   border-bottom-right-radius: 4px;
 }
 
 .message.assistant .bubble {
-  background: #1a1a2e;
+  background: transparent;
   color: #e0e0e0;
-  border: 1px solid #2a2a4a;
   border-bottom-left-radius: 4px;
 }
 
@@ -126,8 +126,8 @@
 }
 
 .footer {
-  background: #1a1a2e;
-  border-top: 1px solid #2a2a4a;
+  background: #0f0f1a;
+  border-top: 1px solid #1a1a2e;
   flex-shrink: 0;
   padding: 4px 20px;
   display: flex;
@@ -220,12 +220,12 @@
 }
 
 .messages::-webkit-scrollbar-thumb {
-  background: #2a2a4a;
+  background: #1a1a2e;
   border-radius: 3px;
 }
 
 .messages::-webkit-scrollbar-thumb:hover {
-  background: #3a3a5a;
+  background: #2a2a3e;
 }
 
 @media (max-width: 768px) {

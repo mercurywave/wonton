@@ -34,7 +34,7 @@
 }
 
 .trigger:hover:not(:disabled) {
-  background: #1a1a2e;
+  background: #16162a;
   border-color: #4a6cf7;
 }
 
@@ -54,8 +54,8 @@
   bottom: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: #1a1a2e;
-  border: 1px solid #2a2a4a;
+  background: #16162a;
+  border: 1px solid #1a1a2e;
   border-radius: 6px;
   max-height: 240px;
   overflow-y: auto;
@@ -109,12 +109,12 @@
 }
 
 .menu::-webkit-scrollbar-thumb {
-  background: #2a2a4a;
+  background: #1a1a2e;
   border-radius: 3px;
 }
 
 .menu::-webkit-scrollbar-thumb:hover {
-  background: #3a3a5a;
+  background: #2a2a3e;
 }
 
 @media (max-width: 768px) {
