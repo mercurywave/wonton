@@ -20,7 +20,6 @@ function MessageBubble({ message }: { message: ChatMessageType }) {
   return (
     <div className={`${styles.message} ${isUser ? styles.user : styles.assistant}`}>
       <div className={styles.bubble}>
-        <div className={styles.role}>{isUser ? "You" : "Assistant"}</div>
         <div className={styles.content}>{message.content}</div>
       </div>
     </div>
@@ -90,7 +89,6 @@ export default function ChatPanel({
           {isLoading && (
             <div className={`${styles.message} ${styles.assistant}`}>
               <div className={styles.bubble}>
-                <div className={styles.role}>Assistant</div>
                 <div className={styles.typing}>
                   <span></span>
                   <span></span>
