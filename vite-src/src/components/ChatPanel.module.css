@@ -133,9 +133,9 @@
 }
 
 .inputArea {
-  border-top: 1px solid #2a2a4a;
-  padding: 16px 20px;
-  background: #16162a;
+  border: none;
+  padding: 0 20px 0px;
+  background: transparent;
   max-width: 800px;
   width: 100%;
   margin: 0 auto;
@@ -147,9 +147,10 @@
   gap: 8px;
   background: #1a1a2e;
   border: 1px solid #2a2a4a;
-  border-radius: 12px;
+  border-radius: 12px 12px 0 0;
   padding: 8px 12px;
   transition: border-color 0.15s ease;
+  margin-bottom: -1px;
 }
 
 .inputWrapper:focus-within {
