@@ -126,9 +126,10 @@
 }
 
 .footer {
-  background: #16162a;
+  background: #1a1a2e;
   border-top: 1px solid #2a2a4a;
   flex-shrink: 0;
+  padding: 4px 20px;
 }
 
 .inputArea {
