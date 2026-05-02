@@ -86,17 +86,6 @@ export default function ChatPanel({
           {messages.map((msg) => (
             <MessageBubble key={msg.id} message={msg} />
           ))}
-          {isLoading && (
-            <div className={`${styles.message} ${styles.assistant}`}>
-              <div className={styles.bubble}>
-                <div className={styles.typing}>
-                  <span></span>
-                  <span></span>
-                  <span></span>
-                </div>
-              </div>
-            </div>
-          )}
           <div ref={messagesEndRef} />
         </div>
       </div>

@@ -2,6 +2,28 @@ import { useState, useCallback, useRef } from "react";
 import { ChatMessage } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
 
+function parseSSEChunk(chunk: string): string {
+  const lines = chunk.split("\n");
+  let text = "";
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("data: ")) {
+      const data = trimmed.slice(6);
+      if (data === "[DONE]") continue;
+      try {
+        const parsed = JSON.parse(data);
+        const content = parsed.choices?.[0]?.delta?.content;
+        if (content) {
+          text += content;
+        }
+      } catch {
+        // ignore malformed JSON chunks
+      }
+    }
+  }
+  return text;
+}
+
 export function useChatApi(settings: ChatSettings) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,7 +70,7 @@ export function useChatApi(settings: ChatSettings) {
           body: JSON.stringify({
             model: modelId,
             messages: allMessages,
-            stream: false,
+            stream: true,
           }),
           signal: controller.signal,
         });
@@ -58,18 +80,66 @@ export function useChatApi(settings: ChatSettings) {
           throw new Error(`API error (${response.status}): ${errorBody}`);
         }
 
-        const data = await response.json();
-        const assistantContent =
-          data.choices?.[0]?.message?.content ?? "";
+        const reader = response.body?.getReader();
+        if (!reader) {
+          throw new Error("No response body");
+        }
 
-        const assistantMessage: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: assistantContent,
-          timestamp: Date.now(),
-        };
+        const assistantId = crypto.randomUUID();
+        const accumulated: string[] = [];
 
-        setMessages((prev) => [...prev, assistantMessage]);
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: assistantId,
+            role: "assistant",
+            content: "",
+            timestamp: Date.now(),
+          },
+        ]);
+
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // Split on double newlines (SSE message boundary)
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() || "";
+
+          for (const part of parts) {
+            const text = parseSSEChunk(part);
+            if (text) {
+              accumulated.push(text);
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantId
+                    ? { ...msg, content: accumulated.join("") }
+                    : msg
+                )
+              );
+            }
+          }
+        }
+
+        // Process any remaining buffer content
+        if (buffer.trim()) {
+          const text = parseSSEChunk(buffer);
+          if (text) {
+            accumulated.push(text);
+            setMessages((prev) =>
+              prev.map((msg) =>
+                msg.id === assistantId
+                  ? { ...msg, content: accumulated.join("") }
+                  : msg
+              )
+            );
+          }
+        }
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           return;
