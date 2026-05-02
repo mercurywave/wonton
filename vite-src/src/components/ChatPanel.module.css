@@ -172,24 +172,35 @@
 .content table {
   border-collapse: collapse;
   margin: 8px 0;
-  width: 100%;
   font-size: 0.9em;
+  border: none;
+  background: transparent;
+  border-spacing: 0;
 }
 
-.content th,
-.content td {
-  border: 1px solid #2a2a4a;
+.content thead th {
   padding: 6px 12px;
   text-align: left;
-}
-
-.content th {
-  background: rgba(255, 255, 255, 0.05);
+  border: none;
+  border-bottom: 2px solid #2a2a4a;
+  background: transparent;
   font-weight: 600;
 }
 
-.content tr:nth-child(even) {
-  background: rgba(255, 255, 255, 0.02);
+.content thead th strong {
+  font-weight: 700;
+}
+
+.content tbody td {
+  padding: 6px 12px;
+  text-align: left;
+  border: none;
+  background: transparent;
+}
+
+.content tr:hover td,
+.content tr:hover th {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .content strong {
