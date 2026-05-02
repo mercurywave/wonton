@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Send, StopCircle } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
 import { ChatMessage as ChatMessageType } from "../types/chat";
 import ModelPicker from "./ModelPicker";
@@ -20,7 +22,9 @@ function MessageBubble({ message }: { message: ChatMessageType }) {
   return (
     <div className={`${styles.message} ${isUser ? styles.user : styles.assistant}`}>
       <div className={styles.bubble}>
-        <div className={styles.content}>{message.content}</div>
+        <div className={styles.content}>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+        </div>
       </div>
     </div>
   );
