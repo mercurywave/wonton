@@ -83,13 +83,13 @@ export function useProjects() {
     try {
       const content = await filesystem.readFile(filePath);
       const parsed = JSON.parse(content);
-      if (parsed && Array.isArray(parsed.projects) && parsed.projects.length > 0) {
-        const hasDefault = parsed.projects.some((p: Project) => p.id === DEFAULT_PROJECT_ID);
+      if (parsed && Array.isArray(parsed) && parsed.length > 0) {
+        const hasDefault = parsed.some((p: Project) => p.id === DEFAULT_PROJECT_ID);
         if (!hasDefault) {
-          parsed.projects = [createDefaultProject(), ...parsed.projects];
-          await filesystem.writeFile(filePath, JSON.stringify(parsed.projects, null, 2));
+          parsed.unshift(createDefaultProject());
+          await filesystem.writeFile(filePath, JSON.stringify(parsed, null, 2));
         }
-        setProjects(parsed.projects);
+        setProjects(parsed);
       } else {
         const defaultProject = createDefaultProject();
         setProjects([defaultProject]);
