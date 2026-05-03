@@ -1,0 +1,165 @@
+.container {
+  display: flex;
+  justify-content: center;
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px 0;
+}
+
+.content {
+  max-width: 600px;
+  width: 100%;
+  padding: 0 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  color: #e0e0e0;
+}
+
+.header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+.newButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid #1a1a2e;
+  color: #9090a0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.newButton:hover {
+  background: #1a1a2e;
+  color: #d0d0e0;
+  border-color: #2a2a3e;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  border: 1px solid #1a1a2e;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: border-color 0.15s ease;
+}
+
+.cardActive {
+  border-color: rgba(74, 108, 247, 0.4);
+}
+
+.cardMain {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  padding: 12px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s ease;
+}
+
+.cardMain:hover {
+  background: rgba(74, 108, 247, 0.05);
+}
+
+.cardIcon {
+  color: #888;
+  flex-shrink: 0;
+}
+
+.cardInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: left;
+  min-width: 0;
+}
+
+.cardName {
+  font-size: 14px;
+  color: #e0e0e0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardDate {
+  font-size: 11px;
+  color: #666;
+}
+
+.editInput {
+  background: #16162a;
+  border: 1px solid #4a6cf7;
+  color: #e0e0e0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  width: 100%;
+  outline: none;
+}
+
+.cardBadge {
+  font-size: 11px;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.cardActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 14px 10px;
+}
+
+.actionBtn {
+  background: none;
+  border: 1px solid #1a1a2e;
+  color: #9090a0;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.actionBtn:hover {
+  background: #1a1a2e;
+  color: #d0d0e0;
+  border-color: #2a2a3e;
+}
+
+.actionBtn.deleteBtn {
+  color: #e06060;
+  border-color: rgba(224, 96, 96, 0.3);
+}
+
+.actionBtn.deleteBtn:hover {
+  background: rgba(224, 96, 96, 0.1);
+  border-color: #e06060;
+}

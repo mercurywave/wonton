@@ -9,9 +9,12 @@
   "enableNativeAPI": true,
   "nativeAllowList": [
     "app.*",
-    "filesystem.readDirectory"
+    "filesystem.*",
+    "computer.getOSInfo",
+    "os.getEnv"
   ],
   "singlePageServe": true,
+  "tokenSecurity": "one-time",
   "modes": {
     "window": {
       "title": "Wonton",

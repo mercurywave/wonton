@@ -5,7 +5,7 @@ export interface ChatMessage {
   timestamp: number;
 }
 
-export type Page = "chat" | "settings";
+export type Page = "chat" | "projects" | "projectSettings" | "settings";
 
 export interface ServerModel {
   id: string;

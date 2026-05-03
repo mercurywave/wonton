@@ -81,6 +81,18 @@
   background: #1a1a2e;
 }
 
+.projectSection {
+  padding: 0 8px;
+  margin-bottom: 4px;
+}
+
+.sidebar:not(.open) .projectSection {
+  padding: 0;
+  margin-bottom: 4px;
+  display: flex;
+  justify-content: center;
+}
+
 .actions {
   padding: 8px;
 }

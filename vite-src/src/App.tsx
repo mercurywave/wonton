@@ -3,9 +3,12 @@ import { Page } from "./types/chat";
 import { useChatSettings } from "./hooks/useChatSettings";
 import { useChatApi } from "./hooks/useChatApi";
 import { useServerModels } from "./hooks/useServerModels";
+import { isNeutralinoConnected, useProjects } from "./hooks/useProjects";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
 import Settings from "./components/Settings";
+import ProjectsPage from "./components/ProjectsPage";
+import ProjectSettingsPage from "./components/ProjectSettingsPage";
 import "./App.css";
 
 const MOBILE_BREAKPOINT = 768;
@@ -19,10 +22,24 @@ function App() {
   const { messages, isLoading, sendMessage, clearChat, stopGeneration } = useChatApi(
     settings
   );
+  const { projects, isLoading: projectsLoading, getProjectById, createProject, updateProject, deleteProject } = useProjects();
   const [currentPage, setCurrentPage] = useState<Page>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT);
   const [perChatModel, setPerChatModel] = useState<string | null>(null);
+  const [activeProjectId, setActiveProjectId] = useState<string>(() => {
+    return projects.find((p) => p.id === "default")?.id ?? "default";
+  });
+  const [projectSettingsId, setProjectSettingsId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (projects.length > 0) {
+      const hasDefault = projects.some((p) => p.id === "default");
+      if (hasDefault) {
+        setActiveProjectId("default");
+      }
+    }
+  }, [projects]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -42,6 +59,9 @@ function App() {
 
   const activeModel = perChatModel ?? settings.defaultModel;
 
+  const activeProject = getProjectById(activeProjectId);
+  const settingsProject = projectSettingsId ? getProjectById(projectSettingsId) : undefined;
+
   const handleNewChat = () => {
     clearChat();
     setPerChatModel(null);
@@ -58,12 +78,48 @@ function App() {
   const handleNavigate = useCallback(
     (page: Page) => {
       setCurrentPage(page);
+      setProjectSettingsId(null);
       if (isMobile) {
         setSidebarOpen(false);
       }
     },
     [isMobile]
   );
+
+  const handleProjectSelect = useCallback((projectId: string) => {
+    setActiveProjectId(projectId);
+    setCurrentPage("chat");
+    setProjectSettingsId(null);
+  }, []);
+
+  const handleNewProject = useCallback(async () => {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+    });
+    const name = `Project ${dateStr}`;
+    await createProject(name);
+  }, [createProject]);
+
+  const handleRenameProject = useCallback(async (id: string, name: string) => {
+    await updateProject(id, { name });
+  }, [updateProject]);
+
+  const handleDeleteProject = useCallback(async (id: string) => {
+    await deleteProject(id);
+    if (activeProjectId === id) {
+      setActiveProjectId("default");
+    }
+  }, [deleteProject, activeProjectId]);
+
+  const handleNavigateToProjectSettings = useCallback((id: string) => {
+    setProjectSettingsId(id);
+    setCurrentPage("projectSettings");
+  }, []);
+
+  const showProjectFeatures = isNeutralinoConnected() && projects.length > 0;
 
   return (
     <div className="app">
@@ -76,6 +132,13 @@ function App() {
         onNewChat={handleNewChat}
         onClearChat={handleClearChat}
         messageCount={messages.length}
+        currentProjectId={activeProjectId}
+        projectCount={projects.length}
+        onProjectSelect={handleProjectSelect}
+        onNewProject={handleNewProject}
+        showProjectFeatures={showProjectFeatures}
+        projectsLoading={projectsLoading}
+        projects={projects}
       />
       <div className={`main ${isMobile ? "" : sidebarOpen ? "expanded" : ""}`}>
         {currentPage === "chat" && (
@@ -97,6 +160,25 @@ function App() {
             modelsLoading={modelsLoading}
             modelsError={modelsError}
             onRefetch={refetchModels}
+          />
+        )}
+        {currentPage === "projects" && !projectSettingsId && (
+          <ProjectsPage
+            projects={projects}
+            activeProjectId={activeProjectId}
+            onProjectSelect={handleProjectSelect}
+            onNewProject={handleNewProject}
+            onRenameProject={handleRenameProject}
+            onDeleteProject={handleDeleteProject}
+            onNavigateToSettings={handleNavigateToProjectSettings}
+          />
+        )}
+        {currentPage === "projectSettings" && settingsProject && (
+          <ProjectSettingsPage
+            project={settingsProject}
+            onBack={() => setCurrentPage("projects")}
+            onRename={handleRenameProject}
+            onDelete={handleDeleteProject}
           />
         )}
       </div>
