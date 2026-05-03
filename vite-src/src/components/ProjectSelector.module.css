@@ -47,11 +47,11 @@
 
 .menu {
   position: absolute;
-  bottom: calc(100% + 4px);
+  top: calc(100% + 4px);
   left: 0;
   right: 0;
-  background: #16162a;
-  border: 1px solid #1a1a2e;
+  background: #1e1e3a;
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 6px;
   max-height: 240px;
   overflow-y: auto;
@@ -66,7 +66,7 @@
   justify-content: space-between;
   background: none;
   border: none;
-  color: #e0e0e0;
+  color: #d0d0e0;
   padding: 8px 12px;
   font-size: 13px;
   font-family: inherit;
@@ -81,7 +81,7 @@
 
 .option.active {
   background: rgba(74, 108, 247, 0.15);
-  color: #4a6cf7;
+  color: #e8e8f0;
 }
 
 .optionLabel {
@@ -97,31 +97,7 @@
   margin-left: 8px;
 }
 
-.divider {
-  height: 1px;
-  background: #1a1a2e;
-  margin: 2px 0;
-}
 
-.newOption {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: none;
-  border: none;
-  color: #4a6cf7;
-  padding: 8px 12px;
-  font-size: 13px;
-  font-family: inherit;
-  cursor: pointer;
-  transition: background 0.1s ease;
-  text-align: left;
-}
-
-.newOption:hover {
-  background: rgba(74, 108, 247, 0.1);
-}
 
 .menu::-webkit-scrollbar {
   width: 6px;

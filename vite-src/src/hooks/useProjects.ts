@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Project } from "../types/project";
-import { computer, filesystem, os, OSInfo } from "@neutralinojs/lib";
+import { computer, filesystem, os } from "@neutralinojs/lib";
 
 const DATA_DIR_NAME = "wonton";
 const PROJECTS_FILE_NAME = "projects.json";

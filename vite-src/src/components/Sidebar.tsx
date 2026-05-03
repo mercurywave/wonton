@@ -15,7 +15,6 @@ interface SidebarProps {
   currentProjectId: string;
   projectCount: number;
   onProjectSelect: (projectId: string) => void;
-  onNewProject: () => void;
   showProjectFeatures: boolean;
   projectsLoading: boolean;
   projects: import("../types/project").Project[];
@@ -33,7 +32,6 @@ export default function Sidebar({
   currentProjectId,
   projectCount,
   onProjectSelect,
-  onNewProject,
   showProjectFeatures,
   projectsLoading,
   projects,
@@ -78,8 +76,7 @@ export default function Sidebar({
               projects={projects}
               activeProjectId={currentProjectId}
               onProjectSelect={onProjectSelect}
-              onNewProject={onNewProject}
-              isOpen={isOpen}
+               isOpen={isOpen}
             />
           </div>
         )}

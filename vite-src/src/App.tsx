@@ -135,7 +135,6 @@ function App() {
         currentProjectId={activeProjectId}
         projectCount={projects.length}
         onProjectSelect={handleProjectSelect}
-        onNewProject={handleNewProject}
         showProjectFeatures={showProjectFeatures}
         projectsLoading={projectsLoading}
         projects={projects}

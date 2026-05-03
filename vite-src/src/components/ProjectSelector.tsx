@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp, FolderPlus } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { Project } from "../types/project";
 import styles from "../components/ProjectSelector.module.css";
 
@@ -7,7 +7,7 @@ interface ProjectSelectorProps {
   projects: Project[];
   activeProjectId: string;
   onProjectSelect: (projectId: string) => void;
-  onNewProject: () => void;
+ 
   isOpen: boolean;
 }
 
@@ -15,7 +15,7 @@ export default function ProjectSelector({
   projects,
   activeProjectId,
   onProjectSelect,
-  onNewProject,
+ 
   isOpen,
 }: ProjectSelectorProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -72,11 +72,7 @@ export default function ProjectSelector({
                 )}
               </button>
             ))}
-            <div className={styles.divider} />
-            <button className={styles.newOption} onClick={onNewProject}>
-              <FolderPlus size={14} />
-              <span>New Project</span>
-            </button>
+ 
           </div>
         )}
       </div>
