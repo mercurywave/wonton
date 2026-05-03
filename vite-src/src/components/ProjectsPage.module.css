@@ -123,6 +123,14 @@
   outline: none;
 }
 
+.editRow {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
 .cardBadge {
   font-size: 11px;
   color: #666;

@@ -76,34 +76,37 @@ export default function ProjectsPage({
                 project.id === activeProjectId ? styles.cardActive : ""
               }`}
             >
-              <button
-                className={styles.cardMain}
-                onClick={() => onProjectSelect(project.id)}
-              >
-                <Folder size={16} className={styles.cardIcon} />
-                <div className={styles.cardInfo}>
-                  {editingId === project.id ? (
-                    <input
-                      ref={inputRef}
-                      className={styles.editInput}
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      onBlur={handleRenameSubmit}
-                      onKeyDown={handleKeyDown}
-                    />
-                  ) : (
-                    <span className={styles.cardName}>{project.name}</span>
-                  )}
-                  <span className={styles.cardDate}>
-                    {new Date(project.createdAt).toLocaleDateString()}
-                  </span>
+              {editingId === project.id ? (
+                <div className={styles.editRow}>
+                  <Folder size={16} className={styles.cardIcon} />
+                  <input
+                    ref={inputRef}
+                    className={styles.editInput}
+                    value={editValue}
+                    onChange={(e) => setEditValue(e.target.value)}
+                    onBlur={handleRenameSubmit}
+                    onKeyDown={handleKeyDown}
+                  />
                 </div>
-                {project.id !== activeProjectId && (
-                  <span className={styles.cardBadge}>
-                    {project.id === "default" ? "Default" : ""}
-                  </span>
-                )}
-              </button>
+              ) : (
+                <button
+                  className={styles.cardMain}
+                  onClick={() => onProjectSelect(project.id)}
+                >
+                  <Folder size={16} className={styles.cardIcon} />
+                  <div className={styles.cardInfo}>
+                    <span className={styles.cardName}>{project.name}</span>
+                    <span className={styles.cardDate}>
+                      {new Date(project.createdAt).toLocaleDateString()}
+                    </span>
+                  </div>
+                  {project.id !== activeProjectId && (
+                    <span className={styles.cardBadge}>
+                      {project.id === "default" ? "Default" : ""}
+                    </span>
+                  )}
+                </button>
+              )}
 
               {project.id !== "default" && (
                 <div className={styles.cardActions}>
