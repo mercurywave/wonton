@@ -101,7 +101,10 @@ export default function Sidebar({
       setRenamingChatId(chatId);
       setRenameValue(chat.name);
       setContextMenu(null);
-      setTimeout(() => renameInputRef.current?.focus(), 0);
+      setTimeout(() => {
+        renameInputRef.current?.focus();
+        renameInputRef.current?.select();
+      }, 0);
     }
   };
 
