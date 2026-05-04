@@ -1,14 +1,19 @@
 import { useState, useEffect, useCallback } from "react";
 import { Project } from "../types/project";
-import { computer, filesystem, os } from "@neutralinojs/lib";
-
-const DATA_DIR_NAME = "wonton";
-const PROJECTS_FILE_NAME = "projects.json";
-const DEFAULT_PROJECT_ID = "default";
-
-function generateGuid(): string {
-  return crypto.randomUUID();
-}
+import {
+  PROJECTS_FILE_NAME,
+  DEFAULT_PROJECT_ID,
+  isNeutralinoConnected,
+  getProjectDataDir,
+  generateGuid,
+} from "./neuUtils";
+import {
+  ensureChatFolder as ensureChatFolderNative,
+  deleteProjectFolder as deleteProjectFolderNative,
+  updateProjectMeta,
+  loadProjectMeta,
+} from "./useChatPersistence";
+import { filesystem } from "@neutralinojs/lib";
 
 function createDefaultProject(): Project {
   return {
@@ -18,35 +23,10 @@ function createDefaultProject(): Project {
   };
 }
 
-async function getLocalAppDataDir(appName: string): Promise<string> {
-  const osInfo = await computer.getOSInfo();
-  const platform = osInfo.name.toLowerCase();
-
-  if (platform.includes("windows")) {
-    const local = await os.getEnv("LOCALAPPDATA");
-    return `${local}\\${appName}`;
-  }
-
-  if (platform.includes("mac")) {
-    const home = await os.getEnv("HOME");
-    return `${home}/Library/Application Support/${appName}`;
-  }
-
-  const xdg = await os.getEnv("XDG_DATA_HOME");
-  if (xdg) {
-    return `${xdg}/${appName}`;
-  }
-  const home = await os.getEnv("HOME");
-  return `${home}/.local/share/${appName}`;
-}
-
-export function isNeutralinoConnected() {return window.NL_MODE !== undefined};
-
 export function useProjects() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);
-  const [nativeAvailable, setNativeAvailable] = useState(false);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -57,12 +37,9 @@ export function useProjects() {
       setInitialized(true);
       return;
     }
-
-    setNativeAvailable(true);
-
     let dataDirPath: string;
     try {
-      dataDirPath = await getLocalAppDataDir(DATA_DIR_NAME);
+      dataDirPath = await getProjectDataDir("");
       const wontonDir = dataDirPath;
       try {
         await filesystem.readDirectory(wontonDir);
@@ -107,6 +84,18 @@ export function useProjects() {
       }
     }
 
+    // Ensure the default project's folder structure exists
+    if (isNeutralinoConnected()) {
+      try {
+        const projMeta = await loadProjectMeta(DEFAULT_PROJECT_ID);
+        if (!projMeta.activeChatId) {
+          await ensureChatFolderNative(DEFAULT_PROJECT_ID);
+        }
+      } catch (err) {
+        console.error("useProjects: failed to ensure default project folder", err);
+      }
+    }
+
     setIsLoading(false);
     setInitialized(true);
   }, []);
@@ -120,66 +109,66 @@ export function useProjects() {
       id: generateGuid(),
       name,
       createdAt: Date.now(),
+      updatedAt: Date.now(),
     };
     setProjects((prev) => {
       const next = [...prev, newProject];
-      if (nativeAvailable) {
+      if (isNeutralinoConnected()) {
         (async () => {
-          if (isNeutralinoConnected()) {
-            try {
-              const dataDirPath = await getLocalAppDataDir(DATA_DIR_NAME);
-              const filePath = `${dataDirPath}/${PROJECTS_FILE_NAME}`;
-              await filesystem.writeFile(filePath, JSON.stringify(next, null, 2));
-            } catch (err) {
-              console.error("useProjects: failed to save projects on create", err);
-            }
+          try {
+            const dataDirPath = await getProjectDataDir("");
+            const filePath = `${dataDirPath}/${PROJECTS_FILE_NAME}`;
+            await filesystem.writeFile(filePath, JSON.stringify(next, null, 2));
+            await ensureChatFolderNative(newProject.id);
+          } catch (err) {
+            console.error("useProjects: failed to save projects on create", err);
           }
         })();
       }
       return next;
     });
-  }, [nativeAvailable]);
+  }, []);
 
-  const updateProject = useCallback(async (id: string, updates: Partial<Pick<Project, "name">>) => {
+  const updateProject = useCallback(async (id: string, updates: Partial<Project>) => {
     setProjects((prev) => {
-      const next = prev.map((p) => (p.id === id ? { ...p, ...updates } : p));
-      if (nativeAvailable && updates.name !== undefined) {
+      const next = prev.map((p) => (p.id === id ? { ...p, ...updates, updatedAt: Date.now() } : p));
+      if (isNeutralinoConnected()) {
         (async () => {
-          if (isNeutralinoConnected()) {
-            try {
-              const dataDirPath = await getLocalAppDataDir(DATA_DIR_NAME);
-              const filePath = `${dataDirPath}/${PROJECTS_FILE_NAME}`;
-              await filesystem.writeFile(filePath, JSON.stringify(next, null, 2));
-            } catch (err) {
-              console.error("useProjects: failed to save projects on update", err);
+          try {
+            const dataDirPath = await getProjectDataDir("");
+            const filePath = `${dataDirPath}/${PROJECTS_FILE_NAME}`;
+            await filesystem.writeFile(filePath, JSON.stringify(next, null, 2));
+            if (updates.name !== undefined) {
+              await updateProjectMeta(id, { systemPrompt: updates.name });
             }
+          } catch (err) {
+            console.error("useProjects: failed to save projects on update", err);
           }
         })();
       }
       return next;
     });
-  }, [nativeAvailable]);
+  }, []);
 
   const deleteProject = useCallback(async (id: string) => {
     if (id === DEFAULT_PROJECT_ID) return;
     setProjects((prev) => {
       const next = prev.filter((p) => p.id !== id);
-      if (nativeAvailable) {
+      if (isNeutralinoConnected()) {
         (async () => {
-          if (isNeutralinoConnected()) {
-            try {
-              const dataDirPath = await getLocalAppDataDir(DATA_DIR_NAME);
-              const filePath = `${dataDirPath}/${PROJECTS_FILE_NAME}`;
-              await filesystem.writeFile(filePath, JSON.stringify(next, null, 2));
-            } catch (err) {
-              console.error("useProjects: failed to save projects on delete", err);
-            }
+          try {
+            const dataDirPath = await getProjectDataDir("");
+            const filePath = `${dataDirPath}/${PROJECTS_FILE_NAME}`;
+            await filesystem.writeFile(filePath, JSON.stringify(next, null, 2));
+            await deleteProjectFolderNative(id);
+          } catch (err) {
+            console.error("useProjects: failed to save projects on delete", err);
           }
         })();
       }
       return next;
     });
-  }, [nativeAvailable]);
+  }, []);
 
   const getProjectById = useCallback(
     (id: string) => projects.find((p) => p.id === id),

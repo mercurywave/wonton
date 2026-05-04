@@ -93,6 +93,157 @@
   justify-content: center;
 }
 
+.chatActions {
+  padding: 8px;
+}
+
+.sidebar:not(.open) .chatActions .action {
+  width: auto;
+  padding: 8px;
+  justify-content: center;
+}
+
+.sidebar:not(.open) .chatActions .action span {
+  display: none;
+}
+
+.chatListSection {
+  border-top: 1px solid #1a1a2e;
+  padding: 8px 0;
+}
+
+.chatListHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 12px;
+  margin-bottom: 4px;
+}
+
+.chatListTitle {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: #666;
+  letter-spacing: 0.5px;
+}
+
+.chatListIcon {
+  color: #666;
+}
+
+.chatList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chatItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: #9090a0;
+  font-size: 13px;
+  position: relative;
+}
+
+.chatItem:hover {
+  background: #1a1a2e;
+  color: #d0d0e0;
+}
+
+.chatItem.active {
+  background: #16162a;
+  color: #e0e0e0;
+}
+
+.chatIcon {
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.chatName {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.chatMoreBtn {
+  display: none;
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.chatItem:hover .chatMoreBtn {
+  display: flex;
+}
+
+.chatMoreBtn:hover {
+  color: #d0d0e0;
+  background: #2a2a3e;
+}
+
+.renameInput {
+  flex: 1;
+  background: #1a1a2e;
+  border: 1px solid #2a2a3e;
+  color: #e0e0e0;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 13px;
+  outline: none;
+}
+
+.renameInput:focus {
+  border-color: #4a4a6e;
+}
+
+.contextMenu {
+  position: fixed;
+  background: #1a1a2e;
+  border: 1px solid #2a2a3e;
+  border-radius: 8px;
+  padding: 4px;
+  z-index: 200;
+  min-width: 140px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.contextMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #9090a0;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 13px;
+  transition: all 0.15s ease;
+}
+
+.contextMenuItem:hover {
+  background: #2a2a3e;
+  color: #e0e0e0;
+}
+
+.contextMenuDelete:hover {
+  background: #2a1a1a;
+  color: #ff6b6b;
+}
+
 .actions {
   padding: 8px;
 }

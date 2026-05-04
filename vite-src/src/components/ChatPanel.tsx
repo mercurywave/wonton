@@ -14,6 +14,7 @@ interface ChatPanelProps {
   models: Array<{ id: string }>;
   activeModel: string;
   onModelChange: (modelId: string) => void;
+  chatName?: string;
 }
 
 function MessageBubble({ message }: { message: ChatMessageType }) {
@@ -38,6 +39,7 @@ export default function ChatPanel({
   models,
   activeModel,
   onModelChange,
+  chatName,
 }: ChatPanelProps) {
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -81,6 +83,11 @@ export default function ChatPanel({
   return (
     <div className={styles.container}>
       <div className={styles.mainContent}>
+        {chatName && (
+          <div className={styles.chatHeader}>
+            <span className={styles.chatHeaderName}>{chatName}</span>
+          </div>
+        )}
         <div className={styles.messages}>
           {messages.length === 0 && (
             <div className={styles.empty}>

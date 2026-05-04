@@ -1,9 +1,11 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { Page } from "./types/chat";
+import { Page, ChatMeta } from "./types/chat";
 import { useChatSettings } from "./hooks/useChatSettings";
 import { useChatApi } from "./hooks/useChatApi";
 import { useServerModels } from "./hooks/useServerModels";
-import { isNeutralinoConnected, useProjects } from "./hooks/useProjects";
+import { useProjects } from "./hooks/useProjects";
+import { isNeutralinoConnected } from "./hooks/neuUtils";
+import { useProjectChats } from "./hooks/useProjectChats";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
 import Settings from "./components/Settings";
@@ -19,9 +21,6 @@ function App() {
     settings.serverUrl,
     settings.apiKey
   );
-  const { messages, isLoading, sendMessage, clearChat, stopGeneration } = useChatApi(
-    settings
-  );
   const { projects, isLoading: projectsLoading, getProjectById, createProject, updateProject, deleteProject } = useProjects();
   const [currentPage, setCurrentPage] = useState<Page>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -31,6 +30,25 @@ function App() {
     return projects.find((p) => p.id === "default")?.id ?? "default";
   });
   const [projectSettingsId, setProjectSettingsId] = useState<string | null>(null);
+  const {
+    chats,
+    activeChatId,
+    activeChat,
+    projectMeta,
+    createChat,
+    deleteChat,
+    renameChat,
+    setActiveChat,
+    clearChatMessages,
+  } = useProjectChats(
+    isNeutralinoConnected() ? activeProjectId : undefined
+  );
+  const { messages, isLoading, sendMessage, clearChat, stopGeneration } = useChatApi(
+    settings,
+    isNeutralinoConnected() ? activeProjectId : undefined,
+    activeChatId || undefined,
+    projectMeta || undefined
+  );
 
   useEffect(() => {
     if (projects.length > 0) {
@@ -59,21 +77,32 @@ function App() {
 
   const activeModel = perChatModel ?? settings.defaultModel;
 
-  const activeProject = getProjectById(activeProjectId);
   const settingsProject = projectSettingsId ? getProjectById(projectSettingsId) : undefined;
 
-  const handleNewChat = () => {
-    clearChat();
-    setPerChatModel(null);
+  const handleNewChat = useCallback(async () => {
+    await createChat();
     setCurrentPage("chat");
     if (isMobile) {
       setSidebarOpen(false);
     }
-  };
+  }, [createChat, isMobile]);
 
-  const handleClearChat = () => {
+  const handleClearChat = useCallback(async () => {
+    if (activeProjectId && activeChatId) {
+      await clearChatMessages(activeChatId);
+    }
     clearChat();
-  };
+    setPerChatModel(null);
+  }, [activeProjectId, activeChatId, clearChatMessages, clearChat]);
+
+  const handleChatSelect = useCallback((chat: ChatMeta) => {
+    setActiveChat(chat.id);
+    setCurrentPage("chat");
+    setPerChatModel(chat.activeModel || null);
+    if (isMobile) {
+      setSidebarOpen(false);
+    }
+  }, [setActiveChat, isMobile]);
 
   const handleNavigate = useCallback(
     (page: Page) => {
@@ -138,6 +167,14 @@ function App() {
         showProjectFeatures={showProjectFeatures}
         projectsLoading={projectsLoading}
         projects={projects}
+        chats={chats.map((c) => ({ id: c.id, name: c.name, updatedAt: c.updatedAt }))}
+        activeChatId={activeChatId}
+        onChatSelect={(chat) => {
+          const fullChat = chats.find((c) => c.id === chat.id);
+          if (fullChat) handleChatSelect(fullChat);
+        }}
+        onRenameChat={renameChat}
+        onDeleteChat={deleteChat}
       />
       <div className={`main ${isMobile ? "" : sidebarOpen ? "expanded" : ""}`}>
         {currentPage === "chat" && (
@@ -149,6 +186,7 @@ function App() {
             models={visibleModels}
             activeModel={activeModel}
             onModelChange={setPerChatModel}
+            chatName={activeChat?.name}
           />
         )}
         {currentPage === "settings" && (

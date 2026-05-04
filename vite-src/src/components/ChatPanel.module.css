@@ -16,6 +16,20 @@
   overscroll-behavior: contain;
 }
 
+.chatHeader {
+  width: 100%;
+  max-width: 800px;
+  padding: 8px 0 16px 0;
+  margin-bottom: 8px;
+  border-bottom: 1px solid #1a1a2e;
+}
+
+.chatHeaderName {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
 .messages {
   display: flex;
   flex-direction: column;

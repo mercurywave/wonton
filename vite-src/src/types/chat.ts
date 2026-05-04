@@ -5,7 +5,21 @@ export interface ChatMessage {
   timestamp: number;
 }
 
-export type Page = "chat" | "projects" | "projectSettings" | "settings";
+export interface ChatMeta {
+  id: string;
+  name: string;
+  createdAt: number;
+  updatedAt: number;
+  activeModel?: string;
+}
+
+export interface ProjectMeta {
+  activeChatId?: string;
+  systemPrompt?: string;
+  defaultModel?: string;
+}
+
+export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings";
 
 export interface ServerModel {
   id: string;

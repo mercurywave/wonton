@@ -1,6 +1,7 @@
-import { useState, useCallback, useRef } from "react";
-import { ChatMessage } from "../types/chat";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { ChatMessage, ProjectMeta } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
+import { appendMessage, loadMessages } from "./useChatPersistence";
 
 function parseSSEChunk(chunk: string): string {
   const lines = chunk.split("\n");
@@ -24,13 +25,27 @@ function parseSSEChunk(chunk: string): string {
   return text;
 }
 
-export function useChatApi(settings: ChatSettings) {
+export function useChatApi(
+  settings: ChatSettings,
+  projectId?: string,
+  chatId?: string,
+  projectMeta?: ProjectMeta
+) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
+  useEffect(() => {
+    if (projectId && chatId) {
+      loadMessages(projectId, chatId).then(setMessages);
+    } else {
+      setMessages([]);
+    }
+  }, [projectId, chatId]);
+
   const sendMessage = useCallback(
     async (content: string, modelId: string) => {
+      const effectiveModel = modelId;
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
@@ -51,8 +66,9 @@ export function useChatApi(settings: ChatSettings) {
 
         const allMessages: Array<{ role: string; content: string }> = [];
 
-        if (settings.systemPrompt) {
-          allMessages.push({ role: "system", content: settings.systemPrompt });
+        const systemPrompt = projectMeta?.systemPrompt || settings.systemPrompt;
+        if (systemPrompt) {
+          allMessages.push({ role: "system", content: systemPrompt });
         }
 
         for (const msg of messages) {
@@ -61,6 +77,8 @@ export function useChatApi(settings: ChatSettings) {
 
         allMessages.push({ role: "user", content });
 
+        const model = projectMeta?.defaultModel || settings.defaultModel || effectiveModel;
+
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
@@ -68,7 +86,7 @@ export function useChatApi(settings: ChatSettings) {
             Authorization: `Bearer ${settings.apiKey}`,
           },
           body: JSON.stringify({
-            model: modelId,
+            model,
             messages: allMessages,
             stream: true,
           }),
@@ -140,6 +158,15 @@ export function useChatApi(settings: ChatSettings) {
             );
           }
         }
+
+        // Persist the completed conversation
+        if (projectId && chatId) {
+          const finalContent = accumulated.join("");
+          const finalMessages = [...messages, userMessage, { id: assistantId, role: "assistant" as const, content: finalContent, timestamp: Date.now() }];
+          for (const msg of finalMessages) {
+            await appendMessage(projectId, chatId, msg);
+          }
+        }
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
           return;
@@ -155,7 +182,7 @@ export function useChatApi(settings: ChatSettings) {
         setIsLoading(false);
       }
     },
-    [messages, settings]
+    [messages, settings, projectId, chatId, projectMeta]
   );
 
   const clearChat = useCallback(() => {
