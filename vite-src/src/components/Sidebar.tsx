@@ -175,7 +175,13 @@ export default function Sidebar({
           <div className={styles.chatListSection}>
             <div className={styles.chatListHeader}>
               <span className={styles.chatListTitle}>Chats</span>
-              <ChevronDown size={14} className={styles.chatListIcon} />
+              <button
+                className={styles.newChatBtn}
+                onClick={onNewChat}
+                title="New chat"
+              >
+                <Plus size={14} />
+              </button>
             </div>
             <div className={styles.chatList}>
               {displayChats.map((chat) => (

@@ -132,6 +132,25 @@
   color: #666;
 }
 
+.newChatBtn {
+  background: none;
+  border: 1px solid #2a2a3e;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.newChatBtn:hover {
+  background: #1a1a2e;
+  color: #d0d0e0;
+  border-color: #3a3a4e;
+}
+
 .chatList {
   display: flex;
   flex-direction: column;
