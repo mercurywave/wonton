@@ -39,11 +39,10 @@ function App() {
     deleteChat,
     renameChat,
     setActiveChat,
-    clearChatMessages,
   } = useProjectChats(
     isNeutralinoConnected() ? activeProjectId : undefined
   );
-  const { messages, isLoading, sendMessage, clearChat, stopGeneration } = useChatApi(
+  const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     settings,
     isNeutralinoConnected() ? activeProjectId : undefined,
     activeChatId || undefined,
@@ -86,14 +85,6 @@ function App() {
       setSidebarOpen(false);
     }
   }, [createChat, isMobile]);
-
-  const handleClearChat = useCallback(async () => {
-    if (activeProjectId && activeChatId) {
-      await clearChatMessages(activeChatId);
-    }
-    clearChat();
-    setPerChatModel(null);
-  }, [activeProjectId, activeChatId, clearChatMessages, clearChat]);
 
   const handleChatSelect = useCallback((chat: ChatMeta) => {
     setActiveChat(chat.id);
@@ -159,8 +150,6 @@ function App() {
         currentPage={currentPage}
         onNavigate={handleNavigate}
         onNewChat={handleNewChat}
-        onClearChat={handleClearChat}
-        messageCount={messages.length}
         currentProjectId={activeProjectId}
         projectCount={projects.length}
         onProjectSelect={handleProjectSelect}

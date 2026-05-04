@@ -27,8 +27,6 @@ interface SidebarProps {
   currentPage: Page;
   onNavigate: (page: Page) => void;
   onNewChat: () => void;
-  onClearChat: () => void;
-  messageCount: number;
   currentProjectId: string;
   projectCount: number;
   onProjectSelect: (projectId: string) => void;
@@ -49,8 +47,6 @@ export default function Sidebar({
   currentPage,
   onNavigate,
   onNewChat,
-  onClearChat,
-  messageCount,
   currentProjectId,
   projectCount,
   onProjectSelect,
@@ -63,8 +59,8 @@ export default function Sidebar({
   onRenameChat,
   onDeleteChat,
 }: SidebarProps) {
-  const navItems: { page: Page; icon: React.ReactNode; label: string }[] = [
-    { page: "chat", icon: <MessageSquare size={18} />, label: "Chat" },
+  const navItems: { page: Page; icon: React.ReactNode; label: string; filterOut?: () => boolean }[] = [
+    { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => isOpen },
     { page: "projects", icon: <Folder size={18} />, label: "Projects" },
     { page: "settings", icon: <Settings size={18} />, label: "Settings" },
   ];
@@ -153,7 +149,7 @@ export default function Sidebar({
           />
         </div>
 
-        {showProjectFeatures && !projectsLoading && (
+        {isOpen && showProjectFeatures && !projectsLoading && (
           <div className={styles.projectSection}>
             <ProjectSelector
               projects={projects}
@@ -164,12 +160,14 @@ export default function Sidebar({
           </div>
         )}
 
-        <div className={styles.chatActions}>
-          <button className={styles.action} onClick={onNewChat} title="New chat">
-            <Plus size={16} />
-            <span>New Chat</span>
-          </button>
-        </div>
+        {!isOpen && (
+          <div className={styles.chatActions}>
+            <button className={styles.action} onClick={onNewChat} title="New chat">
+              <Plus size={16} />
+              <span>New Chat</span>
+            </button>
+          </div>
+        )}
 
         {isOpen && chats.length > 0 && (
           <div className={styles.chatListSection}>
@@ -225,7 +223,7 @@ export default function Sidebar({
         )}
 
         <nav className={styles.nav}>
-          {navItems.map((item) => (
+          {navItems.filter(item => !item.filterOut?.()).map((item) => (
             <button
               key={item.page}
               className={`${styles.navItem} ${currentPage === item.page ? styles.active : ""}`}
@@ -243,12 +241,6 @@ export default function Sidebar({
             src="/takeout.svg"
             alt="Takeout"
           />
-          {messageCount > 0 && (
-            <button className={styles.action} onClick={onClearChat} title="Clear chat">
-              <Trash2 size={16} />
-              <span>Clear Chat</span>
-            </button>
-          )}
         </div>
       </div>
 
