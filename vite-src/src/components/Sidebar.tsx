@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   MessageSquare,
   Settings,
@@ -73,8 +73,22 @@ export default function Sidebar({
   const [renamingChatId, setRenamingChatId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const contextMenuRef = useRef<HTMLDivElement>(null);
 
   const displayChats = chats.slice(0, 5);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        contextMenuRef.current &&
+        !contextMenuRef.current.contains(e.target as Node)
+      ) {
+        setContextMenu(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   const handleContextMenu = (e: React.MouseEvent, chatId: string) => {
     e.preventDefault();
@@ -165,7 +179,10 @@ export default function Sidebar({
                 <div
                   key={chat.id}
                   className={`${styles.chatItem} ${chat.id === activeChatId ? styles.active : ""}`}
-                  onClick={() => onChatSelect?.(chat)}
+                  onClick={() => {
+                    setContextMenu(null);
+                    onChatSelect?.(chat);
+                  }}
                   onContextMenu={(e) => handleContextMenu(e, chat.id)}
                 >
                   {renamingChatId === chat.id ? (
@@ -228,6 +245,7 @@ export default function Sidebar({
 
       {contextMenu && (
         <div
+          ref={contextMenuRef}
           className={styles.contextMenu}
           style={{ left: contextMenu.x, top: contextMenu.y }}
         >
