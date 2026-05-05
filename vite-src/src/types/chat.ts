@@ -19,7 +19,7 @@ export interface ProjectMeta {
   defaultModel?: string;
 }
 
-export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings";
+export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history";
 
 export interface ServerModel {
   id: string;

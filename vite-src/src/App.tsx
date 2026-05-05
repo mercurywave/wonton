@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { Page, ChatMeta } from "./types/chat";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Page, ChatMeta, ChatMessage } from "./types/chat";
 import { useChatSettings } from "./hooks/useChatSettings";
 import { useChatApi } from "./hooks/useChatApi";
 import { useServerModels } from "./hooks/useServerModels";
@@ -11,6 +11,7 @@ import ChatPanel from "./components/ChatPanel";
 import Settings from "./components/Settings";
 import ProjectsPage from "./components/ProjectsPage";
 import ProjectSettingsPage from "./components/ProjectSettingsPage";
+import ChatHistoryPage from "./components/ChatHistoryPage";
 import "./App.css";
 
 const MOBILE_BREAKPOINT = 768;
@@ -30,6 +31,9 @@ function App() {
     return projects.find((p) => p.id === "default")?.id ?? "default";
   });
   const [projectSettingsId, setProjectSettingsId] = useState<string | null>(null);
+  const [historyMessages, setHistoryMessages] = useState<Record<string, ChatMessage[]>>({});
+  const [isLoadingHistoryMessages, setIsLoadingHistoryMessages] = useState(false);
+  const historyLoadedRef = useRef(false);
   const {
     chats,
     activeChatId,
@@ -39,6 +43,7 @@ function App() {
     deleteChat,
     renameChat,
     setActiveChat,
+    loadChatMessages,
   } = useProjectChats(
     isNeutralinoConnected() ? activeProjectId : undefined
   );
@@ -68,6 +73,25 @@ function App() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  useEffect(() => {
+    if (currentPage === "history" && !historyLoadedRef.current && isNeutralinoConnected()) {
+      historyLoadedRef.current = true;
+      const loadAll = async () => {
+        setIsLoadingHistoryMessages(true);
+        const allMessages: Record<string, ChatMessage[]> = {};
+        for (const chat of chats) {
+          const msgs = await loadChatMessages(chat.id);
+          allMessages[chat.id] = msgs;
+        }
+        setHistoryMessages(allMessages);
+        setIsLoadingHistoryMessages(false);
+      };
+      loadAll();
+    } else if (currentPage !== "history") {
+      historyLoadedRef.current = false;
+    }
+  }, [currentPage, chats, loadChatMessages]);
 
   const visibleModels = useMemo(
     () => models.filter((m) => !settings.hiddenModels.includes(m.id)),
@@ -205,6 +229,20 @@ function App() {
             onBack={() => setCurrentPage("projects")}
             onRename={handleRenameProject}
             onDelete={handleDeleteProject}
+          />
+        )}
+        {currentPage === "history" && (
+          <ChatHistoryPage
+            chats={chats}
+            messagesByChat={historyMessages}
+            isLoadingMessages={isLoadingHistoryMessages}
+            onChatSelect={(chatId) => {
+              setActiveChat(chatId);
+              setCurrentPage("chat");
+              if (isMobile) {
+                setSidebarOpen(false);
+              }
+            }}
           />
         )}
       </div>
