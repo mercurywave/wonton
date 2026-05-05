@@ -1,8 +1,27 @@
+export interface LLMStats {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  model: string;
+  timeMs: number;
+  // llamacpp timings
+  cacheN?: number;
+  promptN?: number;
+  promptMs?: number;
+  promptPerTokenMs?: number;
+  promptPerSecond?: number;
+  predictedN?: number;
+  predictedMs?: number;
+  predictedPerTokenMs?: number;
+  predictedPerSecond?: number;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system";
   content: string;
   timestamp: number;
+  stats?: LLMStats;
 }
 
 export interface ChatMeta {

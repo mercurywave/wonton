@@ -71,7 +71,85 @@
   justify-content: flex-start;
 }
 
+.bubbleStats {
+  display: none;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #888;
+  position: relative;
+  cursor: default;
+  line-height: 1;
+}
+
+.bubble:hover .bubbleStats {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bubbleStats:hover .bubbleStatsTooltip {
+  display: block;
+}
+
+.tps {
+  font-weight: 500;
+  color: #888;
+}
+
+.model {
+  color: #888;
+}
+
+.bubbleStatsTooltip {
+  display: none;
+  position: absolute;
+  bottom: calc(100% + 6px);
+  right: 0;
+  background: #1e1e3a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 12px;
+  white-space: nowrap;
+  z-index: 100;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.15s ease;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.tooltipRow:not(:last-child) {
+  border-bottom: 1px solid #2a2a4a;
+  padding-bottom: 4px;
+  margin-bottom: 4px;
+}
+
+.tooltipLabel {
+  color: #888;
+  min-width: 75px;
+}
+
+.tooltipValue {
+  color: #ccc;
+  font-weight: 500;
+}
+
+.bubbleWrapper {
+  position: relative;
+  max-width: 70%;
+}
+
+.message.user .bubbleWrapper {
+  margin-left: auto;
+}
+
 .bubble {
+  position: relative;
   max-width: 70%;
   padding: 12px 16px;
   border-radius: 12px;

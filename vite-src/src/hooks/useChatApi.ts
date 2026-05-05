@@ -1,11 +1,12 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { ChatMessage, ProjectMeta } from "../types/chat";
+import { ChatMessage, LLMStats, ProjectMeta } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
 import { appendMessage, loadMessages } from "./useChatPersistence";
 
-function parseSSEChunk(chunk: string): string {
+function parseSSEChunk(chunk: string): { text: string; stats: LLMStats | null } {
   const lines = chunk.split("\n");
   let text = "";
+  let stats: LLMStats | null = null;
   for (const line of lines) {
     const trimmed = line.trim();
     if (trimmed.startsWith("data: ")) {
@@ -17,12 +18,50 @@ function parseSSEChunk(chunk: string): string {
         if (content) {
           text += content;
         }
+        // OpenAI-style usage
+        const usageData = parsed.usage;
+        if (usageData) {
+          stats = {
+            promptTokens: usageData.prompt_tokens || 0,
+            completionTokens: usageData.completion_tokens || 0,
+            totalTokens: usageData.total_tokens || 0,
+            model: parsed.model || "",
+            timeMs: 0,
+          };
+        }
+        // llamacpp-style timings (may appear alongside or instead of usage)
+        const timings = parsed.timings;
+        if (timings) {
+          const llamacppStats: LLMStats = {
+            promptTokens: timings.prompt_n || 0,
+            completionTokens: timings.predicted_n || 0,
+            totalTokens: (timings.prompt_n || 0) + (timings.predicted_n || 0),
+            model: parsed.model || "",
+            timeMs: (timings.prompt_ms || 0) + (timings.predicted_ms || 0),
+            cacheN: timings.cache_n,
+            promptN: timings.prompt_n,
+            promptMs: timings.prompt_ms,
+            promptPerTokenMs: timings.prompt_per_token_ms,
+            promptPerSecond: timings.prompt_per_second,
+            predictedN: timings.predicted_n,
+            predictedMs: timings.predicted_ms,
+            predictedPerTokenMs: timings.predicted_per_token_ms,
+            predictedPerSecond: timings.predicted_per_second,
+          };
+          // Merge: if we already have usage data, overlay timings on top;
+          // otherwise use the timings-derived stats directly.
+          if (stats) {
+            stats = { ...stats, ...llamacppStats };
+          } else {
+            stats = llamacppStats;
+          }
+        }
       } catch {
         // ignore malformed JSON chunks
       }
     }
   }
-  return text;
+  return { text, stats };
 }
 
 export function useChatApi(
@@ -79,6 +118,7 @@ export function useChatApi(
 
         const model = projectMeta?.defaultModel || settings.defaultModel || effectiveModel;
 
+        const requestStartTime = Date.now();
         const response = await fetch(apiUrl, {
           method: "POST",
           headers: {
@@ -105,6 +145,7 @@ export function useChatApi(
 
         const assistantId = crypto.randomUUID();
         const accumulated: string[] = [];
+        let parsedStats: LLMStats | null = null;
 
         setMessages((prev) => [
           ...prev,
@@ -130,7 +171,7 @@ export function useChatApi(
           buffer = parts.pop() || "";
 
           for (const part of parts) {
-            const text = parseSSEChunk(part);
+            const { text, stats } = parseSSEChunk(part);
             if (text) {
               accumulated.push(text);
               setMessages((prev) =>
@@ -141,12 +182,15 @@ export function useChatApi(
                 )
               );
             }
+            if (stats) {
+              parsedStats = stats;
+            }
           }
         }
 
         // Process any remaining buffer content
         if (buffer.trim()) {
-          const text = parseSSEChunk(buffer);
+          const { text, stats } = parseSSEChunk(buffer);
           if (text) {
             accumulated.push(text);
             setMessages((prev) =>
@@ -157,13 +201,39 @@ export function useChatApi(
               )
             );
           }
+          if (stats) {
+            parsedStats = stats;
+          }
         }
+
+        const timeMs = Date.now() - requestStartTime;
+
+        // Attach usage stats to the assistant message
+        const finalContent = accumulated.join("");
+        const assistantMessage: ChatMessage = {
+          id: assistantId,
+          role: "assistant",
+          content: finalContent,
+          timestamp: Date.now(),
+        };
+
+        if (parsedStats) {
+          assistantMessage.stats = {
+            ...parsedStats,
+            timeMs,
+          };
+        }
+
+        // Update the assistant message with stats in state, then persist
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.id === assistantId ? assistantMessage : msg
+          )
+        );
 
         // Persist the completed conversation
         if (projectId && chatId) {
-          const finalContent = accumulated.join("");
-          const finalMessages = [...messages, userMessage, { id: assistantId, role: "assistant" as const, content: finalContent, timestamp: Date.now() }];
-          for (const msg of finalMessages) {
+          for (const msg of [...messages, userMessage, assistantMessage]) {
             await appendMessage(projectId, chatId, msg);
           }
         }
