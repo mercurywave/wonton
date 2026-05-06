@@ -8,6 +8,8 @@ export interface ChatSettings {
   defaultModel: string;
   systemPrompt: string;
   hiddenModels: string[];
+  defaultContextWindow: number;
+  contextWindows: Record<string, number>;
 }
 
 const DEFAULT_SETTINGS: ChatSettings = {
@@ -16,6 +18,8 @@ const DEFAULT_SETTINGS: ChatSettings = {
   defaultModel: "",
   systemPrompt: "You are a helpful assistant.",
   hiddenModels: [],
+  defaultContextWindow: 131072,
+  contextWindows: {},
 };
 
 function loadSettings(): ChatSettings {

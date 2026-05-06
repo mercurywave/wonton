@@ -200,13 +200,14 @@ function App() {
             activeModel={activeModel}
             onModelChange={setPerChatModel}
             chatName={activeChat?.name}
+            settings={settings}
           />
         )}
         {currentPage === "settings" && (
           <Settings
             settings={settings}
             onUpdate={updateSettings}
-            models={visibleModels}
+            models={models}
             modelsLoading={modelsLoading}
             modelsError={modelsError}
             onRefetch={refetchModels}

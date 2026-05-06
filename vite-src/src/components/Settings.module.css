@@ -148,89 +148,137 @@
 .modelsList {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-height: 300px;
+  gap: 8px;
+  max-height: 500px;
   overflow-y: auto;
 }
 
-.modelRow {
+.modelCard {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.modelCard:hover {
+  border-color: #3a3a5a;
+}
+
+.modelCardDefault {
+  background: rgba(74, 108, 247, 0.06);
+  border-color: rgba(74, 108, 247, 0.3);
+}
+
+.modelCardHeader {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 6px;
-  transition: background 0.1s ease;
-  border: 1px solid transparent;
-}
-
-.modelRow:hover {
-  background: rgba(74, 108, 247, 0.05);
-}
-
-.modelRowDefault {
-  background: rgba(74, 108, 247, 0.08);
-  border-color: rgba(74, 108, 247, 0.2);
-}
-
-.modelRadio {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  flex-shrink: 0;
-}
-
-.radioDot {
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 2px solid #555;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: border-color 0.15s ease;
-}
-
-.radioDotActive {
-  border-color: #4a6cf7;
-}
-
-.radioDotActive::after {
-  content: "";
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #4a6cf7;
+  justify-content: space-between;
+  gap: 12px;
 }
 
 .modelId {
-  flex: 1;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 500;
   color: #e0e0e0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  flex: 1;
+}
+
+.defaultButton {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid #2a2a4a;
+  color: #888;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.defaultButton:hover {
+  border-color: #4a6cf7;
+  color: #e0e0e0;
+}
+
+.defaultButtonActive {
+  background: rgba(74, 108, 247, 0.15);
+  border-color: #4a6cf7;
+  color: #4a6cf7;
+}
+
+.modelCardBody {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.contextField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.contextField label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.contextInput {
+  background: #0f0f1a;
+  border: 1px solid #2a2a4a;
+  color: #e0e0e0;
+  padding: 8px 10px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.contextInput:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.contextInput::placeholder {
+  color: #555;
 }
 
 .hideButton {
-  background: none;
-  border: none;
-  color: #666;
-  padding: 4px;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  gap: 5px;
+  background: none;
+  border: 1px solid #2a2a4a;
+  color: #666;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
   transition: all 0.15s ease;
   flex-shrink: 0;
 }
 
 .hideButton:hover {
   color: #e0e0e0;
-  background: rgba(255, 255, 255, 0.05);
+  border-color: #4a6cf7;
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .modelsList::-webkit-scrollbar {

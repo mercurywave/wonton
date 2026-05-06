@@ -1,10 +1,13 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Send, StopCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
 import { ChatMessage as ChatMessageType, LLMStats } from "../types/chat";
+import { ChatSettings } from "../hooks/useChatSettings";
+import { useContextWindow } from "../hooks/useContextWindow";
 import ModelPicker from "./ModelPicker";
+import ContextRing from "./ContextRing";
 
 interface ChatPanelProps {
   messages: ChatMessageType[];
@@ -15,6 +18,7 @@ interface ChatPanelProps {
   activeModel: string;
   onModelChange: (modelId: string) => void;
   chatName?: string;
+  settings: ChatSettings;
 }
 
 function formatTokensPerSecond(completionTokens: number, timeMs: number): string {
@@ -120,7 +124,19 @@ export default function ChatPanel({
   activeModel,
   onModelChange,
   chatName,
+  settings,
 }: ChatPanelProps) {
+  const { maxTokens } = useContextWindow(activeModel, settings);
+
+  const { usageTokens, showRing } = useMemo(() => {
+    const lastMsg = messages[messages.length - 1];
+    if (!lastMsg || lastMsg.role !== "assistant" || !lastMsg.stats) {
+      return { usageTokens: 0, showRing: false };
+    }
+    const stats = lastMsg.stats;
+    const usage = (stats.promptTokens || 0) + (stats.completionTokens || 0);
+    return { usageTokens: usage, showRing: true };
+  }, [messages]);
   const [input, setInput] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -217,11 +233,19 @@ export default function ChatPanel({
       </form>
 
       <div className={styles.footer}>
-        <ModelPicker
-          models={models}
-          activeModel={activeModel}
-          onModelChange={onModelChange}
-        />
+        <div className={styles.footerContainer}>
+          <ModelPicker
+            models={models}
+            activeModel={activeModel}
+            onModelChange={onModelChange}
+          />
+          {showRing && (
+            <ContextRing
+              usageTokens={usageTokens}
+              maxTokens={maxTokens}
+            />
+          )}
+        </div>
       </div>
     </div>
   );
