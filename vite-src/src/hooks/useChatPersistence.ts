@@ -6,7 +6,7 @@ import {
   isNeutralinoConnected,
   getProjectDataDir,
   generateGuid,
-} from "./neuUtils";
+} from "../utils/neuUtils";
 import { filesystem } from "@neutralinojs/lib";
 
 export async function getProjectDataDirPath(projectId: string): Promise<string> {

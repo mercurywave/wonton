@@ -6,7 +6,7 @@ import {
   isNeutralinoConnected,
   getProjectDataDir,
   generateGuid,
-} from "./neuUtils";
+} from "../utils/neuUtils";
 import {
   ensureChatFolder as ensureChatFolderNative,
   deleteProjectFolder as deleteProjectFolderNative,

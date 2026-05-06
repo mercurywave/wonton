@@ -4,7 +4,7 @@ import { useChatSettings } from "./hooks/useChatSettings";
 import { useChatApi } from "./hooks/useChatApi";
 import { useServerModels } from "./hooks/useServerModels";
 import { useProjects } from "./hooks/useProjects";
-import { isNeutralinoConnected } from "./hooks/neuUtils";
+import { isNeutralinoConnected } from "./utils/neuUtils";
 import { useProjectChats } from "./hooks/useProjectChats";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
