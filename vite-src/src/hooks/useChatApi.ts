@@ -233,9 +233,8 @@ export function useChatApi(
 
         // Persist the completed conversation
         if (projectId && chatId) {
-          for (const msg of [...messages, userMessage, assistantMessage]) {
-            await appendMessage(projectId, chatId, msg);
-          }
+          await appendMessage(projectId, chatId, userMessage);
+          await appendMessage(projectId, chatId, assistantMessage);
         }
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {

@@ -1,18 +1,21 @@
 import { useState, useRef, useEffect } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { ServerModel } from "../types/chat";
+import { getDisplayName } from "../utils/modelUtils";
 import styles from "../components/ModelPicker.module.css";
 
 interface ModelPickerProps {
   models: ServerModel[];
   activeModel: string;
   onModelChange: (modelId: string) => void;
+  modelAliases: Record<string, string>;
 }
 
 export default function ModelPicker({
   models,
   activeModel,
   onModelChange,
+  modelAliases,
 }: ModelPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -32,8 +35,7 @@ export default function ModelPicker({
 
   if (models.length === 0) return null;
 
-  const selectedModel = models.find((m) => m.id === activeModel);
-  const displayName = selectedModel?.id ?? activeModel;
+  const displayName = getDisplayName(activeModel, modelAliases);
 
   return (
     <div className={styles.container} ref={dropdownRef}>
@@ -66,7 +68,7 @@ export default function ModelPicker({
                   setIsOpen(false);
                 }}
               >
-                <span className={styles.optionLabel}>{model.id}</span>
+                <span className={styles.optionLabel}>{getDisplayName(model.id, modelAliases)}</span>
                 {model.id === activeModel && (
                   <span className={styles.checkmark}>✓</span>
                 )}

@@ -10,6 +10,7 @@ export interface ChatSettings {
   hiddenModels: string[];
   defaultContextWindow: number;
   contextWindows: Record<string, number>;
+  modelAliases: Record<string, string>;
 }
 
 const DEFAULT_SETTINGS: ChatSettings = {
@@ -20,6 +21,7 @@ const DEFAULT_SETTINGS: ChatSettings = {
   hiddenModels: [],
   defaultContextWindow: 131072,
   contextWindows: {},
+  modelAliases: {},
 };
 
 function loadSettings(): ChatSettings {

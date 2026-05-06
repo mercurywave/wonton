@@ -48,6 +48,16 @@ export default function Settings({
     onUpdate({ contextWindows: next });
   };
 
+  const handleAliasChange = (modelId: string, value: string) => {
+    const next = { ...settings.modelAliases };
+    if (value.trim()) {
+      next[modelId] = value;
+    } else {
+      delete next[modelId];
+    }
+    onUpdate({ modelAliases: next });
+  };
+
   return (
     <div className={styles.container}>
       <div className={styles.content}>
@@ -148,6 +158,7 @@ export default function Settings({
                   const isDefault = model.id === settings.defaultModel;
                   const customContext = model.id in settings.contextWindows;
                   const contextValue = settings.contextWindows[model.id] ?? "";
+                  const aliasValue = settings.modelAliases[model.id] ?? "";
 
                   return (
                     <div
@@ -168,6 +179,18 @@ export default function Settings({
                       </div>
 
                       <div className={styles.modelCardBody}>
+                        <div className={styles.aliasField}>
+                          <label htmlFor={`alias-${model.id}`}>Alias</label>
+                          <input
+                            id={`alias-${model.id}`}
+                            type="text"
+                            className={styles.aliasInput}
+                            value={aliasValue}
+                            onChange={(e) => handleAliasChange(model.id, e.target.value)}
+                            placeholder="Optional display name"
+                          />
+                        </div>
+
                         <div className={styles.contextField}>
                           <label htmlFor={`context-${model.id}`}>Context Window</label>
                           <input

@@ -182,9 +182,12 @@ export async function loadMessages(projectId: string, chatId: string): Promise<C
 
     const lines = content.trim().split("\n");
     const messages: ChatMessage[] = [];
+    const seenIds = new Set<string>();
     for (const line of lines) {
       try {
         const msg = JSON.parse(line) as ChatMessage;
+        if (seenIds.has(msg.id)) continue;
+        seenIds.add(msg.id);
         messages.push(msg);
       } catch {
         // ignore malformed lines

@@ -8,6 +8,7 @@ import { ChatSettings } from "../hooks/useChatSettings";
 import { useContextWindow } from "../hooks/useContextWindow";
 import ModelPicker from "./ModelPicker";
 import ContextRing from "./ContextRing";
+import { getDisplayName } from "../utils/modelUtils";
 
 interface ChatPanelProps {
   messages: ChatMessageType[];
@@ -28,7 +29,7 @@ function formatTokensPerSecond(completionTokens: number, timeMs: number): string
   return `${tps} tok/s`;
 }
 
-function MessageStats({ stats }: { stats: LLMStats }) {
+function MessageStats({ stats, modelAliases }: { stats: LLMStats; modelAliases: Record<string, string> }) {
   const seconds = stats.timeMs / 1000;
   const displayTps = formatTokensPerSecond(stats.completionTokens, stats.timeMs);
 
@@ -46,7 +47,7 @@ function MessageStats({ stats }: { stats: LLMStats }) {
   return (
     <div className={styles.bubbleStats}>
       <span className={styles.tps}>{displayTps}</span>
-      <span className={styles.model}>{stats.model}</span>
+      <span className={styles.model}>{getDisplayName(stats.model, modelAliases)}</span>
       {hasTimings && (
         <div className={styles.bubbleStatsTooltip}>
           <div className={styles.tooltipRow}>
@@ -97,7 +98,7 @@ function MessageStats({ stats }: { stats: LLMStats }) {
   );
 }
 
-function MessageBubble({ message }: { message: ChatMessageType }) {
+function MessageBubble({ message, modelAliases }: { message: ChatMessageType; modelAliases: Record<string, string> }) {
   const isUser = message.role === "user";
   const hasStats = message.role !== "user" && message.stats;
 
@@ -108,7 +109,7 @@ function MessageBubble({ message }: { message: ChatMessageType }) {
           <div className={styles.content}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
           </div>
-          {hasStats && <MessageStats stats={message.stats!} />}
+          {hasStats && <MessageStats stats={message.stats!} modelAliases={modelAliases} />}
         </div>
       </div>
     </div>
@@ -190,11 +191,11 @@ export default function ChatPanel({
               <p>Start a conversation by typing a message below.</p>
             </div>
           )}
-          {messages.map((msg) => (
-            <div key={msg.id}>
-              <MessageBubble message={msg} />
-            </div>
-          ))}
+           {messages.map((msg) => (
+              <div key={msg.id}>
+                <MessageBubble message={msg} modelAliases={settings.modelAliases} />
+              </div>
+            ))}
           <div ref={messagesEndRef} />
         </div>
       </div>
@@ -234,11 +235,12 @@ export default function ChatPanel({
 
       <div className={styles.footer}>
         <div className={styles.footerContainer}>
-          <ModelPicker
-            models={models}
-            activeModel={activeModel}
-            onModelChange={onModelChange}
-          />
+        <ModelPicker
+             models={models}
+             activeModel={activeModel}
+             onModelChange={onModelChange}
+             modelAliases={settings.modelAliases}
+           />
           {showRing && (
             <ContextRing
               usageTokens={usageTokens}
