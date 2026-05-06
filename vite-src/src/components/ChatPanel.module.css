@@ -72,19 +72,21 @@
 }
 
 .bubbleStats {
-  display: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   margin-top: 4px;
   font-size: 11px;
   color: #888;
   position: relative;
   cursor: default;
   line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s ease;
 }
 
 .bubble:hover .bubbleStats {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  opacity: 1;
 }
 
 .bubbleStats:hover .bubbleStatsTooltip {
