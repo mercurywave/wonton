@@ -20,8 +20,10 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
 
   try {
     await filesystem.createDirectory(projectDir);
-  } catch (err) {
-    console.error("ensureChatFolder: failed to create project dir", err);
+  } catch (err: any) {
+    if (err.code !== "NE_FS_DIRCRER") {
+      console.error("ensureChatFolder: failed to create project dir", err);
+    }
   }
 
   const projPath = `${projectDir}/${PROJ_FILE_NAME}`;
@@ -39,8 +41,10 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
   try {
     await filesystem.createDirectory(chatsDir);
-  } catch (err) {
-    console.error("ensureChatFolder: failed to create chats dir", err);
+  } catch (err: any) {
+    if (err.code !== "NE_FS_DIRCRER") {
+      console.error("ensureChatFolder: failed to create chats dir", err);
+    }
   }
 
   const chatId = generateGuid();
