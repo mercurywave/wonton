@@ -52,7 +52,8 @@ function App() {
     settings,
     isNeutralinoConnected() ? activeProjectId : undefined,
     activeChatId || undefined,
-    projectMeta || undefined
+    projectMeta || undefined,
+    renameChat
   );
 
   useEffect(() => {

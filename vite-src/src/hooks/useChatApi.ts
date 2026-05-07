@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ChatMessage, LLMStats, ProjectMeta } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
-import { appendMessage, loadMessages } from "./useChatPersistence";
+import { appendMessage, loadMessages, updateChatMeta } from "./useChatPersistence";
 
 function parseSSEChunk(chunk: string): { text: string; stats: LLMStats | null } {
   const lines = chunk.split("\n");
@@ -68,7 +68,8 @@ export function useChatApi(
   settings: ChatSettings,
   projectId?: string,
   chatId?: string,
-  projectMeta?: ProjectMeta
+  projectMeta?: ProjectMeta,
+  onTitleGenerated?: (chatId: string, name: string) => void
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -81,6 +82,47 @@ export function useChatApi(
       setMessages([]);
     }
   }, [projectId, chatId]);
+
+  const generateTitle = useCallback(
+    async (userContent: string, assistantContent: string, model: string) => {
+      if (!projectId || !chatId) return;
+
+      const baseUrl = settings.serverUrl.replace(/\/+$/, "");
+      const apiUrl = `${baseUrl}/v1/chat/completions`;
+
+      try {
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${settings.apiKey}`,
+          },
+          body: JSON.stringify({
+            model,
+            messages: [
+              { role: "user" as const, content: userContent },
+              { role: "assistant" as const, content: assistantContent },
+              { role: "user" as const, content: "Generate a 2-4 word title for this conversation. Respond with ONLY the title, nothing else." },
+            ],
+            stream: false,
+            cache_prompt: false,
+          }),
+        });
+
+        if (!response.ok) return;
+
+        const data = await response.json();
+        const title = data.choices?.[0]?.message?.content?.trim();
+        if (!title) return;
+
+        await updateChatMeta(projectId, chatId, { name: title });
+        onTitleGenerated?.(chatId, title);
+      } catch {
+        // silently ignore title generation failures
+      }
+    },
+    [projectId, chatId, settings, onTitleGenerated]
+  );
 
   const sendMessage = useCallback(
     async (content: string, modelId: string) => {
@@ -235,6 +277,14 @@ export function useChatApi(
         if (projectId && chatId) {
           await appendMessage(projectId, chatId, userMessage);
           await appendMessage(projectId, chatId, assistantMessage);
+
+          // Generate title after the first exchange only
+          if (messages.length === 0) {
+            const titleModel = projectMeta?.defaultModel || settings.defaultModel || modelId;
+            setTimeout(() => {
+              generateTitle(userMessage.content, assistantMessage.content, titleModel);
+            }, 0);
+          }
         }
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
@@ -251,7 +301,7 @@ export function useChatApi(
         setIsLoading(false);
       }
     },
-    [messages, settings, projectId, chatId, projectMeta]
+    [messages, settings, projectId, chatId, projectMeta, generateTitle]
   );
 
   const clearChat = useCallback(() => {
