@@ -156,6 +156,7 @@ export default function Settings({
               <div className={styles.modelsList}>
                 {allModels.map((model) => {
                   const isDefault = model.id === settings.defaultModel;
+                  const isHidden = settings.hiddenModels.includes(model.id);
                   const customContext = model.id in settings.contextWindows;
                   const contextValue = settings.contextWindows[model.id] ?? "";
                   const aliasValue = settings.modelAliases[model.id] ?? "";
@@ -163,15 +164,16 @@ export default function Settings({
                   return (
                     <div
                       key={model.id}
-                      className={`${styles.modelCard} ${isDefault ? styles.modelCardDefault : ""}`}
+                      className={`${styles.modelCard} ${isDefault ? styles.modelCardDefault : ""} ${isHidden ? styles.modelCardHidden : ""}`}
                     >
                       <div className={styles.modelCardHeader}>
-                        <span className={styles.modelId}>{model.id}</span>
+                        <span className={`${styles.modelId} ${isHidden ? styles.modelIdHidden : ""}`}>{model.id}</span>
                         <button
-                          className={`${styles.defaultButton} ${isDefault ? styles.defaultButtonActive : ""}`}
-                          onClick={() => handleToggleDefault(model.id)}
+                          className={`${styles.defaultButton} ${isDefault ? styles.defaultButtonActive : ""} ${isHidden ? styles.defaultButtonDisabled : ""}`}
+                          onClick={() => !isHidden && handleToggleDefault(model.id)}
                           type="button"
                           title={isDefault ? "Remove default" : "Set as default model"}
+                          disabled={isHidden}
                         >
                           <Check size={14} />
                           <span>Default</span>
@@ -186,8 +188,9 @@ export default function Settings({
                             type="text"
                             className={styles.aliasInput}
                             value={aliasValue}
-                            onChange={(e) => handleAliasChange(model.id, e.target.value)}
+                            onChange={(e) => !isHidden && handleAliasChange(model.id, e.target.value)}
                             placeholder="Optional display name"
+                            disabled={isHidden}
                           />
                         </div>
 
@@ -198,11 +201,12 @@ export default function Settings({
                             type="number"
                             className={styles.contextInput}
                             value={contextValue}
-                            onChange={(e) => handleContextChange(model.id, e.target.value)}
+                            onChange={(e) => !isHidden && handleContextChange(model.id, e.target.value)}
                             placeholder={settings.defaultContextWindow.toString()}
                             min={1024}
                             step={1024}
                             title={customContext ? "Custom context window for this model" : "Empty = use default"}
+                            disabled={isHidden}
                           />
                         </div>
 
@@ -210,12 +214,12 @@ export default function Settings({
                           className={styles.hideButton}
                           onClick={() => handleToggleHidden(model.id)}
                           type="button"
-                          title={settings.hiddenModels.includes(model.id) ? "Show model" : "Hide model"}
+                          title={isHidden ? "Show model" : "Hide model"}
                         >
-                          {settings.hiddenModels.includes(model.id) ? (
-                            <EyeOff size={14} />
-                          ) : (
+                          {isHidden ? (
                             <Eye size={14} />
+                          ) : (
+                            <EyeOff size={14} />
                           )}
                         </button>
                       </div>
