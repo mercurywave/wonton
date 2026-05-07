@@ -10,6 +10,8 @@
   "nativeAllowList": [
     "app.*",
     "filesystem.*",
+    "os.showFolderDialog",
+    "os.open",
     "computer.getOSInfo",
     "os.getEnv"
   ],

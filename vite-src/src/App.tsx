@@ -6,6 +6,7 @@ import { useServerModels } from "./hooks/useServerModels";
 import { useProjects } from "./hooks/useProjects";
 import { isNeutralinoConnected } from "./utils/neuUtils";
 import { useProjectChats } from "./hooks/useProjectChats";
+import { filesystem, os } from "@neutralinojs/lib";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
 import Settings from "./components/Settings";
@@ -22,7 +23,7 @@ function App() {
     settings.serverUrl,
     settings.apiKey
   );
-  const { projects, isLoading: projectsLoading, getProjectById, createProject, updateProject, deleteProject } = useProjects();
+  const { projects, isLoading: projectsLoading, getProjectById, createProject, createProjectFromFolder, updateProjectFolder, updateProject, deleteProject } = useProjects();
   const [currentPage, setCurrentPage] = useState<Page>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT);
@@ -147,6 +148,51 @@ function App() {
     await createProject(name);
   }, [createProject]);
 
+  const handleCreateProjectFromFolder = useCallback(async () => {
+    if (!isNeutralinoConnected()) return;
+    try {
+      const result = await os.showFolderDialog("Select Project Folder");
+      if (result) {
+        await createProjectFromFolder(result);
+      }
+    } catch (err) {
+      console.error("handleCreateProjectFromFolder: failed to show folder dialog", err);
+    }
+  }, [createProjectFromFolder]);
+
+  const handleLinkFolder = useCallback(async (id: string) => {
+    if (!isNeutralinoConnected()) return;
+    try {
+      const result = await os.showFolderDialog("Select Folder for Project");
+      if (result) {
+        await updateProjectFolder(id, result);
+      }
+    } catch (err) {
+      console.error("handleLinkFolder: failed to show folder dialog", err);
+    }
+  }, [updateProjectFolder]);
+
+  const handleChangeFolder = useCallback(async (id: string) => {
+    if (!isNeutralinoConnected()) return;
+    try {
+      const result = await os.showFolderDialog("Select New Folder for Project");
+      if (result) {
+        await updateProjectFolder(id, result);
+      }
+    } catch (err) {
+      console.error("handleChangeFolder: failed to show folder dialog", err);
+    }
+  }, [updateProjectFolder]);
+
+  const handleOpenFolder = useCallback(async (folderPath: string) => {
+    if (!isNeutralinoConnected()) return;
+    try {
+      await os.open(folderPath);
+    } catch (err) {
+      console.error("handleOpenFolder: failed to open folder", err);
+    }
+  }, []);
+
   const handleRenameProject = useCallback(async (id: string, name: string) => {
     await updateProject(id, { name });
   }, [updateProject]);
@@ -218,10 +264,14 @@ function App() {
             projects={projects}
             activeProjectId={activeProjectId}
             onProjectSelect={handleProjectSelect}
-            onNewProject={handleNewProject}
+            onCreateProjectFromFolder={handleCreateProjectFromFolder}
+            onNewBlankProject={handleNewProject}
             onRenameProject={handleRenameProject}
             onDeleteProject={handleDeleteProject}
             onNavigateToSettings={handleNavigateToProjectSettings}
+            onLinkFolder={handleLinkFolder}
+            onChangeFolder={handleChangeFolder}
+            onOpenFolder={handleOpenFolder}
           />
         )}
         {currentPage === "projectSettings" && settingsProject && (

@@ -1,6 +1,7 @@
 export interface Project {
   id: string;
   name: string;
+  folderPath?: string;
   createdAt: number;
   updatedAt?: number;
 }

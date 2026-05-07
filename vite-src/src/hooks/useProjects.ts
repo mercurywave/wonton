@@ -104,10 +104,11 @@ export function useProjects() {
     loadData();
   }, [loadData]);
 
-  const createProject = useCallback(async (name: string) => {
+  const createProject = useCallback(async (name: string, folderPath?: string) => {
     const newProject: Project = {
       id: generateGuid(),
       name,
+      folderPath,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
@@ -122,6 +123,30 @@ export function useProjects() {
             await ensureChatFolderNative(newProject.id);
           } catch (err) {
             console.error("useProjects: failed to save projects on create", err);
+          }
+        })();
+      }
+      return next;
+    });
+  }, []);
+
+  const createProjectFromFolder = useCallback(async (folderPath: string) => {
+    const folderName = folderPath.split(/[\\/]/).pop() || folderPath;
+    const name = folderName.charAt(0).toUpperCase() + folderName.slice(1);
+    await createProject(name, folderPath);
+  }, [createProject]);
+
+  const updateProjectFolder = useCallback(async (id: string, folderPath: string | null) => {
+    setProjects((prev) => {
+      const next = prev.map((p) => (p.id === id ? { ...p, folderPath: folderPath || undefined, updatedAt: Date.now() } : p));
+      if (isNeutralinoConnected()) {
+        (async () => {
+          try {
+            const dataDirPath = await getProjectDataDir("");
+            const filePath = `${dataDirPath}/${PROJECTS_FILE_NAME}`;
+            await filesystem.writeFile(filePath, JSON.stringify(next, null, 2));
+          } catch (err) {
+            console.error("useProjects: failed to save projects on folder update", err);
           }
         })();
       }
@@ -181,6 +206,8 @@ export function useProjects() {
     initialized,
     getProjectById,
     createProject,
+    createProjectFromFolder,
+    updateProjectFolder,
     updateProject,
     deleteProject,
   };

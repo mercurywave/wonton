@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Folder, Plus, Trash2, Pencil } from "lucide-react";
+import { Folder, Plus, Trash2, Pencil, FolderOpen } from "lucide-react";
 import { Project } from "../types/project";
 import styles from "../components/ProjectsPage.module.css";
 
@@ -7,20 +7,28 @@ interface ProjectsPageProps {
   projects: Project[];
   activeProjectId: string;
   onProjectSelect: (projectId: string) => void;
-  onNewProject: () => void;
+  onCreateProjectFromFolder: () => void;
+  onNewBlankProject: () => void;
   onRenameProject: (id: string, name: string) => void;
   onDeleteProject: (id: string) => void;
   onNavigateToSettings: (id: string) => void;
+  onLinkFolder: (id: string) => void;
+  onChangeFolder: (id: string) => void;
+  onOpenFolder: (folderPath: string) => void;
 }
 
 export default function ProjectsPage({
   projects,
   activeProjectId,
   onProjectSelect,
-  onNewProject,
+  onCreateProjectFromFolder,
+  onNewBlankProject,
   onRenameProject,
   onDeleteProject,
   onNavigateToSettings,
+  onLinkFolder,
+  onChangeFolder,
+  onOpenFolder,
 }: ProjectsPageProps) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
@@ -62,10 +70,16 @@ export default function ProjectsPage({
         <div className={styles.header}>
           <Folder size={20} />
           <h2>Projects</h2>
-          <button className={styles.newButton} onClick={onNewProject}>
-            <Plus size={16} />
-            New Project
-          </button>
+          <div className={styles.newButtons}>
+            <button className={`${styles.newButton} ${styles.primaryButton}`} onClick={onCreateProjectFromFolder}>
+              <FolderOpen size={16} />
+              Project from Folder
+            </button>
+            <button className={`${styles.newButton} ${styles.secondaryButton}`} onClick={onNewBlankProject}>
+              <Plus size={16} />
+              Blank Project
+            </button>
+          </div>
         </div>
 
         <div className={styles.list}>
@@ -98,14 +112,53 @@ export default function ProjectsPage({
                     <span className={styles.cardName}>{project.name}</span>
                     <span className={styles.cardDate}>
                       {new Date(project.createdAt).toLocaleDateString()}
+                      {project.id !== activeProjectId && (
+                        <span className={styles.cardBadge}>
+                          {project.id === "default" ? " · Default" : ""}
+                        </span>
+                      )}
                     </span>
                   </div>
-                  {project.id !== activeProjectId && (
-                    <span className={styles.cardBadge}>
-                      {project.id === "default" ? "Default" : ""}
-                    </span>
-                  )}
                 </button>
+              )}
+
+              {editingId !== project.id && (
+                <div className={styles.cardSubRow}>
+                  {project.folderPath ? (
+                    <>
+                      <button
+                        className={styles.folderLink}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenFolder(project.folderPath!);
+                        }}
+                        title={project.folderPath}
+                      >
+                        <FolderOpen size={12} />
+                        <span className={styles.folderPath}>{project.folderPath}</span>
+                      </button>
+                      <button
+                        className={styles.folderAction}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onChangeFolder(project.id);
+                        }}
+                      >
+                        Change
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      className={styles.folderAction}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onLinkFolder(project.id);
+                      }}
+                    >
+                      Link Folder
+                    </button>
+                  )}
+                </div>
               )}
 
               {project.id !== "default" && (
