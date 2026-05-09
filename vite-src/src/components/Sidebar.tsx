@@ -273,7 +273,10 @@ export default function Sidebar({
           </button>
           <button
             className={`${styles.contextMenuItem} ${styles.contextMenuDelete}`}
-            onClick={() => onDeleteChat?.(contextMenu.chatId)}
+            onClick={() => {
+              onDeleteChat?.(contextMenu.chatId);
+              setContextMenu(null);
+            }}
           >
             <Trash2 size={14} />
             <span>Delete</span>
