@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useRef, useEffect, useCallback, useMemo } from "react";
 import { Send, StopCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -6,6 +6,7 @@ import styles from "../components/ChatPanel.module.css";
 import { ChatMessage as ChatMessageType, LLMStats } from "../types/chat";
 import { ChatSettings } from "../hooks/useChatSettings";
 import { useContextWindow } from "../hooks/useContextWindow";
+import { useChatDraft } from "../hooks/useChatDraft";
 import ModelPicker from "./ModelPicker";
 import ContextRing from "./ContextRing";
 import { getDisplayName } from "../utils/modelUtils";
@@ -20,6 +21,8 @@ interface ChatPanelProps {
   onModelChange: (modelId: string) => void;
   chatName?: string;
   settings: ChatSettings;
+  projectId?: string;
+  chatId?: string;
 }
 
 function formatTokensPerSecond(completionTokens: number, timeMs: number): string {
@@ -126,6 +129,8 @@ export default function ChatPanel({
   onModelChange,
   chatName,
   settings,
+  projectId,
+  chatId,
 }: ChatPanelProps) {
   const { maxTokens } = useContextWindow(activeModel, settings);
 
@@ -138,7 +143,7 @@ export default function ChatPanel({
     const usage = (stats.promptTokens || 0) + (stats.completionTokens || 0);
     return { usageTokens: usage, showRing: true };
   }, [messages]);
-  const [input, setInput] = useState("");
+  const { draft, setDraft, handleBlur } = useChatDraft(projectId, chatId);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -151,20 +156,20 @@ export default function ChatPanel({
       textareaRef.current.style.height = "auto";
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + "px";
     }
-  }, [input]);
+  }, [draft]);
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {
       e.preventDefault();
-      const trimmed = input.trim();
+      const trimmed = draft.trim();
       if (!trimmed || isLoading) return;
       onSend(trimmed, activeModel);
-      setInput("");
+      setDraft("");
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
     },
-    [input, isLoading, onSend, activeModel]
+    [draft, isLoading, onSend, activeModel, setDraft]
   );
 
   const handleKeyDown = useCallback(
@@ -205,9 +210,10 @@ export default function ChatPanel({
           <textarea
             ref={textareaRef}
             className={styles.textarea}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
+            onBlur={handleBlur}
             placeholder="Type a message..."
             rows={1}
           />
@@ -224,7 +230,7 @@ export default function ChatPanel({
             <button
               type="submit"
               className={styles.sendButton}
-              disabled={!input.trim()}
+              disabled={!draft.trim()}
               title="Send message"
             >
               <Send size={18} />

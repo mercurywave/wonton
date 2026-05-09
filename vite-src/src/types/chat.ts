@@ -26,11 +26,13 @@ export interface ChatMessage {
 
 export interface ChatMeta {
   id: string;
+  projectId: string;
   name: string;
   createdAt: number;
   updatedAt: number;
   activeModel?: string;
   logId?: string;
+  draft?: string;
 }
 
 export interface ProjectMeta {

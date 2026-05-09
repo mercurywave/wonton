@@ -1,0 +1,72 @@
+import { useState, useEffect, useCallback, useRef } from "react";
+import { updateChatDraft, listChatMeta } from "./useChatPersistence";
+import { isNeutralinoConnected } from "../utils/neuUtils";
+
+const DRAFT_SAVE_INTERVAL_MS = 5000;
+
+export function useChatDraft(projectId?: string, chatId?: string) {
+  const [draft, setDraft] = useState("");
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevKeyRef = useRef<string>("");
+  const [writeProjectId, setWriteProjectId] = useState<string | undefined>();
+  const [writeChatId, setWriteChatId] = useState<string | undefined>();
+
+  // Load draft when chat changes
+  useEffect(() => {
+    if (!projectId || !chatId) {
+      setDraft("");
+      return;
+    }
+
+    const loadDraft = async () => {
+      if (!isNeutralinoConnected()) {
+        setDraft("");
+        return;
+      }
+
+      const metas = await listChatMeta(projectId);
+      const chatMeta = metas.find((m) => m.id === chatId);
+      setDraft(chatMeta?.draft || "");
+      // Store the project ID from the meta so we always write to the right folder
+      setWriteProjectId(chatMeta?.projectId || projectId);
+      setWriteChatId(chatId);
+    };
+
+    loadDraft();
+  }, [projectId, chatId]);
+
+  // Debounced save to file on interval
+  useEffect(() => {
+    if (!writeProjectId || !writeChatId) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(() => {
+      updateChatDraft(writeProjectId, writeChatId, draft);
+    }, DRAFT_SAVE_INTERVAL_MS);
+
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [draft, writeProjectId, writeChatId]);
+
+  const handleBlur = useCallback(() => {
+    if (writeProjectId && writeChatId) {
+      updateChatDraft(writeProjectId, writeChatId, draft);
+    }
+  }, [writeProjectId, writeChatId, draft]);
+
+  const setDraftAndSave = useCallback((value: string) => {
+    setDraft(value);
+  }, []);
+
+  return {
+    draft,
+    setDraft: setDraftAndSave,
+    handleBlur,
+  };
+}

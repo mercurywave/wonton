@@ -249,6 +249,8 @@ function App() {
             onModelChange={setPerChatModel}
             chatName={activeChat?.name}
             settings={settings}
+            projectId={isNeutralinoConnected() ? activeProjectId : undefined}
+            chatId={activeChatId || undefined}
           />
         )}
         {currentPage === "settings" && (

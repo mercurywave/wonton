@@ -57,6 +57,7 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   const logId = projectId;
   const chatMeta: ChatMeta = {
     id: chatId,
+    projectId: projectId,
     name: "Initial",
     createdAt: Date.now(),
     updatedAt: Date.now(),
@@ -99,6 +100,7 @@ export async function listChatMeta(projectId: string): Promise<ChatMeta[]> {
           const content = await filesystem.readFile(`${chatsDir}/${name}`);
           const meta = JSON.parse(content) as ChatMeta;
           meta.id = chatId;
+          meta.projectId = meta.projectId || projectId;
           metas.push(meta);
         } catch {
           // ignore malformed files
@@ -120,6 +122,7 @@ export async function createChat(
     const logId = generateGuid();
     return {
       id: chatId,
+      projectId,
       name: name || `Chat ${new Date().toLocaleTimeString()}`,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -137,6 +140,7 @@ export async function createChat(
 
   const chatMeta: ChatMeta = {
     id: chatId,
+    projectId,
     name: name || `Chat ${new Date().toLocaleTimeString()}`,
     createdAt: now,
     updatedAt: now,
@@ -256,7 +260,7 @@ export async function appendMessage(
 export async function updateChatMeta(
   projectId: string,
   chatId: string,
-  updates: Partial<Pick<ChatMeta, "name" | "updatedAt" | "activeModel">>
+  updates: Partial<Pick<ChatMeta, "name" | "updatedAt" | "activeModel" | "draft" | "projectId">>
 ): Promise<void> {
   if (!isNeutralinoConnected()) return;
 
@@ -270,6 +274,26 @@ export async function updateChatMeta(
     await filesystem.writeFile(metaPath, JSON.stringify(next, null, 2));
   } catch (err) {
     console.error("updateChatMeta: failed to update chat meta", err);
+  }
+}
+
+export async function updateChatDraft(
+  projectId: string,
+  chatId: string,
+  draft: string
+): Promise<void> {
+  if (!isNeutralinoConnected()) return;
+
+  const projectDir = await getProjectDataDir(projectId);
+  const metaPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.json`;
+
+  try {
+    const content = await filesystem.readFile(metaPath);
+    const meta = JSON.parse(content) as ChatMeta;
+    const next = { ...meta, draft, updatedAt: Date.now() };
+    await filesystem.writeFile(metaPath, JSON.stringify(next, null, 2));
+  } catch (err) {
+    console.error("updateChatDraft: failed to update draft", err);
   }
 }
 
