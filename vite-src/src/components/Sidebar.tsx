@@ -9,6 +9,7 @@ import {
   MoreVertical,
   Pencil,
   Clock,
+  DraftingCompass,
 } from "lucide-react";
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
@@ -18,6 +19,7 @@ interface ChatItem {
   id: string;
   name: string;
   updatedAt: number;
+  draft?: string;
 }
 
 interface SidebarProps {
@@ -206,15 +208,26 @@ export default function Sidebar({
                     <>
                       <MessageSquare size={14} className={styles.chatIcon} />
                       <span className={styles.chatName}>{chat.name}</span>
-                      <button
-                        className={styles.chatMoreBtn}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleContextMenu(e, chat.id);
-                        }}
-                      >
-                        <MoreVertical size={12} />
-                      </button>
+                      {chat.draft ? (
+                        <DraftingCompass 
+                          size={14} 
+                          className={styles.draftIcon} 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleContextMenu(e, chat.id);
+                          }} 
+                        />
+                      ) : (
+                        <button
+                          className={styles.chatMoreBtn}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleContextMenu(e, chat.id);
+                          }}
+                        >
+                          <MoreVertical size={12} />
+                        </button>
+                      )}
                     </>
                   )}
                 </div>

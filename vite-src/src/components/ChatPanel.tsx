@@ -23,6 +23,7 @@ interface ChatPanelProps {
   settings: ChatSettings;
   projectId?: string;
   chatId?: string;
+  setChatDraft?: (chatId: string, draft: string) => Promise<void>;
 }
 
 function formatTokensPerSecond(completionTokens: number, timeMs: number): string {
@@ -131,6 +132,7 @@ export default function ChatPanel({
   settings,
   projectId,
   chatId,
+  setChatDraft,
 }: ChatPanelProps) {
   const { maxTokens } = useContextWindow(activeModel, settings);
 
@@ -143,7 +145,7 @@ export default function ChatPanel({
     const usage = (stats.promptTokens || 0) + (stats.completionTokens || 0);
     return { usageTokens: usage, showRing: true };
   }, [messages]);
-  const { draft, setDraft, handleBlur } = useChatDraft(projectId, chatId);
+  const { draft, setDraft, handleBlur } = useChatDraft(projectId, chatId, setChatDraft);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 

@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { updateChatDraft, listChatMeta } from "./useChatPersistence";
+import { listChatMeta } from "./useChatPersistence";
 import { isNeutralinoConnected } from "../utils/neuUtils";
 
 const DRAFT_SAVE_INTERVAL_MS = 5000;
 
-export function useChatDraft(projectId?: string, chatId?: string) {
+export function useChatDraft(projectId?: string, chatId?: string, setChatDraft?: (chatId: string, draft: string) => Promise<void>) {
   const [draft, setDraft] = useState("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const prevKeyRef = useRef<string>("");
@@ -27,7 +27,6 @@ export function useChatDraft(projectId?: string, chatId?: string) {
       const metas = await listChatMeta(projectId);
       const chatMeta = metas.find((m) => m.id === chatId);
       setDraft(chatMeta?.draft || "");
-      // Store the project ID from the meta so we always write to the right folder
       setWriteProjectId(chatMeta?.projectId || projectId);
       setWriteChatId(chatId);
     };
@@ -37,14 +36,14 @@ export function useChatDraft(projectId?: string, chatId?: string) {
 
   // Debounced save to file on interval
   useEffect(() => {
-    if (!writeProjectId || !writeChatId) return;
+    if (!writeProjectId || !writeChatId || !setChatDraft) return;
 
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current);
     }
 
     saveTimerRef.current = setTimeout(() => {
-      updateChatDraft(writeProjectId, writeChatId, draft);
+      setChatDraft(writeChatId, draft);
     }, DRAFT_SAVE_INTERVAL_MS);
 
     return () => {
@@ -52,13 +51,13 @@ export function useChatDraft(projectId?: string, chatId?: string) {
         clearTimeout(saveTimerRef.current);
       }
     };
-  }, [draft, writeProjectId, writeChatId]);
+  }, [draft, writeProjectId, writeChatId, setChatDraft]);
 
   const handleBlur = useCallback(() => {
-    if (writeProjectId && writeChatId) {
-      updateChatDraft(writeProjectId, writeChatId, draft);
+    if (writeProjectId && writeChatId && setChatDraft) {
+      setChatDraft(writeChatId, draft);
     }
-  }, [writeProjectId, writeChatId, draft]);
+  }, [writeProjectId, writeChatId, draft, setChatDraft]);
 
   const setDraftAndSave = useCallback((value: string) => {
     setDraft(value);

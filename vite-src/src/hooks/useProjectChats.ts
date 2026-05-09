@@ -105,6 +105,20 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
     chatCache.delete(chatId);
   }, [projectId]);
 
+  const setChatDraft = useCallback(async (chatId: string, draft: string) => {
+    if (!projectId) return;
+    await updateChatMetaNative(projectId, chatId, { draft, updatedAt: Date.now() });
+    setChats((prev) =>
+      prev.map((c) => (c.id === chatId ? { ...c, draft, updatedAt: Date.now() } : c))
+    );
+  }, [projectId]);
+
+  const refreshChats = useCallback(async () => {
+    if (!projectId) return;
+    const metas = await listChatMeta(projectId);
+    setChats(metas);
+  }, [projectId]);
+
   const activeChat = chats.find((c) => c.id === activeChatId);
 
   return {
@@ -119,6 +133,8 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
     setActiveChat: setChatActive,
     loadChatMessages,
     clearChatMessages,
+    setChatDraft,
+    refreshChats,
     setProjectMeta,
     loadMeta,
   };

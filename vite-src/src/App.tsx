@@ -45,6 +45,7 @@ function App() {
     renameChat,
     setActiveChat,
     loadChatMessages,
+    setChatDraft,
   } = useProjectChats(
     isNeutralinoConnected() ? activeProjectId : undefined,
     projectsInitialized
@@ -228,7 +229,7 @@ function App() {
         showProjectFeatures={showProjectFeatures}
         projectsLoading={projectsLoading}
         projects={projects}
-        chats={chats.map((c) => ({ id: c.id, name: c.name, updatedAt: c.updatedAt }))}
+        chats={chats.map((c) => ({ id: c.id, name: c.name, updatedAt: c.updatedAt, draft: c.draft }))}
         activeChatId={activeChatId}
         onChatSelect={(chat) => {
           const fullChat = chats.find((c) => c.id === chat.id);
@@ -251,6 +252,7 @@ function App() {
             settings={settings}
             projectId={isNeutralinoConnected() ? activeProjectId : undefined}
             chatId={activeChatId || undefined}
+            setChatDraft={setChatDraft}
           />
         )}
         {currentPage === "settings" && (
