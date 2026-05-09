@@ -1,7 +1,9 @@
-import { Settings as SettingsIcon, Eye, EyeOff, Check } from "lucide-react";
+import { useState } from "react";
+import { Settings as SettingsIcon, Eye, EyeOff, Check, Plus, Trash2 } from "lucide-react";
 import styles from "../components/Settings.module.css";
 import { ChatSettings as ChatSettingsType } from "../hooks/useChatSettings";
-import { ServerModel } from "../types/chat";
+import { ServerModel, Agent } from "../types/chat";
+import { BUILTIN_AGENTS } from "../utils/agents";
 
 interface SettingsProps {
   settings: ChatSettingsType;
@@ -10,6 +12,9 @@ interface SettingsProps {
   modelsLoading: boolean;
   modelsError: string | null;
   onRefetch: () => void;
+  customAgents: Agent[];
+  onAddAgent: (agent: Omit<Agent, "id">) => Promise<void>;
+  onDeleteAgent: (id: string) => Promise<void>;
 }
 
 export default function Settings({
@@ -19,8 +24,14 @@ export default function Settings({
   modelsLoading,
   modelsError,
   onRefetch,
+  customAgents,
+  onAddAgent,
+  onDeleteAgent,
 }: SettingsProps) {
   const allModels = models;
+  const [showAddAgent, setShowAddAgent] = useState(false);
+  const [agentName, setAgentName] = useState("");
+  const [agentPrompt, setAgentPrompt] = useState("");
 
   const handleToggleDefault = (modelId: string) => {
     onUpdate({ defaultModel: modelId });
@@ -56,6 +67,18 @@ export default function Settings({
       delete next[modelId];
     }
     onUpdate({ modelAliases: next });
+  };
+
+  const handleAddAgent = async () => {
+    if (!agentName.trim() || !agentPrompt.trim()) return;
+    await onAddAgent({ name: agentName.trim(), systemPrompt: agentPrompt.trim(), main: true });
+    setAgentName("");
+    setAgentPrompt("");
+    setShowAddAgent(false);
+  };
+
+  const handleDeleteAgent = async (id: string) => {
+    await onDeleteAgent(id);
   };
 
   return (
@@ -227,6 +250,97 @@ export default function Settings({
                   );
                 })}
               </div>
+            )}
+          </div>
+
+          <div className={styles.agentsSection}>
+            <label>Agents</label>
+            <div className={styles.agentsList}>
+              {BUILTIN_AGENTS.map((agent) => (
+                <div key={agent.id} className={`${styles.agentCard} ${styles.agentCardBuiltin}`}>
+                  <div className={styles.agentCardHeader}>
+                    <span className={styles.agentName}>{agent.name}</span>
+                    <span className={styles.builtinBadge}>Built-in</span>
+                  </div>
+                  <div className={styles.agentPromptPreview}>
+                    {agent.systemPrompt.length > 120
+                      ? agent.systemPrompt.slice(0, 120) + "..."
+                      : agent.systemPrompt}
+                  </div>
+                </div>
+              ))}
+              {customAgents.map((agent) => (
+                <div key={agent.id} className={styles.agentCard}>
+                  <div className={styles.agentCardHeader}>
+                    <span className={styles.agentName}>{agent.name}</span>
+                    <button
+                      className={styles.deleteAgentButton}
+                      onClick={() => handleDeleteAgent(agent.id)}
+                      type="button"
+                      title="Delete agent"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                  <div className={styles.agentPromptPreview}>
+                    {agent.systemPrompt.length > 120
+                      ? agent.systemPrompt.slice(0, 120) + "..."
+                      : agent.systemPrompt}
+                  </div>
+                </div>
+              ))}
+            </div>
+            {showAddAgent ? (
+              <div className={styles.addAgentForm}>
+                <div className={styles.addAgentField}>
+                  <input
+                    type="text"
+                    className={styles.input}
+                    value={agentName}
+                    onChange={(e) => setAgentName(e.target.value)}
+                    placeholder="Agent name"
+                  />
+                </div>
+                <div className={styles.addAgentField}>
+                  <textarea
+                    className={styles.textarea}
+                    value={agentPrompt}
+                    onChange={(e) => setAgentPrompt(e.target.value)}
+                    placeholder="System prompt for this agent"
+                    rows={4}
+                  />
+                </div>
+                <div className={styles.addAgentActions}>
+                  <button
+                    className={styles.addAgentButton}
+                    onClick={handleAddAgent}
+                    type="button"
+                    disabled={!agentName.trim() || !agentPrompt.trim()}
+                  >
+                    Add Agent
+                  </button>
+                  <button
+                    className={styles.cancelButton}
+                    onClick={() => {
+                      setShowAddAgent(false);
+                      setAgentName("");
+                      setAgentPrompt("");
+                    }}
+                    type="button"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button
+                className={styles.addAgentToggle}
+                onClick={() => setShowAddAgent(true)}
+                type="button"
+              >
+                <Plus size={14} />
+                <span>Add Agent</span>
+              </button>
             )}
           </div>
         </div>

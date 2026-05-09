@@ -24,6 +24,13 @@ export interface ChatMessage {
   stats?: LLMStats;
 }
 
+export interface Agent {
+  id: string;
+  name: string;
+  systemPrompt: string;
+  main: boolean;
+}
+
 export interface ChatMeta {
   id: string;
   projectId: string;
@@ -31,6 +38,7 @@ export interface ChatMeta {
   createdAt: number;
   updatedAt: number;
   activeModel?: string;
+  activeAgentId?: string;
   logId?: string;
   draft?: string;
 }

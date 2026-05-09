@@ -1,12 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Page, ChatMeta, ChatMessage } from "./types/chat";
+import { Page, ChatMeta, ChatMessage, Agent } from "./types/chat";
 import { useChatSettings } from "./hooks/useChatSettings";
 import { useChatApi } from "./hooks/useChatApi";
+import { updateChatMeta as updateChatMetaNative } from "./hooks/useChatPersistence";
 import { useServerModels } from "./hooks/useServerModels";
 import { useProjects } from "./hooks/useProjects";
 import { isNeutralinoConnected } from "./utils/neuUtils";
 import { useProjectChats } from "./hooks/useProjectChats";
-import { filesystem, os } from "@neutralinojs/lib";
+import { useAgents, getAllAgents, loadAgentsFile } from "./hooks/useAgents";
+import { os } from "@neutralinojs/lib";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
 import Settings from "./components/Settings";
@@ -24,10 +26,12 @@ function App() {
     settings.apiKey
   );
   const { projects, isLoading: projectsLoading, initialized: projectsInitialized, getProjectById, createProject, createProjectFromFolder, updateProjectFolder, updateProject, deleteProject } = useProjects();
+  const [customAgents, addAgent, deleteAgent] = useAgents();
   const [currentPage, setCurrentPage] = useState<Page>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT);
   const [perChatModel, setPerChatModel] = useState<string | null>(null);
+  const [perChatAgent, setPerChatAgent] = useState<string | null>(null);
   const [activeProjectId, setActiveProjectId] = useState<string>(() => {
     return projects.find((p) => p.id === "default")?.id ?? "default";
   });
@@ -35,6 +39,7 @@ function App() {
   const [historyMessages, setHistoryMessages] = useState<Record<string, ChatMessage[]>>({});
   const [isLoadingHistoryMessages, setIsLoadingHistoryMessages] = useState(false);
   const historyLoadedRef = useRef(false);
+  const [allAgents, setAllAgents] = useState<Agent[]>([]);
   const {
     chats,
     activeChatId,
@@ -50,11 +55,20 @@ function App() {
     isNeutralinoConnected() ? activeProjectId : undefined,
     projectsInitialized
   );
+
+  const activeAgentId = perChatAgent || "builtin:default";
+
+  const activeAgent = useMemo(
+    () => allAgents.find((a) => a.id === activeAgentId),
+    [allAgents, activeAgentId]
+  );
+
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     settings,
     isNeutralinoConnected() ? activeProjectId : undefined,
     activeChatId || undefined,
     projectMeta || undefined,
+    activeAgent?.systemPrompt,
     renameChat
   );
 
@@ -66,6 +80,12 @@ function App() {
       }
     }
   }, [projects]);
+
+  useEffect(() => {
+    loadAgentsFile().then((custom) => {
+      setAllAgents(getAllAgents(custom));
+    });
+  }, []);
 
   useEffect(() => {
     const handleResize = () => {
@@ -114,10 +134,18 @@ function App() {
     }
   }, [createChat, isMobile]);
 
+  const handleAgentChange = useCallback(async (agentId: string) => {
+    setPerChatAgent(agentId);
+    if (activeChatId && isNeutralinoConnected()) {
+      await updateChatMetaNative(activeProjectId, activeChatId, { activeAgentId: agentId });
+    }
+  }, [activeChatId, activeProjectId]);
+
   const handleChatSelect = useCallback((chat: ChatMeta) => {
     setActiveChat(chat.id);
     setCurrentPage("chat");
     setPerChatModel(chat.activeModel || null);
+    setPerChatAgent(chat.activeAgentId || null);
     if (isMobile) {
       setSidebarOpen(false);
     }
@@ -240,20 +268,23 @@ function App() {
       />
       <div className={`main ${isMobile ? "" : sidebarOpen ? "expanded" : ""}`}>
         {currentPage === "chat" && (
-          <ChatPanel
-            messages={messages}
-            isLoading={isLoading}
-            onSend={sendMessage}
-            onStop={stopGeneration}
-            models={visibleModels}
-            activeModel={activeModel}
-            onModelChange={setPerChatModel}
-            chatName={activeChat?.name}
-            settings={settings}
-            projectId={isNeutralinoConnected() ? activeProjectId : undefined}
-            chatId={activeChatId || undefined}
-            setChatDraft={setChatDraft}
-          />
+<ChatPanel
+              messages={messages}
+              isLoading={isLoading}
+              onSend={sendMessage}
+              onStop={stopGeneration}
+              models={visibleModels}
+              activeModel={activeModel}
+              onModelChange={setPerChatModel}
+              agents={allAgents}
+              activeAgentId={activeAgentId}
+              onAgentChange={handleAgentChange}
+              chatName={activeChat?.name}
+              settings={settings}
+              projectId={isNeutralinoConnected() ? activeProjectId : undefined}
+              chatId={activeChatId || undefined}
+              setChatDraft={setChatDraft}
+            />
         )}
         {currentPage === "settings" && (
           <Settings
@@ -263,6 +294,9 @@ function App() {
             modelsLoading={modelsLoading}
             modelsError={modelsError}
             onRefetch={refetchModels}
+            customAgents={customAgents}
+            onAddAgent={addAgent}
+            onDeleteAgent={deleteAgent}
           />
         )}
         {currentPage === "projects" && !projectSettingsId && (

@@ -69,6 +69,7 @@ export function useChatApi(
   projectId?: string,
   chatId?: string,
   projectMeta?: ProjectMeta,
+  agentSystemPrompt?: string,
   onTitleGenerated?: (chatId: string, name: string) => void
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -147,7 +148,7 @@ export function useChatApi(
 
         const allMessages: Array<{ role: string; content: string }> = [];
 
-        const systemPrompt = projectMeta?.systemPrompt || settings.systemPrompt;
+        const systemPrompt = agentSystemPrompt || projectMeta?.systemPrompt || settings.systemPrompt;
         if (systemPrompt) {
           allMessages.push({ role: "system", content: systemPrompt });
         }

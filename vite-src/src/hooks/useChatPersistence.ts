@@ -260,7 +260,7 @@ export async function appendMessage(
 export async function updateChatMeta(
   projectId: string,
   chatId: string,
-  updates: Partial<Pick<ChatMeta, "name" | "updatedAt" | "activeModel" | "draft" | "projectId">>
+  updates: Partial<Pick<ChatMeta, "name" | "updatedAt" | "activeModel" | "activeAgentId" | "draft" | "projectId">>
 ): Promise<void> {
   if (!isNeutralinoConnected()) return;
 

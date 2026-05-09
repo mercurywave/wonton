@@ -3,11 +3,12 @@ import { Send, StopCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
-import { ChatMessage as ChatMessageType, LLMStats } from "../types/chat";
+import { ChatMessage as ChatMessageType, Agent, LLMStats, ServerModel } from "../types/chat";
 import { ChatSettings } from "../hooks/useChatSettings";
 import { useContextWindow } from "../hooks/useContextWindow";
 import { useChatDraft } from "../hooks/useChatDraft";
 import ModelPicker from "./ModelPicker";
+import AgentPicker from "./AgentPicker";
 import ContextRing from "./ContextRing";
 import { getDisplayName } from "../utils/modelUtils";
 
@@ -16,9 +17,12 @@ interface ChatPanelProps {
   isLoading: boolean;
   onSend: (content: string, modelId: string) => void;
   onStop: () => void;
-  models: Array<{ id: string }>;
+  models: ServerModel[];
   activeModel: string;
   onModelChange: (modelId: string) => void;
+  agents: Agent[];
+  activeAgentId: string;
+  onAgentChange: (agentId: string) => void;
   chatName?: string;
   settings: ChatSettings;
   projectId?: string;
@@ -128,6 +132,9 @@ export default function ChatPanel({
   models,
   activeModel,
   onModelChange,
+  agents,
+  activeAgentId,
+  onAgentChange,
   chatName,
   settings,
   projectId,
@@ -241,14 +248,21 @@ export default function ChatPanel({
         </div>
       </form>
 
-      <div className={styles.footer}>
+     <div className={styles.footer}>
         <div className={styles.footerContainer}>
-        <ModelPicker
-             models={models}
-             activeModel={activeModel}
-             onModelChange={onModelChange}
-             modelAliases={settings.modelAliases}
-           />
+          <div className={styles.footerSelectors}>
+            <ModelPicker
+              models={models}
+              activeModel={activeModel}
+              onModelChange={onModelChange}
+              modelAliases={settings.modelAliases}
+            />
+            <AgentPicker
+              agents={agents}
+              activeAgentId={activeAgentId}
+              onAgentChange={onAgentChange}
+            />
+          </div>
           {showRing && (
             <ContextRing
               usageTokens={usageTokens}
