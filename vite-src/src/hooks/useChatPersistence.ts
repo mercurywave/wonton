@@ -27,18 +27,6 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
     }
   }
 
-  const projPath = `${projectDir}/${PROJ_FILE_NAME}`;
-  try {
-    await filesystem.readFile(projPath);
-  } catch {
-    const meta: ProjectMeta = {};
-    try {
-      await filesystem.writeFile(projPath, JSON.stringify(meta, null, 2));
-    } catch (err) {
-      console.error("ensureChatFolder: failed to write proj.json", err);
-    }
-  }
-
   const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
   try {
     await filesystem.createDirectory(chatsDir);
@@ -57,8 +45,16 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
     }
   }
 
-  const chatId = generateGuid();
-  const logId = generateGuid();
+  const projPath = `${projectDir}/${PROJ_FILE_NAME}`;
+  try {
+    await filesystem.readFile(projPath);
+    return;
+  } catch { }
+
+  // I seemingly can't avoid race conditions that lead to double files
+  // so write the first chat using the project ID to avoid a double entry
+  const chatId = projectId;
+  const logId = projectId;
   const chatMeta: ChatMeta = {
     id: chatId,
     name: "Initial",
@@ -78,13 +74,11 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
     return;
   }
 
+  const meta: ProjectMeta = { activeChatId: chatId };
   try {
-    const content = await filesystem.readFile(projPath);
-    const existingMeta: ProjectMeta = JSON.parse(content);
-    existingMeta.activeChatId = chatId;
-    await filesystem.writeFile(projPath, JSON.stringify(existingMeta, null, 2));
+    await filesystem.writeFile(projPath, JSON.stringify(meta, null, 2));
   } catch (err) {
-    console.error("ensureChatFolder: failed to set activeChatId", err);
+    console.error("ensureChatFolder: failed to write proj.json", err);
   }
 }
 
