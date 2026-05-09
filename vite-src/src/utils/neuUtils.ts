@@ -3,6 +3,7 @@ import { computer, os } from "@neutralinojs/lib";
 export const DATA_DIR_NAME = "wonton";
 export const PROJ_FILE_NAME = "proj.json";
 export const CHATS_DIR_NAME = "chats";
+export const MSGS_DIR_NAME = "msgs";
 export const PROJECTS_FILE_NAME = "projects.json";
 export const DEFAULT_PROJECT_ID = "default";
 

@@ -23,7 +23,7 @@ function App() {
     settings.serverUrl,
     settings.apiKey
   );
-  const { projects, isLoading: projectsLoading, getProjectById, createProject, createProjectFromFolder, updateProjectFolder, updateProject, deleteProject } = useProjects();
+  const { projects, isLoading: projectsLoading, initialized: projectsInitialized, getProjectById, createProject, createProjectFromFolder, updateProjectFolder, updateProject, deleteProject } = useProjects();
   const [currentPage, setCurrentPage] = useState<Page>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT);
@@ -46,7 +46,8 @@ function App() {
     setActiveChat,
     loadChatMessages,
   } = useProjectChats(
-    isNeutralinoConnected() ? activeProjectId : undefined
+    isNeutralinoConnected() ? activeProjectId : undefined,
+    projectsInitialized
   );
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     settings,

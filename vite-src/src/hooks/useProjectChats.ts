@@ -13,7 +13,7 @@ import {
 
 const chatCache = new Map<string, ChatMessage[]>();
 
-export function useProjectChats(projectId: string | undefined) {
+export function useProjectChats(projectId: string | undefined, projectsInitialized?: boolean) {
   const [chats, setChats] = useState<ChatMeta[]>([]);
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [projectMeta, setProjectMeta] = useState<ProjectMeta | null>(null);
@@ -45,11 +45,11 @@ export function useProjectChats(projectId: string | undefined) {
       skipMetaRef.current = false;
       return;
     }
-    if (projectId) {
+    if (projectId && projectsInitialized !== false) {
       loadMeta();
       loadChats();
     }
-  }, [projectId, loadMeta, loadChats]);
+  }, [projectId, projectsInitialized, loadMeta, loadChats]);
 
   const createChat = useCallback(async () => {
     if (!projectId) return;

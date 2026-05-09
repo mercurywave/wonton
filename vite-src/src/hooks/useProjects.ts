@@ -40,13 +40,6 @@ export function useProjects() {
     let dataDirPath: string;
     try {
       dataDirPath = await getProjectDataDir("");
-      const wontonDir = dataDirPath;
-      try {
-        await filesystem.readDirectory(wontonDir);
-      } catch (err) {
-        console.error("useProjects: failed to read directory", err);
-        await filesystem.createDirectory(wontonDir);
-      }
     } catch (err) {
       console.error("useProjects: failed to get data dir path", err);
       setProjects([createDefaultProject()]);
@@ -55,7 +48,28 @@ export function useProjects() {
       return;
     }
 
-    const filePath = `${dataDirPath}/${PROJECTS_FILE_NAME}`;
+    const wontonDir = dataDirPath;
+    try {
+      await filesystem.createDirectory(wontonDir);
+    } catch (err: any) {
+      if (err.code !== "NE_FS_DIRCRER") {
+        console.error("useProjects: failed to create directory", err);
+      }
+    }
+
+    // Ensure the default project's folder structure exists before loading
+    if (isNeutralinoConnected()) {
+      try {
+        const projMeta = await loadProjectMeta(DEFAULT_PROJECT_ID);
+        if (!projMeta.activeChatId) {
+          await ensureChatFolderNative(DEFAULT_PROJECT_ID);
+        }
+      } catch (err) {
+        console.error("useProjects: failed to ensure default project folder", err);
+      }
+    }
+
+    const filePath = `${wontonDir}/${PROJECTS_FILE_NAME}`;
 
     try {
       const content = await filesystem.readFile(filePath);
@@ -77,22 +91,9 @@ export function useProjects() {
       const defaultProject = createDefaultProject();
       setProjects([defaultProject]);
       try {
-        const filePath2 = `${dataDirPath}/${PROJECTS_FILE_NAME}`;
-        await filesystem.writeFile(filePath2, JSON.stringify([defaultProject], null, 2));
+        await filesystem.writeFile(filePath, JSON.stringify([defaultProject], null, 2));
       } catch (err2) {
         console.error("useProjects: failed to write default projects file", err2);
-      }
-    }
-
-    // Ensure the default project's folder structure exists
-    if (isNeutralinoConnected()) {
-      try {
-        const projMeta = await loadProjectMeta(DEFAULT_PROJECT_ID);
-        if (!projMeta.activeChatId) {
-          await ensureChatFolderNative(DEFAULT_PROJECT_ID);
-        }
-      } catch (err) {
-        console.error("useProjects: failed to ensure default project folder", err);
       }
     }
 

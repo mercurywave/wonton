@@ -30,6 +30,7 @@ export interface ChatMeta {
   createdAt: number;
   updatedAt: number;
   activeModel?: string;
+  logId?: string;
 }
 
 export interface ProjectMeta {

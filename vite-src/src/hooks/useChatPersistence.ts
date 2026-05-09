@@ -3,6 +3,7 @@ import { ChatMessage } from "../types/chat";
 import {
   PROJ_FILE_NAME,
   CHATS_DIR_NAME,
+  MSGS_DIR_NAME,
   isNeutralinoConnected,
   getProjectDataDir,
   generateGuid,
@@ -47,12 +48,23 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
     }
   }
 
+  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
+  try {
+    await filesystem.createDirectory(msgsDir);
+  } catch (err: any) {
+    if (err.code !== "NE_FS_DIRCRER") {
+      console.error("ensureChatFolder: failed to create msgs dir", err);
+    }
+  }
+
   const chatId = generateGuid();
+  const logId = generateGuid();
   const chatMeta: ChatMeta = {
     id: chatId,
     name: "Initial",
     createdAt: Date.now(),
     updatedAt: Date.now(),
+    logId: logId,
   };
 
   try {
@@ -60,7 +72,7 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
       `${chatsDir}/${chatId}.json`,
       JSON.stringify(chatMeta, null, 2)
     );
-    await filesystem.writeFile(`${chatsDir}/${chatId}.jsonl`, "");
+    await filesystem.writeFile(`${msgsDir}/${logId}.jsonl`, "");
   } catch (err) {
     console.error("ensureChatFolder: failed to create initial chat", err);
     return;
@@ -111,18 +123,22 @@ export async function createChat(
 ): Promise<ChatMeta> {
   if (!isNeutralinoConnected()) {
     const chatId = generateGuid();
+    const logId = generateGuid();
     return {
       id: chatId,
       name: name || `Chat ${new Date().toLocaleTimeString()}`,
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      logId: logId,
     };
   }
 
   const projectDir = await getProjectDataDir(projectId);
   const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
+  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
 
   const chatId = generateGuid();
+  const logId = generateGuid();
   const now = Date.now();
 
   const chatMeta: ChatMeta = {
@@ -130,6 +146,7 @@ export async function createChat(
     name: name || `Chat ${new Date().toLocaleTimeString()}`,
     createdAt: now,
     updatedAt: now,
+    logId: logId,
   };
 
   try {
@@ -137,7 +154,7 @@ export async function createChat(
       `${chatsDir}/${chatId}.json`,
       JSON.stringify(chatMeta, null, 2)
     );
-    await filesystem.writeFile(`${chatsDir}/${chatId}.jsonl`, "");
+    await filesystem.writeFile(`${msgsDir}/${logId}.jsonl`, "");
   } catch (err) {
     console.error("createChat: failed to write chat files", err);
   }
@@ -160,17 +177,17 @@ export async function deleteChat(projectId: string, chatId: string): Promise<voi
 
   const projectDir = await getProjectDataDir(projectId);
   const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
+  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
 
   try {
+    const content = await filesystem.readFile(`${chatsDir}/${chatId}.json`);
+    const meta = JSON.parse(content) as ChatMeta;
     await filesystem.remove(`${chatsDir}/${chatId}.json`);
+    if (meta.logId) {
+      await filesystem.remove(`${msgsDir}/${meta.logId}.jsonl`);
+    }
   } catch (err) {
-    console.error("deleteChat: failed to remove meta file", err);
-  }
-
-  try {
-    await filesystem.remove(`${chatsDir}/${chatId}.jsonl`);
-  } catch (err) {
-    console.error("deleteChat: failed to remove jsonl file", err);
+    console.error("deleteChat: failed to remove chat files", err);
   }
 }
 
@@ -178,9 +195,15 @@ export async function loadMessages(projectId: string, chatId: string): Promise<C
   if (!isNeutralinoConnected()) return [];
 
   const projectDir = await getProjectDataDir(projectId);
-  const jsonlPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.jsonl`;
+  const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
+  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
 
   try {
+    const metaContent = await filesystem.readFile(`${chatsDir}/${chatId}.json`);
+    const meta = JSON.parse(metaContent) as ChatMeta;
+    const logId = meta.logId || chatId;
+    const jsonlPath = `${msgsDir}/${logId}.jsonl`;
+
     const content = await filesystem.readFile(jsonlPath);
     if (!content.trim()) return [];
 
@@ -211,9 +234,14 @@ export async function appendMessage(
   if (!isNeutralinoConnected()) return;
 
   const projectDir = await getProjectDataDir(projectId);
-  const jsonlPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.jsonl`;
+  const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
+  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
 
   try {
+    const metaContent = await filesystem.readFile(`${chatsDir}/${chatId}.json`);
+    const meta = JSON.parse(metaContent) as ChatMeta;
+    const logId = meta.logId || chatId;
+    const jsonlPath = `${msgsDir}/${logId}.jsonl`;
     const line = JSON.stringify(message) + "\n";
     await filesystem.appendFile(jsonlPath, line);
   } catch (err) {
@@ -255,9 +283,14 @@ export async function clearChat(projectId: string, chatId: string): Promise<void
   if (!isNeutralinoConnected()) return;
 
   const projectDir = await getProjectDataDir(projectId);
-  const jsonlPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.jsonl`;
+  const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
+  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
 
   try {
+    const metaContent = await filesystem.readFile(`${chatsDir}/${chatId}.json`);
+    const meta = JSON.parse(metaContent) as ChatMeta;
+    const logId = meta.logId || chatId;
+    const jsonlPath = `${msgsDir}/${logId}.jsonl`;
     await filesystem.writeFile(jsonlPath, "");
   } catch (err) {
     console.error("clearChat: failed to truncate jsonl", err);
@@ -288,6 +321,12 @@ export async function deleteProjectFolder(projectId: string): Promise<void> {
       await filesystem.remove(`${chatsDir}/${entry.entry}`);
     }
     await filesystem.remove(chatsDir);
+    const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
+    const msgEntries = await filesystem.readDirectory(msgsDir);
+    for (const entry of msgEntries) {
+      await filesystem.remove(`${msgsDir}/${entry.entry}`);
+    }
+    await filesystem.remove(msgsDir);
   } catch (err) {
     console.error("deleteProjectFolder: failed to remove project folder", err);
   }
