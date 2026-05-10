@@ -113,7 +113,7 @@ interface ApiMessagesResult {
   messages: Array<{
     role: string;
     content?: string;
-    tool_calls?: { id: string; function: { name: string; arguments: string } }[];
+    tool_calls?: { type: string; id: string; function: { name: string; arguments: string } }[];
     tool_call_id?: string;
   }>;
   tools?: ToolDefinition[];
@@ -127,7 +127,7 @@ function buildApiMessages(
   const allMessages: Array<{
     role: string;
     content?: string;
-    tool_calls?: { id: string; function: { name: string; arguments: string } }[];
+    tool_calls?: { type: string; id: string; function: { name: string; arguments: string } }[];
     tool_call_id?: string;
   }> = [];
 
@@ -139,7 +139,7 @@ function buildApiMessages(
     const apiMsg: {
       role: string;
       content?: string;
-      tool_calls?: { id: string; function: { name: string; arguments: string } }[];
+      tool_calls?: { type: string; id: string; function: { name: string; arguments: string } }[];
       tool_call_id?: string;
     } = { role: msg.role };
 
@@ -152,6 +152,7 @@ function buildApiMessages(
 
     if (msg.toolCalls && msg.toolCalls.length > 0) {
       apiMsg.tool_calls = msg.toolCalls.map((tc) => ({
+        type: "function",
         id: tc.id,
         function: { name: tc.name, arguments: tc.arguments },
       }));
@@ -172,7 +173,7 @@ interface ApiRequestBody {
   messages: Array<{
     role: string;
     content?: string;
-    tool_calls?: { id: string; function: { name: string; arguments: string } }[];
+    tool_calls?: { type: string; id: string; function: { name: string; arguments: string } }[];
     tool_call_id?: string;
   }>;
   stream: boolean;
