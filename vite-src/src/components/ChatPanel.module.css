@@ -425,3 +425,88 @@
     max-width: 90%;
   }
 }
+
+.toolCallContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 4px;
+  max-width: 70%;
+}
+
+.message.user .toolCallContainer {
+  margin-left: auto;
+}
+
+.message.assistant .toolCallContainer {
+  margin-right: auto;
+}
+
+.toolCallSection {
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  overflow: hidden;
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.toolCallHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(74, 108, 247, 0.05);
+  border: none;
+  border-bottom: 1px solid #2a2a4a;
+  color: #e0e0e0;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  text-align: left;
+}
+
+.toolCallHeader:hover {
+  background: rgba(74, 108, 247, 0.1);
+}
+
+.toolCallIcon {
+  font-size: 12px;
+}
+
+.toolCallName {
+  flex: 1;
+  font-weight: 500;
+  color: #4a6cf7;
+}
+
+.toolCallArrow {
+  font-size: 8px;
+  color: #888;
+}
+
+.toolCallBody {
+  padding: 10px 12px;
+}
+
+.toolCallSectionLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.toolCallArgs {
+  margin: 0;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #1a1a2e;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  color: #ccc;
+  overflow-x: auto;
+  line-height: 1.5;
+}

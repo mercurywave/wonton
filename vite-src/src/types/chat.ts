@@ -16,12 +16,35 @@ export interface LLMStats {
   predictedPerSecond?: number;
 }
 
+export interface ToolCall {
+  id: string;
+  name: string;
+  arguments: string;
+}
+
+export interface ToolResult {
+  callId: string;
+  content: string;
+  isError?: boolean;
+}
+
 export interface ChatMessage {
   id: string;
-  role: "user" | "assistant" | "system";
+  role: "user" | "assistant" | "system" | "tool";
   content: string;
   timestamp: number;
   stats?: LLMStats;
+  toolCalls?: ToolCall[];
+  toolCallId?: string;
+}
+
+export interface ToolDefinition {
+  type: "function";
+  function: {
+    name: string;
+    description: string;
+    parameters: object;
+  };
 }
 
 export interface Agent {

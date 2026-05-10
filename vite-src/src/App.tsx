@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Page, ChatMeta, ChatMessage, Agent } from "./types/chat";
+import { Page, ChatMeta, ChatMessage, Agent, ToolDefinition } from "./types/chat";
 import { useChatSettings } from "./hooks/useChatSettings";
 import { useChatApi } from "./hooks/useChatApi";
 import { updateChatMeta as updateChatMetaNative } from "./hooks/useChatPersistence";
 import { useServerModels } from "./hooks/useServerModels";
 import { useProjects } from "./hooks/useProjects";
 import { isNeutralinoConnected } from "./utils/neuUtils";
+import { getAvailableTools } from "./utils/tools";
 import { useProjectChats } from "./hooks/useProjectChats";
 import { useAgents, getAllAgents, loadAgentsFile } from "./hooks/useAgents";
 import { os } from "@neutralinojs/lib";
@@ -64,13 +65,25 @@ function App() {
     [allAgents, activeAgentId]
   );
 
+  const activeProject = useMemo(
+    () => projects.find((p) => p.id === activeProjectId),
+    [projects, activeProjectId]
+  );
+
+  const availableTools: ToolDefinition[] = useMemo(
+    () => getAvailableTools(activeProject?.folderPath),
+    [activeProject?.folderPath]
+  );
+
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     settings,
     isNeutralinoConnected() ? activeProjectId : undefined,
     activeChatId || undefined,
     projectMeta || undefined,
     activeAgent?.systemPrompt,
-    renameChat
+    renameChat,
+    availableTools,
+    activeProject?.folderPath
   );
 
   useEffect(() => {
@@ -296,7 +309,7 @@ function App() {
       />
       <div className={`main ${isMobile ? "" : sidebarOpen ? "expanded" : ""}`}>
         {currentPage === "chat" && (
-<ChatPanel
+           <ChatPanel
               messages={messages}
               isLoading={isLoading}
               onSend={sendMessage}
@@ -312,6 +325,7 @@ function App() {
               projectId={isNeutralinoConnected() ? activeProjectId : undefined}
               chatId={activeChatId || undefined}
               setChatDraft={setChatDraft}
+              tools={availableTools}
             />
         )}
         {currentPage === "settings" && (

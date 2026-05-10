@@ -1,15 +1,16 @@
-import { useRef, useEffect, useCallback, useMemo } from "react";
+import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import { Send, StopCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
-import { ChatMessage as ChatMessageType, Agent, LLMStats, ServerModel } from "../types/chat";
+import { ChatMessage as ChatMessageType, Agent, LLMStats, ServerModel, ToolCall, ToolDefinition } from "../types/chat";
 import { ChatSettings } from "../hooks/useChatSettings";
 import { useContextWindow } from "../hooks/useContextWindow";
 import { useChatDraft } from "../hooks/useChatDraft";
 import ModelPicker from "./ModelPicker";
 import AgentPicker from "./AgentPicker";
 import ContextRing from "./ContextRing";
+import ToolPicker from "./ToolPicker";
 import { getDisplayName } from "../utils/modelUtils";
 
 interface ChatPanelProps {
@@ -28,6 +29,7 @@ interface ChatPanelProps {
   projectId?: string;
   chatId?: string;
   setChatDraft?: (chatId: string, draft: string) => Promise<void>;
+  tools?: ToolDefinition[];
 }
 
 function formatTokensPerSecond(completionTokens: number, timeMs: number): string {
@@ -106,9 +108,42 @@ function MessageStats({ stats, modelAliases }: { stats: LLMStats; modelAliases: 
   );
 }
 
+function ToolCallSection({ toolCall }: { toolCall: ToolCall }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [parsedArgs] = useState<object | null>(() => {
+    try {
+      return JSON.parse(toolCall.arguments);
+    } catch {
+      return { raw: toolCall.arguments };
+    }
+  });
+
+  return (
+    <div className={styles.toolCallSection}>
+      <button
+        className={styles.toolCallHeader}
+        onClick={() => setIsExpanded((prev) => !prev)}
+      >
+        <span className={styles.toolCallIcon}>⚡</span>
+        <span className={styles.toolCallName}>{toolCall.name}</span>
+        <span className={styles.toolCallArrow}>{isExpanded ? "▲" : "▼"}</span>
+      </button>
+      {isExpanded && (
+        <div className={styles.toolCallBody}>
+          <div className={styles.toolCallSectionLabel}>Arguments</div>
+          <pre className={styles.toolCallArgs}>
+            {JSON.stringify(parsedArgs, null, 2)}
+          </pre>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function MessageBubble({ message, modelAliases }: { message: ChatMessageType; modelAliases: Record<string, string> }) {
   const isUser = message.role === "user";
   const hasStats = message.role !== "user" && message.stats;
+  const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
 
   return (
     <div className={`${styles.message} ${isUser ? styles.user : styles.assistant}`}>
@@ -119,6 +154,13 @@ function MessageBubble({ message, modelAliases }: { message: ChatMessageType; mo
           </div>
           {hasStats && <MessageStats stats={message.stats!} modelAliases={modelAliases} />}
         </div>
+        {hasToolCalls && (
+          <div className={styles.toolCallContainer}>
+            {message.toolCalls!.map((tc) => (
+              <ToolCallSection key={tc.id} toolCall={tc} />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -140,6 +182,7 @@ export default function ChatPanel({
   projectId,
   chatId,
   setChatDraft,
+  tools,
 }: ChatPanelProps) {
   const { maxTokens } = useContextWindow(activeModel, settings);
 
@@ -248,7 +291,7 @@ export default function ChatPanel({
         </div>
       </form>
 
-     <div className={styles.footer}>
+      <div className={styles.footer}>
         <div className={styles.footerContainer}>
           <div className={styles.footerSelectors}>
             <ModelPicker
@@ -263,6 +306,7 @@ export default function ChatPanel({
               onAgentChange={onAgentChange}
             />
           </div>
+          <ToolPicker tools={tools || []} />
           {showRing && (
             <ContextRing
               usageTokens={usageTokens}

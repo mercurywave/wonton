@@ -1,0 +1,111 @@
+.container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.trigger {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.trigger:hover {
+  color: #4a6cf7;
+  background: rgba(74, 108, 247, 0.15);
+}
+
+.trigger.active {
+  color: #4a6cf7;
+  background: rgba(74, 108, 247, 0.2);
+}
+
+.popup {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  right: 0;
+  background: #1e1e3a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 0;
+  min-width: 320px;
+  max-width: 400px;
+  z-index: 200;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.15s ease;
+}
+
+.popupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid #2a2a4a;
+  font-size: 12px;
+  font-weight: 600;
+  color: #aaa;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0 4px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.closeBtn:hover {
+  color: #e0e0e0;
+}
+
+.toolList {
+  padding: 8px;
+}
+
+.toolItem {
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: default;
+  transition: background 0.1s ease;
+}
+
+.toolItem:hover {
+  background: rgba(74, 108, 247, 0.08);
+}
+
+.toolName {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #e0e0e0;
+  margin-bottom: 2px;
+}
+
+.toolDescription {
+  display: block;
+  font-size: 11px;
+  color: #888;
+  line-height: 1.4;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

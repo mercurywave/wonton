@@ -1,12 +1,34 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { ChatMessage, LLMStats, ProjectMeta } from "../types/chat";
+import { ChatMessage, LLMStats, ProjectMeta, ToolCall, ToolDefinition } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
 import { appendMessage, loadMessages, updateChatMeta } from "./useChatPersistence";
+import { executeToolCall } from "../utils/tools";
 
-function parseSSEChunk(chunk: string): { text: string; stats: LLMStats | null } {
-  const lines = chunk.split("\n");
+interface SSEDelta {
+  content?: string;
+  tool_calls?: Array<{
+    index?: number;
+    id?: string;
+    function?: { name?: string; arguments?: string };
+  }>;
+}
+
+interface ChatMessageWithToolCalls extends Omit<ChatMessage, "toolCalls"> {
+  toolCalls?: ToolCall[];
+}
+
+interface SSEChunkResult {
+  text: string;
+  stats: LLMStats | null;
+  toolCalls: Array<{ index: number; id: string; name: string; args: string }>;
+}
+
+function parseSSEChunk(chunk: string): SSEChunkResult {
   let text = "";
   let stats: LLMStats | null = null;
+  const toolCallsMap = new Map<number, { id: string; name: string; args: string }>();
+
+  const lines = chunk.split("\n");
   for (const line of lines) {
     const trimmed = line.trim();
     if (trimmed.startsWith("data: ")) {
@@ -14,11 +36,12 @@ function parseSSEChunk(chunk: string): { text: string; stats: LLMStats | null } 
       if (data === "[DONE]") continue;
       try {
         const parsed = JSON.parse(data);
-        const content = parsed.choices?.[0]?.delta?.content;
-        if (content) {
-          text += content;
+        const delta: SSEDelta = parsed.choices?.[0]?.delta || {};
+
+        if (delta.content) {
+          text += delta.content;
         }
-        // OpenAI-style usage
+
         const usageData = parsed.usage;
         if (usageData) {
           stats = {
@@ -29,7 +52,7 @@ function parseSSEChunk(chunk: string): { text: string; stats: LLMStats | null } 
             timeMs: 0,
           };
         }
-        // llamacpp-style timings (may appear alongside or instead of usage)
+
         const timings = parsed.timings;
         if (timings) {
           const llamacppStats: LLMStats = {
@@ -48,20 +71,164 @@ function parseSSEChunk(chunk: string): { text: string; stats: LLMStats | null } 
             predictedPerTokenMs: timings.predicted_per_token_ms,
             predictedPerSecond: timings.predicted_per_second,
           };
-          // Merge: if we already have usage data, overlay timings on top;
-          // otherwise use the timings-derived stats directly.
           if (stats) {
             stats = { ...stats, ...llamacppStats };
           } else {
             stats = llamacppStats;
           }
         }
-      } catch {
-        // ignore malformed JSON chunks
+
+        const deltas = delta.tool_calls;
+        if (deltas && Array.isArray(deltas)) {
+          for (const deltaItem of deltas) {
+            const idx = deltaItem.index || 0;
+            if (!toolCallsMap.has(idx)) {
+              toolCallsMap.set(idx, { id: "", name: "", args: "" });
+            }
+            const existing = toolCallsMap.get(idx)!;
+            if (deltaItem.id) existing.id = deltaItem.id;
+            if (deltaItem.function?.name) existing.name = deltaItem.function.name;
+            if (deltaItem.function?.arguments) existing.args += deltaItem.function.arguments;
+          }
+        }
+      } catch (e) {
+        console.error("unexpected json response", e);
       }
     }
   }
-  return { text, stats };
+
+  const toolCalls = Array.from(toolCallsMap.entries())
+    .map(([index, call]) => ({ index, ...call }));
+
+  return { text, stats, toolCalls };
+}
+
+function mergeStats(existing: LLMStats | null, incoming: LLMStats | null): LLMStats | null {
+  if (!existing) return incoming;
+  if (!incoming) return existing;
+  return { ...existing, ...incoming };
+}
+
+interface ApiMessagesResult {
+  messages: Array<{
+    role: string;
+    content?: string;
+    tool_calls?: { id: string; function: { name: string; arguments: string } }[];
+    tool_call_id?: string;
+  }>;
+  tools?: ToolDefinition[];
+}
+
+function buildApiMessages(
+  messages: ChatMessage[],
+  systemPrompt?: string,
+  tools?: ToolDefinition[]
+): ApiMessagesResult {
+  const allMessages: Array<{
+    role: string;
+    content?: string;
+    tool_calls?: { id: string; function: { name: string; arguments: string } }[];
+    tool_call_id?: string;
+  }> = [];
+
+  if (systemPrompt) {
+    allMessages.push({ role: "system", content: systemPrompt });
+  }
+
+  for (const msg of messages) {
+    const apiMsg: {
+      role: string;
+      content?: string;
+      tool_calls?: { id: string; function: { name: string; arguments: string } }[];
+      tool_call_id?: string;
+    } = { role: msg.role };
+
+    if (msg.role === "tool") {
+      apiMsg.tool_call_id = msg.toolCallId;
+      apiMsg.content = msg.content;
+    } else {
+      apiMsg.content = msg.content;
+    }
+
+    if (msg.toolCalls && msg.toolCalls.length > 0) {
+      apiMsg.tool_calls = msg.toolCalls.map((tc) => ({
+        id: tc.id,
+        function: { name: tc.name, arguments: tc.arguments },
+      }));
+    }
+
+    allMessages.push(apiMsg);
+  }
+
+  if (tools && tools.length > 0) {
+    return { messages: allMessages, tools };
+  }
+
+  return { messages: allMessages };
+}
+
+interface ApiRequestBody {
+  model: string;
+  messages: Array<{
+    role: string;
+    content?: string;
+    tool_calls?: { id: string; function: { name: string; arguments: string } }[];
+    tool_call_id?: string;
+  }>;
+  stream: boolean;
+  tools?: ToolDefinition[];
+  tool_choice?: string;
+}
+
+async function makeApiCall(
+  settings: ChatSettings,
+  messages: ApiRequestBody["messages"],
+  model: string,
+  tools?: ToolDefinition[],
+  signal?: AbortSignal
+): Promise<{ body: ApiRequestBody; stream: ReadableStreamDefaultReader<Uint8Array> }> {
+  const baseUrl = settings.serverUrl.replace(/\/+$/, "");
+  const apiUrl = `${baseUrl}/v1/chat/completions`;
+
+  const body: ApiRequestBody = {
+    model,
+    messages,
+    stream: true,
+  };
+
+  if (tools && tools.length > 0) {
+    body.tools = tools.map((t) => ({
+      type: t.type,
+      function: {
+        name: t.function.name,
+        description: t.function.description,
+        parameters: t.function.parameters,
+      },
+    }));
+    body.tool_choice = "auto";
+  }
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${settings.apiKey}`,
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`API error (${response.status}): ${errorBody}`);
+  }
+
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error("No response body");
+  }
+
+  return { body, stream: reader };
 }
 
 export function useChatApi(
@@ -70,11 +237,15 @@ export function useChatApi(
   chatId?: string,
   projectMeta?: ProjectMeta,
   agentSystemPrompt?: string,
-  onTitleGenerated?: (chatId: string, name: string) => void
+  onTitleGenerated?: (chatId: string, name: string) => void,
+  tools?: ToolDefinition[],
+  folderPath?: string
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const messagesRef = useRef<ChatMessage[]>([]);
+  messagesRef.current = messages;
 
   useEffect(() => {
     if (projectId && chatId) {
@@ -101,9 +272,9 @@ export function useChatApi(
           body: JSON.stringify({
             model,
             messages: [
-              { role: "user" as const, content: userContent },
-              { role: "assistant" as const, content: assistantContent },
-              { role: "user" as const, content: "Generate a 2-4 word title for this conversation. Respond with ONLY the title, nothing else." },
+              { role: "user", content: userContent },
+              { role: "assistant", content: assistantContent },
+              { role: "user", content: "Generate a 2-4 word title for this conversation. Respond with ONLY the title, nothing else." },
             ],
             stream: false,
             cache_prompt: false,
@@ -127,6 +298,7 @@ export function useChatApi(
 
   const sendMessage = useCallback(
     async (content: string, modelId: string) => {
+      const requestStartTime = Date.now();
       const effectiveModel = modelId;
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
@@ -143,147 +315,196 @@ export function useChatApi(
         const controller = new AbortController();
         abortRef.current = controller;
 
-        const baseUrl = settings.serverUrl.replace(/\/+$/, "");
-        const apiUrl = `${baseUrl}/v1/chat/completions`;
-
-        const allMessages: Array<{ role: string; content: string }> = [];
-
         const systemPrompt = agentSystemPrompt || projectMeta?.systemPrompt || settings.systemPrompt;
-        if (systemPrompt) {
-          allMessages.push({ role: "system", content: systemPrompt });
-        }
-
-        for (const msg of messages) {
-          allMessages.push({ role: msg.role, content: msg.content });
-        }
-
-        allMessages.push({ role: "user", content });
-
         const model = projectMeta?.defaultModel || settings.defaultModel || effectiveModel;
 
-        const requestStartTime = Date.now();
-        const response = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.apiKey}`,
-          },
-          body: JSON.stringify({
-            model,
-            messages: allMessages,
-            stream: true,
-          }),
-          signal: controller.signal,
-        });
+        // Include userMessage since setMessages is async and messages state is stale
+        const allMessagesForApi = [...messagesRef.current, userMessage];
 
-        if (!response.ok) {
-          const errorBody = await response.text();
-          throw new Error(`API error (${response.status}): ${errorBody}`);
-        }
-
-        const reader = response.body?.getReader();
-        if (!reader) {
-          throw new Error("No response body");
-        }
-
-        const assistantId = crypto.randomUUID();
-        const accumulated: string[] = [];
-        let parsedStats: LLMStats | null = null;
-
-        setMessages((prev) => [
-          ...prev,
-          {
-            id: assistantId,
-            role: "assistant",
-            content: "",
-            timestamp: Date.now(),
-          },
-        ]);
-
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          buffer += decoder.decode(value, { stream: true });
-
-          // Split on double newlines (SSE message boundary)
-          const parts = buffer.split("\n\n");
-          buffer = parts.pop() || "";
-
-          for (const part of parts) {
-            const { text, stats } = parseSSEChunk(part);
-            if (text) {
-              accumulated.push(text);
-              setMessages((prev) =>
-                prev.map((msg) =>
-                  msg.id === assistantId
-                    ? { ...msg, content: accumulated.join("") }
-                    : msg
-                )
-              );
-            }
-            if (stats) {
-              parsedStats = stats;
-            }
-          }
-        }
-
-        // Process any remaining buffer content
-        if (buffer.trim()) {
-          const { text, stats } = parseSSEChunk(buffer);
-          if (text) {
-            accumulated.push(text);
-            setMessages((prev) =>
-              prev.map((msg) =>
-                msg.id === assistantId
-                  ? { ...msg, content: accumulated.join("") }
-                  : msg
-              )
-            );
-          }
-          if (stats) {
-            parsedStats = stats;
-          }
-        }
-
-        const timeMs = Date.now() - requestStartTime;
-
-        // Attach usage stats to the assistant message
-        const finalContent = accumulated.join("");
-        const assistantMessage: ChatMessage = {
-          id: assistantId,
-          role: "assistant",
-          content: finalContent,
-          timestamp: Date.now(),
-        };
-
-        if (parsedStats) {
-          assistantMessage.stats = {
-            ...parsedStats,
-            timeMs,
-          };
-        }
-
-        // Update the assistant message with stats in state, then persist
-        setMessages((prev) =>
-          prev.map((msg) =>
-            msg.id === assistantId ? assistantMessage : msg
-          )
+        // Build initial API messages
+        const { messages: initialApiMessages, tools: apiTools } = buildApiMessages(
+          allMessagesForApi,
+          systemPrompt,
+          tools
         );
 
-        // Persist the completed conversation
+        // Stream loop that handles multiple rounds of tool calls
+        let currentApiMessages: ApiRequestBody["messages"] = initialApiMessages;
+        let allAssistantMessages: ChatMessageWithToolCalls[] = [];
+        let allToolResults: ChatMessage[] = [];
+        let hasMoreToolCalls = true;
+        let round = 0;
+        const MAX_TOOL_ROUNDS = 10;
+
+        while (hasMoreToolCalls && round < MAX_TOOL_ROUNDS) {
+          const { stream: roundStream } = await makeApiCall(
+            settings,
+            currentApiMessages,
+            model,
+            apiTools,
+            controller.signal
+          );
+
+          const assistantId = crypto.randomUUID();
+          const accumulated: string[] = [];
+          let parsedStats: LLMStats | null = null;
+          const toolCallsMap = new Map<number, { id: string; name: string; args: string }>();
+
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: assistantId,
+              role: "assistant",
+              content: "",
+              timestamp: Date.now(),
+              toolCalls: [],
+            } as ChatMessageWithToolCalls,
+          ]);
+
+          const decoder = new TextDecoder();
+          let buffer = "";
+
+          while (true) {
+            const { done, value } = await roundStream.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+
+            const parts = buffer.split("\n\n");
+            buffer = parts.pop() || "";
+
+            for (const part of parts) {
+              const result = parseSSEChunk(part);
+
+              if (result.text) {
+                accumulated.push(result.text);
+                setMessages((prev) =>
+                  prev.map((msg) =>
+                    msg.id === assistantId
+                      ? { ...msg, content: accumulated.join("") }
+                      : msg
+                  )
+                );
+              }
+              parsedStats = mergeStats(parsedStats, result.stats);
+
+              for (const call of result.toolCalls) {
+                const existing = toolCallsMap.get(call.index);
+                if (existing) {
+                  if (call.id) existing.id = call.id;
+                  if (call.name) existing.name = call.name;
+                  if (call.args) existing.args += call.args;
+                } else {
+                  toolCallsMap.set(call.index, { id: call.id, name: call.name, args: call.args });
+                }
+              }
+            }
+          }
+
+          // Process remaining buffer
+          if (buffer.trim()) {
+            const result = parseSSEChunk(buffer);
+
+            if (result.text) {
+              accumulated.push(result.text);
+            }
+            parsedStats = mergeStats(parsedStats, result.stats);
+
+            for (const call of result.toolCalls) {
+              const existing = toolCallsMap.get(call.index);
+              if (existing) {
+                if (call.id) existing.id = call.id;
+                if (call.name) existing.name = call.name;
+                if (call.args) existing.args += call.args;
+              } else {
+                toolCallsMap.set(call.index, { id: call.id, name: call.name, args: call.args });
+              }
+            }
+          }
+
+          const toolCalls: ToolCall[] = Array.from(toolCallsMap.entries())
+            .filter(([, call]) => call.id && call.name)
+            .map(([index, call]) => ({ id: call.id, name: call.name, arguments: call.args }));
+
+          const assistantMessage: ChatMessageWithToolCalls = {
+            id: assistantId,
+            role: "assistant",
+            content: accumulated.join(""),
+            timestamp: Date.now(),
+          };
+
+          if (parsedStats) {
+            assistantMessage.stats = { ...parsedStats, timeMs: Date.now() - requestStartTime };
+          }
+
+          if (toolCalls.length > 0) {
+            assistantMessage.toolCalls = toolCalls;
+          }
+
+          setMessages((prev) =>
+            prev.map((msg) =>
+              msg.id === assistantId ? assistantMessage : msg
+            )
+          );
+
+          allAssistantMessages.push(assistantMessage);
+
+          // Check if there are tool calls to execute
+          if (toolCalls.length === 0) {
+            hasMoreToolCalls = false;
+          } else {
+            const toolResults: ChatMessage[] = [];
+
+            for (const tc of toolCalls) {
+              let args: object = {};
+              try {
+                args = JSON.parse(tc.arguments);
+              } catch {
+                args = { raw: tc.arguments };
+              }
+
+              const result = await executeToolCall(tc.name, args, { folderPath });
+              const toolResultMessage: ChatMessage = {
+                id: crypto.randomUUID(),
+                role: "tool",
+                content: result.content,
+                timestamp: Date.now(),
+                toolCallId: tc.id,
+              };
+              toolResults.push(toolResultMessage);
+              setMessages((prev) => [...prev, toolResultMessage]);
+            }
+
+            allToolResults.push(...toolResults);
+
+            // Build next API call with tool results appended
+            currentApiMessages = [...currentApiMessages, ...toolResults.map((tr) => ({
+              role: "tool" as const,
+              tool_call_id: tr.toolCallId,
+              content: tr.content,
+            }))];
+
+            round++;
+          }
+        }
+
+        // The last assistant message is the final response
+        const finalAssistantMessage = allAssistantMessages[allAssistantMessages.length - 1];
+
+        // Persist all messages
         if (projectId && chatId) {
           await appendMessage(projectId, chatId, userMessage);
-          await appendMessage(projectId, chatId, assistantMessage);
+          for (const msg of allAssistantMessages) {
+            await appendMessage(projectId, chatId, msg);
+          }
+          for (const tr of allToolResults) {
+            await appendMessage(projectId, chatId, tr);
+          }
 
-          // Generate title after the first exchange only
-          if (messages.length === 0) {
+          if (messagesRef.current.length === 0) {
             const titleModel = projectMeta?.defaultModel || settings.defaultModel || modelId;
             setTimeout(() => {
-              generateTitle(userMessage.content, assistantMessage.content, titleModel);
+              generateTitle(userMessage.content, finalAssistantMessage.content, titleModel);
             }, 0);
           }
         }
@@ -302,7 +523,7 @@ export function useChatApi(
         setIsLoading(false);
       }
     },
-    [messages, settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle]
+    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath]
   );
 
   const clearChat = useCallback(() => {
