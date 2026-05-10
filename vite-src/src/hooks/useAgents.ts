@@ -78,6 +78,7 @@ export function getMainAgents(customAgents: Agent[]): Agent[] {
 export function useAgents(): [
   Agent[],
   (agent: Omit<Agent, "id">) => Promise<void>,
+  (id: string, name: string, systemPrompt: string) => Promise<void>,
   (id: string) => Promise<void>,
 ] {
   const [agents, setAgents] = useState<Agent[]>(() => {
@@ -95,11 +96,19 @@ export function useAgents(): [
     await saveAgentsFile(next);
   }, [agents]);
 
+  const updateAgent = useCallback(async (id: string, name: string, systemPrompt: string) => {
+    const next = agents.map((a) =>
+      a.id === id ? { ...a, name, systemPrompt } : a
+    );
+    setAgents(next);
+    await saveAgentsFile(next);
+  }, [agents]);
+
   const deleteAgent = useCallback(async (id: string) => {
     const next = agents.filter((a) => a.id !== id);
     setAgents(next);
     await saveAgentsFile(next);
   }, [agents]);
 
-  return [agents, addAgent, deleteAgent];
+  return [agents, addAgent, updateAgent, deleteAgent];
 }

@@ -26,7 +26,7 @@ function App() {
     settings.apiKey
   );
   const { projects, isLoading: projectsLoading, initialized: projectsInitialized, getProjectById, createProject, createProjectFromFolder, updateProjectFolder, updateProject, deleteProject } = useProjects();
-  const [customAgents, addAgent, deleteAgent] = useAgents();
+  const [customAgents, addAgent, updateAgent, deleteAgent] = useAgents();
   const [currentPage, setCurrentPage] = useState<Page>("chat");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(() => window.innerWidth <= MOBILE_BREAKPOINT);
@@ -296,6 +296,7 @@ function App() {
             onRefetch={refetchModels}
             customAgents={customAgents}
             onAddAgent={addAgent}
+            onUpdateAgent={updateAgent}
             onDeleteAgent={deleteAgent}
           />
         )}

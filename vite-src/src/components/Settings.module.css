@@ -424,6 +424,90 @@
   background: rgba(224, 96, 96, 0.1);
 }
 
+.agentActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.editActions {
+  display: flex;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.editAgentButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  color: #666;
+  padding: 5px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editAgentButton:hover {
+  color: #4a6cf7;
+  border-color: #4a6cf7;
+  background: rgba(74, 108, 247, 0.1);
+}
+
+.saveEditButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  color: #4a6cf7;
+  padding: 5px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.saveEditButton:hover:not(:disabled) {
+  background: rgba(74, 108, 247, 0.15);
+  border-color: #4a6cf7;
+}
+
+.saveEditButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.cancelEditButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid transparent;
+  color: #e06060;
+  padding: 5px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cancelEditButton:hover {
+  background: rgba(224, 96, 96, 0.1);
+  border-color: #e06060;
+}
+
+.editField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .agentPromptPreview {
   font-size: 12px;
   color: #888;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings as SettingsIcon, Eye, EyeOff, Check, Plus, Trash2 } from "lucide-react";
+import { Settings as SettingsIcon, Eye, EyeOff, Check, Plus, Trash2, Pencil, Save, X } from "lucide-react";
 import styles from "../components/Settings.module.css";
 import { ChatSettings as ChatSettingsType } from "../hooks/useChatSettings";
 import { ServerModel, Agent } from "../types/chat";
@@ -14,6 +14,7 @@ interface SettingsProps {
   onRefetch: () => void;
   customAgents: Agent[];
   onAddAgent: (agent: Omit<Agent, "id">) => Promise<void>;
+  onUpdateAgent: (id: string, name: string, systemPrompt: string) => Promise<void>;
   onDeleteAgent: (id: string) => Promise<void>;
 }
 
@@ -26,12 +27,16 @@ export default function Settings({
   onRefetch,
   customAgents,
   onAddAgent,
+  onUpdateAgent,
   onDeleteAgent,
 }: SettingsProps) {
   const allModels = models;
   const [showAddAgent, setShowAddAgent] = useState(false);
+  const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
   const [agentName, setAgentName] = useState("");
   const [agentPrompt, setAgentPrompt] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editPrompt, setEditPrompt] = useState("");
 
   const handleToggleDefault = (modelId: string) => {
     onUpdate({ defaultModel: modelId });
@@ -79,6 +84,26 @@ export default function Settings({
 
   const handleDeleteAgent = async (id: string) => {
     await onDeleteAgent(id);
+  };
+
+  const handleStartEdit = (agent: Agent) => {
+    setEditingAgentId(agent.id);
+    setEditName(agent.name);
+    setEditPrompt(agent.systemPrompt);
+  };
+
+  const handleSaveEdit = async (id: string) => {
+    if (!editName.trim() || !editPrompt.trim()) return;
+    await onUpdateAgent(id, editName.trim(), editPrompt.trim());
+    setEditingAgentId(null);
+    setEditName("");
+    setEditPrompt("");
+  };
+
+  const handleCancelEdit = () => {
+    setEditingAgentId(null);
+    setEditName("");
+    setEditPrompt("");
   };
 
   return (
@@ -269,26 +294,86 @@ export default function Settings({
                   </div>
                 </div>
               ))}
-              {customAgents.map((agent) => (
-                <div key={agent.id} className={styles.agentCard}>
-                  <div className={styles.agentCardHeader}>
-                    <span className={styles.agentName}>{agent.name}</span>
-                    <button
-                      className={styles.deleteAgentButton}
-                      onClick={() => handleDeleteAgent(agent.id)}
-                      type="button"
-                      title="Delete agent"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+              {customAgents.map((agent) => {
+                const isEditing = editingAgentId === agent.id;
+                return (
+                  <div key={agent.id} className={styles.agentCard}>
+                    {isEditing ? (
+                      <>
+                        <div className={styles.agentCardHeader}>
+                          <span className={styles.agentName}>Editing Agent</span>
+                          <div className={styles.editActions}>
+                            <button
+                              className={styles.saveEditButton}
+                              onClick={() => handleSaveEdit(agent.id)}
+                              type="button"
+                              title="Save changes"
+                              disabled={!editName.trim() || !editPrompt.trim()}
+                            >
+                              <Save size={14} />
+                            </button>
+                            <button
+                              className={styles.cancelEditButton}
+                              onClick={handleCancelEdit}
+                              type="button"
+                              title="Cancel editing"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className={styles.editField}>
+                          <input
+                            type="text"
+                            className={styles.input}
+                            value={editName}
+                            onChange={(e) => setEditName(e.target.value)}
+                            placeholder="Agent name"
+                          />
+                        </div>
+                        <div className={styles.editField}>
+                          <textarea
+                            className={styles.textarea}
+                            value={editPrompt}
+                            onChange={(e) => setEditPrompt(e.target.value)}
+                            placeholder="System prompt for this agent"
+                            rows={4}
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className={styles.agentCardHeader}>
+                          <span className={styles.agentName}>{agent.name}</span>
+                          <div className={styles.agentActions}>
+                            <button
+                              className={styles.editAgentButton}
+                              onClick={() => handleStartEdit(agent)}
+                              type="button"
+                              title="Edit agent"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              className={styles.deleteAgentButton}
+                              onClick={() => handleDeleteAgent(agent.id)}
+                              type="button"
+                              title="Delete agent"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                        <div className={styles.agentPromptPreview}>
+                          {agent.systemPrompt.length > 120
+                            ? agent.systemPrompt.slice(0, 120) + "..."
+                            : agent.systemPrompt}
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <div className={styles.agentPromptPreview}>
-                    {agent.systemPrompt.length > 120
-                      ? agent.systemPrompt.slice(0, 120) + "..."
-                      : agent.systemPrompt}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             {showAddAgent ? (
               <div className={styles.addAgentForm}>
