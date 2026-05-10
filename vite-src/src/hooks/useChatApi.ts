@@ -335,8 +335,14 @@ export function useChatApi(
         let hasMoreToolCalls = true;
         let round = 0;
         const MAX_TOOL_ROUNDS = 10;
+        const persistedMessageIds = new Set<string>();
 
         while (hasMoreToolCalls && round < MAX_TOOL_ROUNDS) {
+          if (round === 0 && projectId && chatId) {
+            await appendMessage(projectId, chatId, userMessage);
+            persistedMessageIds.add(userMessage.id);
+          }
+
           const { stream: roundStream } = await makeApiCall(
             settings,
             currentApiMessages,
@@ -477,6 +483,16 @@ export function useChatApi(
 
             allToolResults.push(...toolResults);
 
+            // Persist assistant message and its tool results in order
+            if (projectId && chatId) {
+              await appendMessage(projectId, chatId, assistantMessage);
+              persistedMessageIds.add(assistantMessage.id);
+              for (const tr of toolResults) {
+                await appendMessage(projectId, chatId, tr);
+                persistedMessageIds.add(tr.id);
+              }
+            }
+
             // Build next API call with tool results appended
             currentApiMessages = [...currentApiMessages, ...toolResults.map((tr) => ({
               role: "tool" as const,
@@ -491,14 +507,11 @@ export function useChatApi(
         // The last assistant message is the final response
         const finalAssistantMessage = allAssistantMessages[allAssistantMessages.length - 1];
 
-        // Persist all messages
+        // Persist any remaining assistant messages
         if (projectId && chatId) {
-          await appendMessage(projectId, chatId, userMessage);
           for (const msg of allAssistantMessages) {
+            if (persistedMessageIds.has(msg.id)) continue;
             await appendMessage(projectId, chatId, msg);
-          }
-          for (const tr of allToolResults) {
-            await appendMessage(projectId, chatId, tr);
           }
 
           if (messagesRef.current.length === 0) {
