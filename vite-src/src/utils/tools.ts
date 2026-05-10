@@ -21,9 +21,37 @@ class FileSearchTool {
     return FileSearchTool.instance;
   }
 
+  private globToRegex(pattern: string): RegExp {
+    const segments = pattern.split("/");
+    const regexParts: string[] = [];
+
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
+
+      if (segment === "**") {
+        regexParts.push("(?:[^/.][^/]*/)*");
+      } else {
+        let escaped = "";
+        for (let j = 0; j < segment.length; j++) {
+          const char = segment[j];
+          if (char === "*") {
+            escaped += "[^.]*";
+          } else {
+            escaped += char;
+          }
+        }
+        regexParts.push(escaped);
+      }
+    }
+
+    const regex = regexParts.join("/");
+    return new RegExp(`^${regex}$`, "i");
+  }
+
   private async searchDirectory(
     dirPath: string,
-    query: string,
+    patternSegments: string[],
+    currentSegmentIndex: number,
     results: Array<{ path: string; size: number }>,
     maxResults: number,
     depth: number
@@ -34,38 +62,89 @@ class FileSearchTool {
 
     if (!filesystem) return false;
 
+    if (currentSegmentIndex >= patternSegments.length) {
+      return results.length >= maxResults;
+    }
+
     try {
       const entries = await filesystem.readDirectory(dirPath);
       const entriesList: string[] = entries.map(e => e.entry);
 
-      for (const entry of entriesList) {
-        if (results.length >= maxResults) return true;
+      const currentPattern = patternSegments[currentSegmentIndex];
+      const isLastPattern = currentSegmentIndex === patternSegments.length - 1;
 
-        const fullPath = `${dirPath}/${entry}`;
+      // Handle ** (recursive match)
+      if (currentPattern === "**") {
+        if (isLastPattern) {
+          // ** is the last segment — shouldn't happen, skip
+          return false;
+        }
 
-        if (entry.startsWith(".")) continue;
+        const nextPattern = patternSegments[currentSegmentIndex + 1];
+        const nextRegex = this.globToRegex(nextPattern);
 
-        if (entry.toLowerCase().includes(query.toLowerCase())) {
+        // Check files at current level against next pattern (** can match zero directories)
+        for (const entry of entriesList) {
+          if (results.length >= maxResults) return true;
+          if (entry.startsWith(".")) continue;
+
+          const fullPath = `${dirPath}/${entry}`;
+          const stat = await filesystem.getStats(fullPath);
+          if (stat && !stat.isDirectory && nextRegex.test(entry)) {
+            results.push({ path: fullPath, size: stat.size || 0 });
+          }
+        }
+
+        // Recurse into subdirectories
+        for (const entry of entriesList) {
+          if (results.length >= maxResults) return true;
+          if (entry.startsWith(".")) continue;
+
+          const fullPath = `${dirPath}/${entry}`;
           try {
             const stat = await filesystem.getStats(fullPath);
-            if (stat && !stat.isDirectory) {
-              results.push({ path: fullPath, size: stat.size || 0 });
+            if (stat?.isDirectory) {
+              const done = await this.searchDirectory(
+                fullPath,
+                patternSegments,
+                currentSegmentIndex + 1,
+                results,
+                maxResults,
+                depth + 1
+              );
+              if (done) return true;
             }
           } catch {
             continue;
           }
         }
+
+        return results.length >= maxResults;
       }
+
+      // Normal pattern matching
+      const entryRegex = this.globToRegex(currentPattern);
 
       for (const entry of entriesList) {
         if (results.length >= maxResults) return true;
         if (entry.startsWith(".")) continue;
 
         const fullPath = `${dirPath}/${entry}`;
+        if (!entryRegex.test(entry)) continue;
+
         try {
           const stat = await filesystem.getStats(fullPath);
-          if (stat?.isDirectory) {
-            const done = await this.searchDirectory(fullPath, query, results, maxResults, depth + 1);
+          if (stat && !stat.isDirectory && isLastPattern) {
+            results.push({ path: fullPath, size: stat.size || 0 });
+          } else if (stat?.isDirectory && !isLastPattern) {
+            const done = await this.searchDirectory(
+              fullPath,
+              patternSegments,
+              currentSegmentIndex + 1,
+              results,
+              maxResults,
+              depth + 1
+            );
             if (done) return true;
           }
         } catch {
@@ -99,8 +178,16 @@ class FileSearchTool {
       };
     }
 
+    const patternSegments = query.includes("/") ? query.split("/") : [query];
     const results: Array<{ path: string; size: number }> = [];
-    const done = await this.searchDirectory(folderPath, query, results, maxResults, 0);
+    const done = await this.searchDirectory(
+      folderPath,
+      patternSegments,
+      0,
+      results,
+      maxResults,
+      0
+    );
 
     if (results.length === 0) {
       return {
@@ -161,7 +248,7 @@ export const SEARCH_FILES_TOOL: ToolDefinition = {
       properties: {
         query: {
           type: "string",
-          description: "The search query to match against file names and contents",
+          description: "The search query supporting wildcards: * for file names, ** for recursive directories (e.g. **/*.ts, src/**/test/*)",
         }
       },
       required: ["query"],
