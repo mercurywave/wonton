@@ -302,7 +302,7 @@ export function useChatApi(
         setIsLoading(false);
       }
     },
-    [messages, settings, projectId, chatId, projectMeta, generateTitle]
+    [messages, settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle]
   );
 
   const clearChat = useCallback(() => {

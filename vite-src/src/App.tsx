@@ -51,6 +51,7 @@ function App() {
     setActiveChat,
     loadChatMessages,
     setChatDraft,
+    refreshChats,
   } = useProjectChats(
     isNeutralinoConnected() ? activeProjectId : undefined,
     projectsInitialized
@@ -86,6 +87,15 @@ function App() {
       setAllAgents(getAllAgents(custom));
     });
   }, []);
+
+  useEffect(() => {
+    if (activeChat?.activeModel !== undefined) {
+      setPerChatModel(activeChat.activeModel || null);
+    }
+    if (activeChat?.activeAgentId !== undefined) {
+      setPerChatAgent(activeChat.activeAgentId || null);
+    }
+  }, [activeChat?.id, activeChat?.activeModel, activeChat?.activeAgentId]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -129,17 +139,35 @@ function App() {
   const handleNewChat = useCallback(async () => {
     await createChat();
     setCurrentPage("chat");
+    setPerChatAgent(null);
     if (isMobile) {
       setSidebarOpen(false);
     }
   }, [createChat, isMobile]);
 
+  const handleModelChange = useCallback(async (modelId: string) => {
+    setPerChatModel(modelId);
+    if (activeChatId && isNeutralinoConnected()) {
+      if (modelId === settings.defaultModel) {
+        await updateChatMetaNative(activeProjectId, activeChatId, { activeModel: undefined });
+      } else {
+        await updateChatMetaNative(activeProjectId, activeChatId, { activeModel: modelId });
+      }
+      await refreshChats();
+    }
+  }, [activeChatId, activeProjectId, settings.defaultModel, refreshChats]);
+
   const handleAgentChange = useCallback(async (agentId: string) => {
     setPerChatAgent(agentId);
     if (activeChatId && isNeutralinoConnected()) {
-      await updateChatMetaNative(activeProjectId, activeChatId, { activeAgentId: agentId });
+      if (agentId === "builtin:default") {
+        await updateChatMetaNative(activeProjectId, activeChatId, { activeAgentId: undefined });
+      } else {
+        await updateChatMetaNative(activeProjectId, activeChatId, { activeAgentId: agentId });
+      }
+      await refreshChats();
     }
-  }, [activeChatId, activeProjectId]);
+  }, [activeChatId, activeProjectId, refreshChats]);
 
   const handleChatSelect = useCallback((chat: ChatMeta) => {
     setActiveChat(chat.id);
@@ -275,7 +303,7 @@ function App() {
               onStop={stopGeneration}
               models={visibleModels}
               activeModel={activeModel}
-              onModelChange={setPerChatModel}
+              onModelChange={handleModelChange}
               agents={allAgents}
               activeAgentId={activeAgentId}
               onAgentChange={handleAgentChange}
