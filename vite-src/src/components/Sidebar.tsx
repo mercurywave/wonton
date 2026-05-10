@@ -188,7 +188,7 @@ export default function Sidebar({
               {displayChats.map((chat) => (
                 <div
                   key={chat.id}
-                  className={`${styles.chatItem} ${chat.id === activeChatId ? styles.active : ""}`}
+                  className={`${styles.chatItem} ${currentPage === "chat" && chat.id === activeChatId ? styles.active : ""}`}
                   onClick={() => {
                     setContextMenu(null);
                     onChatSelect?.(chat);
