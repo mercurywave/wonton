@@ -11,6 +11,7 @@ export interface ChatSettings {
   defaultContextWindow: number;
   contextWindows: Record<string, number>;
   modelAliases: Record<string, string>;
+  lastProjectId: string;
 }
 
 const DEFAULT_SETTINGS: ChatSettings = {
@@ -22,13 +23,14 @@ const DEFAULT_SETTINGS: ChatSettings = {
   defaultContextWindow: 131072,
   contextWindows: {},
   modelAliases: {},
+  lastProjectId: "default",
 };
 
 function loadSettings(): ChatSettings {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
-      const parsed: Partial<ChatSettings> = JSON.parse(stored);
+      const parsed: Partial<ChatSettings> & { model?: string } = JSON.parse(stored);
       // Migrate old 'model' field to 'defaultModel'
       if (parsed.model && !parsed.defaultModel) {
         parsed.defaultModel = parsed.model;

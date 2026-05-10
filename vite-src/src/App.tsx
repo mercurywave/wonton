@@ -36,6 +36,7 @@ function App() {
   const [activeProjectId, setActiveProjectId] = useState<string>(() => {
     return projects.find((p) => p.id === "default")?.id ?? "default";
   });
+  const [restoredProject, setRestoredProject] = useState(false);
   const [projectSettingsId, setProjectSettingsId] = useState<string | null>(null);
   const [historyMessages, setHistoryMessages] = useState<Record<string, ChatMessage[]>>({});
   const [isLoadingHistoryMessages, setIsLoadingHistoryMessages] = useState(false);
@@ -87,13 +88,17 @@ function App() {
   );
 
   useEffect(() => {
-    if (projects.length > 0) {
+    if (projects.length > 0 && !restoredProject) {
+      setRestoredProject(true);
       const hasDefault = projects.some((p) => p.id === "default");
-      if (hasDefault) {
+      const lastId = settings.lastProjectId;
+      if (lastId && lastId !== "default" && projects.some((p) => p.id === lastId)) {
+        setActiveProjectId(lastId);
+      } else if (hasDefault) {
         setActiveProjectId("default");
       }
     }
-  }, [projects]);
+  }, [projects, restoredProject, settings.lastProjectId]);
 
   useEffect(() => {
     loadAgentsFile().then((custom) => {
@@ -205,9 +210,10 @@ function App() {
 
   const handleProjectSelect = useCallback((projectId: string) => {
     setActiveProjectId(projectId);
+    updateSettings({ lastProjectId: projectId });
     setCurrentPage("chat");
     setProjectSettingsId(null);
-  }, []);
+  }, [updateSettings]);
 
   const handleNewProject = useCallback(async () => {
     const now = new Date();
