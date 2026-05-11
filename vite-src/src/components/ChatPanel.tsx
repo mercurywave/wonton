@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
-import { Send, StopCircle } from "lucide-react";
+import { Send, StopCircle, Hammer } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
@@ -108,13 +108,22 @@ function MessageStats({ stats, modelAliases }: { stats: LLMStats; modelAliases: 
   );
 }
 
-function ToolCallSection({ toolCall }: { toolCall: ToolCall }) {
+function ToolCallSection({ toolCall, result }: { toolCall: ToolCall; result?: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [parsedArgs] = useState<object | null>(() => {
     try {
       return JSON.parse(toolCall.arguments);
     } catch {
       return { raw: toolCall.arguments };
+    }
+  });
+  const [parsedResult] = useState<{ formatted: string; isJson: boolean }>(() => {
+    if (result == null) return { formatted: "", isJson: false };
+    try {
+      const obj = JSON.parse(result);
+      return { formatted: JSON.stringify(obj, null, 2), isJson: true };
+    } catch {
+      return { formatted: result, isJson: false };
     }
   });
 
@@ -124,7 +133,7 @@ function ToolCallSection({ toolCall }: { toolCall: ToolCall }) {
         className={styles.toolCallHeader}
         onClick={() => setIsExpanded((prev) => !prev)}
       >
-        <span className={styles.toolCallIcon}>⚡</span>
+        <Hammer className={styles.toolCallIcon} size={14} />
         <span className={styles.toolCallName}>{toolCall.name}</span>
         <span className={styles.toolCallArrow}>{isExpanded ? "▲" : "▼"}</span>
       </button>
@@ -134,16 +143,35 @@ function ToolCallSection({ toolCall }: { toolCall: ToolCall }) {
           <pre className={styles.toolCallArgs}>
             {JSON.stringify(parsedArgs, null, 2)}
           </pre>
+          {parsedResult.isJson && (
+            <>
+              <div className={styles.toolCallSectionLabel}>Response</div>
+              <pre className={styles.toolCallResponse}>
+                {parsedResult.formatted}
+              </pre>
+            </>
+          )}
         </div>
       )}
     </div>
   );
 }
 
-function MessageBubble({ message, modelAliases }: { message: ChatMessageType; modelAliases: Record<string, string> }) {
+function MessageBubble({ message, modelAliases, toolResultMessages }: { message: ChatMessageType; modelAliases: Record<string, string>; toolResultMessages?: ChatMessageType[] }) {
   const isUser = message.role === "user";
   const hasStats = message.role !== "user" && message.stats;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
+
+  const toolCallResults = useMemo(() => {
+    if (!toolResultMessages) return {};
+    const results: Record<string, string> = {};
+    for (const tr of toolResultMessages) {
+      if (tr.role === "tool" && tr.toolCallId) {
+        results[tr.toolCallId] = tr.content;
+      }
+    }
+    return results;
+  }, [toolResultMessages]);
 
   return (
     <div className={`${styles.message} ${isUser ? styles.user : styles.assistant}`}>
@@ -154,14 +182,14 @@ function MessageBubble({ message, modelAliases }: { message: ChatMessageType; mo
           </div>
           {hasStats && <MessageStats stats={message.stats!} modelAliases={modelAliases} />}
         </div>
-        {hasToolCalls && (
-          <div className={styles.toolCallContainer}>
-            {message.toolCalls!.map((tc) => (
-              <ToolCallSection key={tc.id} toolCall={tc} />
-            ))}
-          </div>
-        )}
       </div>
+      {hasToolCalls && (
+        <div className={styles.toolCallContainer}>
+          {message.toolCalls!.map((tc) => (
+            <ToolCallSection key={tc.id} toolCall={tc} result={toolCallResults[tc.id]} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -248,11 +276,48 @@ export default function ChatPanel({
               <p>Start a conversation by typing a message below.</p>
             </div>
           )}
-           {messages.map((msg) => (
-              <div key={msg.id}>
-                <MessageBubble message={msg} modelAliases={settings.modelAliases} />
-              </div>
-            ))}
+          {(() => {
+             const skip: Set<number> = new Set();
+             const elements: React.ReactElement[] = [];
+
+             for (let i = 0; i < messages.length; i++) {
+               if (skip.has(i)) continue;
+
+               const msg = messages[i];
+
+               if (msg.toolCalls && msg.toolCalls.length > 0) {
+                 const toolResultMessages: ChatMessageType[] = [];
+                 for (let j = i + 1; j < messages.length; j++) {
+                   if (skip.has(j)) break;
+                   const next = messages[j];
+                   if (next.role === "tool" && next.toolCallId) {
+                     if (msg.toolCalls!.some((tc) => tc.id === next.toolCallId)) {
+                       toolResultMessages.push(next);
+                       skip.add(j);
+                     } else {
+                       break;
+                     }
+                   } else {
+                     break;
+                   }
+                 }
+                 elements.push(
+                   <div key={msg.id}>
+                     <MessageBubble message={msg} modelAliases={settings.modelAliases} toolResultMessages={toolResultMessages} />
+                   </div>
+                 );
+                 continue;
+               }
+
+               elements.push(
+                 <div key={msg.id}>
+                   <MessageBubble message={msg} modelAliases={settings.modelAliases} />
+                 </div>
+               );
+             }
+
+             return elements;
+           })()}
           <div ref={messagesEndRef} />
         </div>
       </div>

@@ -69,6 +69,8 @@
 
 .message.assistant {
   justify-content: flex-start;
+  flex-direction: column;
+  align-items: flex-start;
 }
 
 .bubbleStats {
@@ -431,22 +433,12 @@
   flex-direction: column;
   gap: 4px;
   margin-top: 4px;
-  max-width: 70%;
-}
-
-.message.user .toolCallContainer {
-  margin-left: auto;
-}
-
-.message.assistant .toolCallContainer {
-  margin-right: auto;
+  margin-left: 12px;
+  width: 90%;
 }
 
 .toolCallSection {
-  border: 1px solid #2a2a4a;
-  border-radius: 8px;
-  overflow: hidden;
-  background: rgba(0, 0, 0, 0.15);
+  background: transparent;
 }
 
 .toolCallHeader {
@@ -454,12 +446,10 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(74, 108, 247, 0.05);
+  background: transparent;
   border: none;
-  border-bottom: 1px solid #2a2a4a;
   color: #e0e0e0;
-  padding: 8px 12px;
-  font-size: 12px;
+  padding: 8px 0;
   font-family: inherit;
   cursor: pointer;
   transition: background 0.1s ease;
@@ -467,17 +457,19 @@
 }
 
 .toolCallHeader:hover {
-  background: rgba(74, 108, 247, 0.1);
+  background: transparent;
 }
 
 .toolCallIcon {
-  font-size: 12px;
+  color: #e0e0e0;
+  flex-shrink: 0;
 }
 
 .toolCallName {
   flex: 1;
-  font-weight: 500;
-  color: #4a6cf7;
+  font-size: 14px;
+  font-weight: 400;
+  color: #e0e0e0;
 }
 
 .toolCallArrow {
@@ -486,7 +478,8 @@
 }
 
 .toolCallBody {
-  padding: 10px 12px;
+  padding: 10px 0;
+  margin-left: 30px;
 }
 
 .toolCallSectionLabel {
@@ -494,7 +487,8 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: #888;
-  margin-bottom: 6px;
+  margin-top: 4px;
+  margin-left: 4px;
   font-weight: 600;
 }
 
@@ -509,4 +503,19 @@
   color: #ccc;
   overflow-x: auto;
   line-height: 1.5;
+}
+
+.toolCallResponse {
+  margin: 0;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #1a1a2e;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  color: #ccc;
+  overflow-x: auto;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
