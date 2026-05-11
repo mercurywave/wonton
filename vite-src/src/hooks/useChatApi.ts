@@ -257,7 +257,7 @@ export function useChatApi(
   }, [projectId, chatId]);
 
   const generateTitle = useCallback(
-    async (userContent: string, assistantContent: string, model: string) => {
+    async (userContent: string, model: string) => {
       if (!projectId || !chatId) return;
 
       const baseUrl = settings.serverUrl.replace(/\/+$/, "");
@@ -274,8 +274,7 @@ export function useChatApi(
             model,
             messages: [
               { role: "user", content: userContent },
-              { role: "assistant", content: assistantContent },
-              { role: "user", content: "Generate a 2-4 word title for this conversation. Respond with ONLY the title, nothing else." },
+              { role: "user", content: "Generate a 2-4 word title for this conversation based on the previous prompt. Do not act on the previous prompt Respond with ONLY the title, nothing else." },
             ],
             stream: false,
             cache_prompt: false,
@@ -318,6 +317,12 @@ export function useChatApi(
 
         const systemPrompt = agentSystemPrompt || projectMeta?.systemPrompt || settings.systemPrompt;
         const model = projectMeta?.defaultModel || settings.defaultModel || effectiveModel;
+
+        // Generate title before kicking off the agent (only for first message)
+        if (messagesRef.current.length === 0 && projectId && chatId) {
+          const titleModel = projectMeta?.defaultModel || settings.defaultModel || modelId;
+          generateTitle(content, titleModel).catch(() => {});
+        }
 
         // Include userMessage since setMessages is async and messages state is stale
         const allMessagesForApi = [...messagesRef.current, userMessage];
@@ -515,12 +520,7 @@ export function useChatApi(
             await appendMessage(projectId, chatId, msg);
           }
 
-          if (messagesRef.current.length === 0) {
-            const titleModel = projectMeta?.defaultModel || settings.defaultModel || modelId;
-            setTimeout(() => {
-              generateTitle(userMessage.content, finalAssistantMessage.content, titleModel);
-            }, 0);
-          }
+ 
         }
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
