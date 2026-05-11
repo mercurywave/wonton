@@ -453,12 +453,6 @@ export function useChatApi(
             assistantMessage.toolCalls = toolCalls;
           }
 
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === assistantId ? assistantMessage : msg
-            )
-          );
-
           allAssistantMessages.push(assistantMessage);
 
           // Check if there are tool calls to execute
@@ -484,10 +478,17 @@ export function useChatApi(
                 toolCallId: tc.id,
               };
               toolResults.push(toolResultMessage);
-              setMessages((prev) => [...prev, toolResultMessage]);
             }
 
             allToolResults.push(...toolResults);
+
+            // Update assistant message with toolCalls and add tool results in a single state update
+            setMessages((prev) => {
+              const updated = prev.map((msg) =>
+                msg.id === assistantId ? assistantMessage : msg
+              );
+              return [...updated, ...toolResults];
+            });
 
             // Persist assistant message and its tool results in order
             if (projectId && chatId) {
