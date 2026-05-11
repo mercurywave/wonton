@@ -325,6 +325,12 @@
   gap: 8px;
 }
 
+.footerRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .inputArea {
   border: none;
   padding: 0 20px 0px;

@@ -371,13 +371,15 @@ export default function ChatPanel({
               onAgentChange={onAgentChange}
             />
           </div>
-          <ToolPicker tools={tools || []} />
-          {showRing && (
-            <ContextRing
-              usageTokens={usageTokens}
-              maxTokens={maxTokens}
-            />
+          <div className={styles.footerRight}>
+            <ToolPicker tools={tools || []} />
+            {showRing && (
+              <ContextRing
+                usageTokens={usageTokens}
+                maxTokens={maxTokens}
+              />
           )}
+        </div>
         </div>
       </div>
     </div>
