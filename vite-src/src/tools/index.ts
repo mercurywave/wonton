@@ -3,6 +3,7 @@ import { ToolContext, ToolHandler } from "./handler";
 export type { ToolContext, ToolHandler } from "./handler";
 import { SearchFilesHandler } from "./searchFiles";
 import { SearchContentsHandler } from "./searchContents";
+import { ReadFileHandler } from "./readFile";
 
 const toolHandlers: Record<string, ToolHandler> = {};
 
@@ -15,6 +16,9 @@ registerTool(SearchFilesHandler.getInstance());
 
 SearchContentsHandler.getInstance();
 registerTool(SearchContentsHandler.getInstance());
+
+ReadFileHandler.getInstance();
+registerTool(ReadFileHandler.getInstance());
 
 export function getToolHandler(toolName: string): ToolHandler | undefined {
   return toolHandlers[toolName];
