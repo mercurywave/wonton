@@ -1,6 +1,8 @@
 import { filesystem } from "@neutralinojs/lib";
-import { ToolHandler, ToolContext } from "./handler";
-import { ToolDefinition, ToolResult } from "../types/chat";
+import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
+import { ToolResult } from "../types/chat";
+
+export const SEARCH_FILES_TOOL_NAME = "glob";
 
 interface SearchResult {
   path: string;
@@ -9,6 +11,27 @@ interface SearchResult {
 
 export class SearchFilesHandler implements ToolHandler {
   private static instance: SearchFilesHandler;
+
+  readonly name = SEARCH_FILES_TOOL_NAME;
+
+  readonly definition: ToolDefinition = {
+    type: "function",
+    function: {
+      name: SEARCH_FILES_TOOL_NAME,
+      description:
+        "Searches files in the project's linked folder for names matching the given query. Returns file paths and sizes in bytes as JSON.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: {
+            type: "string",
+            description: "The search query supporting wildcards: * for file names, ** for recursive directories (e.g. **/*.ts, src/**/test/*)",
+          },
+        },
+        required: ["query"],
+      },
+    },
+  };
 
   private constructor() {}
 
@@ -206,21 +229,3 @@ export class SearchFilesHandler implements ToolHandler {
   }
 }
 
-export const SEARCH_FILES_TOOL: ToolDefinition = {
-  type: "function",
-  function: {
-    name: "searchFiles",
-    description:
-      "Searches files in the project's linked folder for names matching the given query. Returns file paths and sizes in bytes as JSON.",
-    parameters: {
-      type: "object",
-      properties: {
-        query: {
-          type: "string",
-          description: "The search query supporting wildcards: * for file names, ** for recursive directories (e.g. **/*.ts, src/**/test/*)",
-        }
-      },
-      required: ["query"],
-    },
-  },
-};

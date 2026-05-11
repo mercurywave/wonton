@@ -1,18 +1,20 @@
-import { ToolResult, ToolDefinition } from "../types/chat";
+import { ToolDefinition, ToolResult } from "../types/chat";
 import { ToolContext, ToolHandler } from "./handler";
 export type { ToolContext, ToolHandler } from "./handler";
-import { SearchFilesHandler, SEARCH_FILES_TOOL } from "./searchFiles";
+import { SearchFilesHandler } from "./searchFiles";
+import { SearchContentsHandler } from "./searchContents";
 
 const toolHandlers: Record<string, ToolHandler> = {};
-const toolDefinitions: Array<() => ToolDefinition> = [];
 
-export function registerTool(name: string, handler: ToolHandler, definitionFn: () => ToolDefinition): void {
-  toolHandlers[name] = handler;
-  toolDefinitions.push(definitionFn);
+export function registerTool(handler: ToolHandler): void {
+  toolHandlers[handler.name] = handler;
 }
 
 SearchFilesHandler.getInstance();
-registerTool("searchFiles", SearchFilesHandler.getInstance(), () => SEARCH_FILES_TOOL);
+registerTool(SearchFilesHandler.getInstance());
+
+SearchContentsHandler.getInstance();
+registerTool(SearchContentsHandler.getInstance());
 
 export function getToolHandler(toolName: string): ToolHandler | undefined {
   return toolHandlers[toolName];
@@ -38,5 +40,5 @@ export function getAvailableTools(folderPath?: string): ToolDefinition[] {
   if (!folderPath) {
     return [];
   }
-  return toolDefinitions.map((fn) => fn());
+  return Object.values(toolHandlers).map((h) => h.definition);
 }
