@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { ChatMessage, LLMStats, ProjectMeta, ToolCall, ToolDefinition } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
 import { appendMessage, loadMessages, updateChatMeta } from "./useChatPersistence";
-import { executeToolCall } from "../utils/tools";
+import { executeToolCall } from "../tools";
 
 interface SSEDelta {
   content?: string;

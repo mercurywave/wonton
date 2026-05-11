@@ -6,7 +6,7 @@ import { updateChatMeta as updateChatMetaNative } from "./hooks/useChatPersisten
 import { useServerModels } from "./hooks/useServerModels";
 import { useProjects } from "./hooks/useProjects";
 import { isNeutralinoConnected } from "./utils/neuUtils";
-import { getAvailableTools } from "./utils/tools";
+import { getAvailableTools } from "./tools";
 import { useProjectChats } from "./hooks/useProjectChats";
 import { useAgents, getAllAgents, loadAgentsFile } from "./hooks/useAgents";
 import { os } from "@neutralinojs/lib";

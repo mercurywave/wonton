@@ -1,24 +1,22 @@
 import { filesystem } from "@neutralinojs/lib";
-import { ToolResult, ToolDefinition } from "../types/chat";
+import { ToolHandler, ToolContext } from "./handler";
+import { ToolDefinition, ToolResult } from "../types/chat";
 
-export interface ToolContext {
-  folderPath?: string;
+interface SearchResult {
+  path: string;
+  size: number;
 }
 
-export interface ToolHandler {
-  execute(toolName: string, args: object, context: ToolContext): Promise<ToolResult>;
-}
-
-class FileSearchTool {
-  private static instance: FileSearchTool;
+export class SearchFilesHandler implements ToolHandler {
+  private static instance: SearchFilesHandler;
 
   private constructor() {}
 
-  static getInstance(): FileSearchTool {
-    if (!FileSearchTool.instance) {
-      FileSearchTool.instance = new FileSearchTool();
+  static getInstance(): SearchFilesHandler {
+    if (!SearchFilesHandler.instance) {
+      SearchFilesHandler.instance = new SearchFilesHandler();
     }
-    return FileSearchTool.instance;
+    return SearchFilesHandler.instance;
   }
 
   private globToRegex(pattern: string): RegExp {
@@ -52,7 +50,7 @@ class FileSearchTool {
     dirPath: string,
     patternSegments: string[],
     currentSegmentIndex: number,
-    results: Array<{ path: string; size: number }>,
+    results: SearchResult[],
     maxResults: number,
     depth: number
   ): Promise<boolean> {
@@ -73,17 +71,14 @@ class FileSearchTool {
       const currentPattern = patternSegments[currentSegmentIndex];
       const isLastPattern = currentSegmentIndex === patternSegments.length - 1;
 
-      // Handle ** (recursive match)
       if (currentPattern === "**") {
         if (isLastPattern) {
-          // ** is the last segment — shouldn't happen, skip
           return false;
         }
 
         const nextPattern = patternSegments[currentSegmentIndex + 1];
         const nextRegex = this.globToRegex(nextPattern);
 
-        // Check files at current level against next pattern (** can match zero directories)
         for (const entry of entriesList) {
           if (results.length >= maxResults) return true;
           if (entry.startsWith(".")) continue;
@@ -95,7 +90,6 @@ class FileSearchTool {
           }
         }
 
-        // Recurse into subdirectories
         for (const entry of entriesList) {
           if (results.length >= maxResults) return true;
           if (entry.startsWith(".")) continue;
@@ -122,7 +116,6 @@ class FileSearchTool {
         return results.length >= maxResults;
       }
 
-      // Normal pattern matching
       const entryRegex = this.globToRegex(currentPattern);
 
       for (const entry of entriesList) {
@@ -179,7 +172,7 @@ class FileSearchTool {
     }
 
     const patternSegments = query.includes("/") ? query.split("/") : [query];
-    const results: Array<{ path: string; size: number }> = [];
+    const results: SearchResult[] = [];
     const done = await this.searchDirectory(
       folderPath,
       patternSegments,
@@ -213,30 +206,6 @@ class FileSearchTool {
   }
 }
 
-const toolHandlers: Record<string, ToolHandler> = {
-  searchFiles: FileSearchTool.getInstance(),
-};
-
-export function getToolHandler(toolName: string): ToolHandler | undefined {
-  return toolHandlers[toolName];
-}
-
-export async function executeToolCall(
-  toolName: string,
-  args: object,
-  context: ToolContext
-): Promise<ToolResult> {
-  const handler = getToolHandler(toolName);
-  if (!handler) {
-    return {
-      callId: "",
-      content: `Error: Unknown tool "${toolName}"`,
-      isError: true,
-    };
-  }
-  return handler.execute(toolName, args, context);
-}
-
 export const SEARCH_FILES_TOOL: ToolDefinition = {
   type: "function",
   function: {
@@ -255,10 +224,3 @@ export const SEARCH_FILES_TOOL: ToolDefinition = {
     },
   },
 };
-
-export function getAvailableTools(folderPath?: string): ToolDefinition[] {
-  if (!folderPath) {
-    return [];
-  }
-  return [SEARCH_FILES_TOOL];
-}
