@@ -1,16 +1,12 @@
 import { filesystem } from "@neutralinojs/lib";
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
+import { truncateContent } from "./truncationTools";
 
 export const READ_FILE_TOOL_NAME = "read";
 
-interface ReadFileResult {
-  path: string;
-  size: number;
-  content: string;
-  totalLines: number;
-  linesReturned: number;
-}
+const MAX_LINES = 2000;
+const MAX_BYTES = 50 * 1024; // 50KB
 
 export class ReadFileHandler implements ToolHandler {
   private static instance: ReadFileHandler;
@@ -122,7 +118,7 @@ export class ReadFileHandler implements ToolHandler {
       // Check if offset is beyond file
       if (startLine > totalLines) {
         const relPath = path.replace(/^\//, "");
-        const result: ReadFileResult = {
+        const result: Record<string, unknown> = {
           path: relPath,
           size: stat.size || 0,
           content: `// Offset ${offset} is beyond the end of the file (${totalLines} lines)`,
@@ -138,15 +134,23 @@ export class ReadFileHandler implements ToolHandler {
       const selectedLines = lines.slice(startLine - 1, endLine);
       const selectedContent = selectedLines.join("\n");
 
+      // Apply truncation limits (max lines and max bytes)
+      const truncated = truncateContent(selectedContent, MAX_LINES, MAX_BYTES);
+
       const relPath = path.replace(/^\//, "");
 
-      const result: ReadFileResult = {
+      const result: Record<string, unknown> = {
         path: relPath,
         size: stat.size || 0,
-        content: selectedContent,
+        content: truncated.content,
         totalLines,
-        linesReturned: selectedLines.length,
+        linesReturned: truncated.returnedLines,
       };
+
+      if (truncated.wasTruncated) {
+        result.wasTruncated = true;
+        result.truncationReason = truncated.truncationReason;
+      }
 
       return {
         callId: "",
