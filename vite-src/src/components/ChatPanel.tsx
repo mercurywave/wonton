@@ -173,13 +173,17 @@ function MessageBubble({ message, modelAliases, toolResultMessages }: { message:
     return results;
   }, [toolResultMessages]);
 
+  const showContent = message.content?.trim();
+
   return (
     <div className={`${styles.message} ${isUser ? styles.user : styles.assistant}`}>
       <div className={styles.bubbleWrapper}>
-        <div className={styles.bubble}>
-          <div className={styles.content}>
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
-          </div>
+        <div className={`${styles.bubble} ${!showContent ? styles.noContent : ""}`}>
+          {showContent && (
+            <div className={styles.content}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+            </div>
+          )}
           {hasStats && <MessageStats stats={message.stats!} modelAliases={modelAliases} />}
         </div>
       </div>
@@ -281,9 +285,9 @@ export default function ChatPanel({
              const elements: React.ReactElement[] = [];
 
              for (let i = 0; i < messages.length; i++) {
-               if (skip.has(i)) continue;
+                if (skip.has(i)) continue;
 
-               const msg = messages[i];
+                const msg = messages[i];
 
                if (msg.toolCalls && msg.toolCalls.length > 0) {
                  const toolResultMessages: ChatMessageType[] = [];

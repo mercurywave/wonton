@@ -162,6 +162,10 @@
   word-wrap: break-word;
 }
 
+.bubble.noContent {
+  padding: 0 32px;
+}
+
 .message.user .bubble {
   background: #1a1a2e;
   color: #e0e0e0;
