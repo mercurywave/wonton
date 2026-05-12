@@ -2,6 +2,7 @@ import { filesystem } from "@neutralinojs/lib";
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
 import { truncateContent } from "./truncationTools";
+import { sanitizeAndResolvePath } from "./pathTools";
 
 export const READ_FILE_TOOL_NAME = "read";
 
@@ -77,7 +78,17 @@ export class ReadFileHandler implements ToolHandler {
     const offset = offsetArg && offsetArg > 0 ? offsetArg : 1;
     const limit = limitArg && limitArg > 0 ? limitArg : undefined;
 
-    const fullPath = path.startsWith("/") ? path : `${folderPath}/${path}`;
+    // Sanitize and resolve path
+    const sanitized = await sanitizeAndResolvePath(folderPath, path);
+    if (!sanitized.success) {
+      return {
+        callId: "",
+        content: `Error: ${sanitized.error}`,
+        isError: true,
+      };
+    }
+
+    const fullPath = sanitized.resolvedPath!;
 
     try {
       const stat = await filesystem.getStats(fullPath);
@@ -117,9 +128,8 @@ export class ReadFileHandler implements ToolHandler {
 
       // Check if offset is beyond file
       if (startLine > totalLines) {
-        const relPath = path.replace(/^\//, "");
         const result: Record<string, unknown> = {
-          path: relPath,
+          path: sanitized.relativePath,
           size: stat.size || 0,
           content: `// Offset ${offset} is beyond the end of the file (${totalLines} lines)`,
           totalLines,
@@ -137,10 +147,8 @@ export class ReadFileHandler implements ToolHandler {
       // Apply truncation limits (max lines and max bytes)
       const truncated = truncateContent(selectedContent, MAX_LINES, MAX_BYTES);
 
-      const relPath = path.replace(/^\//, "");
-
       const result: Record<string, unknown> = {
-        path: relPath,
+        path: sanitized.relativePath,
         size: stat.size || 0,
         content: truncated.content,
         totalLines,
