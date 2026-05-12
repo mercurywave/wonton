@@ -8,6 +8,8 @@ interface ReadFileResult {
   path: string;
   size: number;
   content: string;
+  totalLines: number;
+  linesReturned: number;
 }
 
 export class ReadFileHandler implements ToolHandler {
@@ -20,13 +22,21 @@ export class ReadFileHandler implements ToolHandler {
     function: {
       name: READ_FILE_TOOL_NAME,
       description:
-        "Reads the full contents of a specific file in the project's linked folder. Returns the file path, size, and content as JSON.",
+        "Reads contents of a specific file in the project's linked folder. Can read full file or a range of lines. Returns the file path, size, content, and line metadata as JSON.",
       parameters: {
         type: "object",
         properties: {
           path: {
             type: "string",
             description: "The relative or absolute path to the file to read",
+          },
+          offset: {
+            type: "number",
+            description: "The 1-based line number to start reading from (optional, defaults to 1)",
+          },
+          limit: {
+            type: "number",
+            description: "The maximum number of lines to read (optional, defaults to all lines)",
           },
         },
         required: ["path"],
@@ -44,7 +54,11 @@ export class ReadFileHandler implements ToolHandler {
   }
 
   async execute(toolName: string, args: object, context: ToolContext): Promise<ToolResult> {
-    const { path } = args as { path: string };
+    const { path, offset: offsetArg, limit: limitArg } = args as { 
+      path: string; 
+      offset?: number; 
+      limit?: number; 
+    };
     const { folderPath } = context;
 
     if (!folderPath) {
@@ -62,6 +76,10 @@ export class ReadFileHandler implements ToolHandler {
         isError: true,
       };
     }
+
+    // Parse offset and limit with defaults
+    const offset = offsetArg && offsetArg > 0 ? offsetArg : 1;
+    const limit = limitArg && limitArg > 0 ? limitArg : undefined;
 
     const fullPath = path.startsWith("/") ? path : `${folderPath}/${path}`;
 
@@ -83,14 +101,7 @@ export class ReadFileHandler implements ToolHandler {
         };
       }
 
-      if (stat.size > 500_000) {
-        return {
-          callId: "",
-          content: `Error: File too large (${stat.size} bytes). Maximum allowed is 500000 bytes.`,
-          isError: true,
-        };
-      }
-
+      // Read the full file content first
       const content = await filesystem.readFile(fullPath);
       if (!content) {
         return {
@@ -100,12 +111,41 @@ export class ReadFileHandler implements ToolHandler {
         };
       }
 
+      // Split into lines
+      const lines = content.split("\n");
+      const totalLines = lines.length;
+
+      // Apply offset and limit
+      const startLine = Math.min(offset, totalLines);
+      const endLine = limit ? Math.min(startLine + limit - 1, totalLines) : totalLines;
+
+      // Check if offset is beyond file
+      if (startLine > totalLines) {
+        const relPath = path.replace(/^\//, "");
+        const result: ReadFileResult = {
+          path: relPath,
+          size: stat.size || 0,
+          content: `// Offset ${offset} is beyond the end of the file (${totalLines} lines)`,
+          totalLines,
+          linesReturned: 0,
+        };
+        return {
+          callId: "",
+          content: JSON.stringify(result),
+        };
+      }
+
+      const selectedLines = lines.slice(startLine - 1, endLine);
+      const selectedContent = selectedLines.join("\n");
+
       const relPath = path.replace(/^\//, "");
 
       const result: ReadFileResult = {
         path: relPath,
         size: stat.size || 0,
-        content,
+        content: selectedContent,
+        totalLines,
+        linesReturned: selectedLines.length,
       };
 
       return {
