@@ -4,6 +4,7 @@ export type { ToolContext, ToolHandler } from "./handler";
 import { SearchFilesHandler } from "./searchFiles";
 import { SearchContentsHandler } from "./searchContents";
 import { ReadFileHandler } from "./readFile";
+import { WriteFileHandler } from "./writeFile";
 
 const toolHandlers: Record<string, ToolHandler> = {};
 
@@ -11,14 +12,10 @@ export function registerTool(handler: ToolHandler): void {
   toolHandlers[handler.name] = handler;
 }
 
-SearchFilesHandler.getInstance();
 registerTool(SearchFilesHandler.getInstance());
-
-SearchContentsHandler.getInstance();
 registerTool(SearchContentsHandler.getInstance());
-
-ReadFileHandler.getInstance();
 registerTool(ReadFileHandler.getInstance());
+registerTool(WriteFileHandler.getInstance());
 
 export function getToolHandler(toolName: string): ToolHandler | undefined {
   return toolHandlers[toolName];
