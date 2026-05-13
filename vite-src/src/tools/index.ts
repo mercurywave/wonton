@@ -5,6 +5,7 @@ import { SearchFilesHandler } from "./searchFiles";
 import { SearchContentsHandler } from "./searchContents";
 import { ReadFileHandler } from "./readFile";
 import { WriteFileHandler } from "./writeFile";
+import { EditFileHandler } from "./editFile";
 
 const toolHandlers: Record<string, ToolHandler> = {};
 
@@ -16,6 +17,7 @@ registerTool(SearchFilesHandler.getInstance());
 registerTool(SearchContentsHandler.getInstance());
 registerTool(ReadFileHandler.getInstance());
 registerTool(WriteFileHandler.getInstance());
+registerTool(EditFileHandler.getInstance());
 
 export function getToolHandler(toolName: string): ToolHandler | undefined {
   return toolHandlers[toolName];
