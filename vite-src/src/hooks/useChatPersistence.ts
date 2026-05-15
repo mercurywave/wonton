@@ -189,7 +189,7 @@ export async function deleteChat(projectId: string, chatId: string): Promise<voi
   }
 }
 
-export async function loadMessages(projectId: string, chatId: string): Promise<ChatMessage[]> {
+export async function loadMessages(projectId: string, chatId: string, chatExecutionIds?: Map<string, string>): Promise<ChatMessage[]> {
   if (!isNeutralinoConnected()) return [];
 
   const projectDir = await getProjectDataDir(projectId);
@@ -217,6 +217,15 @@ export async function loadMessages(projectId: string, chatId: string): Promise<C
       } catch {
         // ignore malformed lines
       }
+    }
+    if(chatExecutionIds?.has(chatId)) {
+      messages.push({
+        id: chatExecutionIds.get(chatId)!,
+        role: "assistant",
+        content: "",
+        timestamp: Date.now(),
+        toolCalls: [],
+      })
     }
     return messages;
   } catch {

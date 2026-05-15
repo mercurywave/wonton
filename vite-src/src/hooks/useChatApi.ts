@@ -234,6 +234,8 @@ async function makeApiCall(
 
 export function useChatApi(
   settings: ChatSettings,
+  chatExecutionIds: Map<string, string>,
+  setChatExecutionId: (chatId: string, executionId: string | null) => void,
   projectId?: string,
   chatId?: string,
   projectMeta?: ProjectMeta,
@@ -241,8 +243,6 @@ export function useChatApi(
   onTitleGenerated?: (chatId: string, name: string) => void,
   tools?: ToolDefinition[],
   folderPath?: string,
-  onProcessingStart?: (executionId: string) => void,
-  onProcessingEnd?: () => void
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -252,7 +252,7 @@ export function useChatApi(
 
   useEffect(() => {
     if (projectId && chatId) {
-      loadMessages(projectId, chatId).then(setMessages);
+      loadMessages(projectId, chatId, chatExecutionIds).then(setMessages);
     } else {
       setMessages([]);
     }
@@ -312,7 +312,9 @@ export function useChatApi(
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
 
-      onProcessingStart?.(crypto.randomUUID());
+      if(chatId){
+        setChatExecutionId(chatId, crypto.randomUUID());
+      }
 
       try {
         abortRef.current?.abort();
@@ -362,7 +364,7 @@ export function useChatApi(
           );
 
           const assistantId = crypto.randomUUID();
-          onProcessingStart?.(assistantId);
+          setChatExecutionId(chatId!, assistantId);
           const accumulated: string[] = [];
           let parsedStats: LLMStats | null = null;
           const toolCallsMap = new Map<number, { id: string; name: string; args: string }>();
@@ -541,10 +543,10 @@ export function useChatApi(
         setMessages((prev) => [...prev, errorMessage]);
       } finally {
         setIsLoading(false);
-        onProcessingEnd?.();
+        setChatExecutionId(chatId!, null);
       }
     },
-    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, onProcessingStart, onProcessingEnd]
+    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, setChatExecutionId]
   );
 
   const clearChat = useCallback(() => {
@@ -554,8 +556,8 @@ export function useChatApi(
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
     setIsLoading(false);
-    onProcessingEnd?.();
-  }, [onProcessingEnd]);
+    setChatExecutionId(chatId!, null);
+  }, [setChatExecutionId]);
 
   return {
     messages,

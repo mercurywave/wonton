@@ -80,6 +80,8 @@ function App() {
 
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     settings,
+    chatExecutionIds,
+    setChatExecutionId,
     isNeutralinoConnected() ? activeProjectId : undefined,
     activeChatId || undefined,
     projectMeta || undefined,
@@ -87,16 +89,6 @@ function App() {
     renameChat,
     availableTools,
     activeProject?.folderPath,
-    (executionId: string) => {
-      if (activeChatId) {
-        setChatExecutionId(activeChatId, executionId);
-      }
-    },
-    () => {
-      if (activeChatId) {
-        setChatExecutionId(activeChatId, null);
-      }
-    }
   );
 
   useEffect(() => {
