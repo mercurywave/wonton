@@ -54,8 +54,8 @@ function App() {
     loadChatMessages,
     setChatDraft,
     refreshChats,
-    setChatProcessing,
-    processingChatIds,
+    setChatExecutionId,
+    chatExecutionIds,
   } = useProjectChats(
     isNeutralinoConnected() ? activeProjectId : undefined,
     projectsInitialized
@@ -87,14 +87,14 @@ function App() {
     renameChat,
     availableTools,
     activeProject?.folderPath,
-    () => {
+    (executionId: string) => {
       if (activeChatId) {
-        setChatProcessing(activeChatId, true);
+        setChatExecutionId(activeChatId, executionId);
       }
     },
     () => {
       if (activeChatId) {
-        setChatProcessing(activeChatId, false);
+        setChatExecutionId(activeChatId, null);
       }
     }
   );
@@ -321,7 +321,7 @@ function App() {
           name: c.name,
           updatedAt: c.updatedAt,
           draft: c.draft,
-          isProcessing: processingChatIds.has(c.id),
+          isProcessing: chatExecutionIds.has(c.id),
         }))}
         activeChatId={activeChatId}
         onChatSelect={(chat) => {
@@ -336,7 +336,7 @@ function App() {
          <ChatPanel
                messages={messages}
                isLoading={isLoading}
-               isProcessing={activeChatId ? processingChatIds.has(activeChatId) : false}
+               isProcessing={activeChatId ? chatExecutionIds.has(activeChatId) : false}
                onSend={sendMessage}
                onStop={stopGeneration}
               models={visibleModels}

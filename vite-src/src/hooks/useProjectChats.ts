@@ -18,7 +18,7 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [projectMeta, setProjectMeta] = useState<ProjectMeta | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [processingChatIds, setProcessingChatIds] = useState<Set<string>>(new Set());
+  const [chatExecutionIds, setChatExecutionIds] = useState<Map<string, string>>(new Map());
   const skipMetaRef = useRef(false);
 
   const loadMeta = useCallback(async () => {
@@ -122,16 +122,16 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
 
   const activeChat = chats.find((c) => c.id === activeChatId);
 
-  const setChatProcessing = useCallback((chatId: string, processing: boolean) => {
-    setProcessingChatIds((prev) => {
-      const next = new Set(prev);
-      if (processing) {
-        next.add(chatId);
+  const setChatExecutionId = useCallback((chatId: string, executionId: string | null) => {
+    setChatExecutionIds((prev) => {
+      const next = new Map(prev);
+      if(executionId) {
+        next.set(chatId, executionId);
       } else {
         next.delete(chatId);
       }
       return next;
-    });
+    })
   }, []);
 
   return {
@@ -140,7 +140,7 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
     activeChat,
     projectMeta,
     isLoading,
-    processingChatIds,
+    chatExecutionIds,
     createChat,
     deleteChat,
     renameChat,
@@ -151,6 +151,6 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
     refreshChats,
     setProjectMeta,
     loadMeta,
-    setChatProcessing,
+    setChatExecutionId,
   };
 }

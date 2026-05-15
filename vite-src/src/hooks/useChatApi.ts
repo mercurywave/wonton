@@ -241,7 +241,7 @@ export function useChatApi(
   onTitleGenerated?: (chatId: string, name: string) => void,
   tools?: ToolDefinition[],
   folderPath?: string,
-  onProcessingStart?: () => void,
+  onProcessingStart?: (executionId: string) => void,
   onProcessingEnd?: () => void
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -311,7 +311,8 @@ export function useChatApi(
 
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
-      onProcessingStart?.();
+
+      onProcessingStart?.(crypto.randomUUID());
 
       try {
         abortRef.current?.abort();
@@ -361,6 +362,7 @@ export function useChatApi(
           );
 
           const assistantId = crypto.randomUUID();
+          onProcessingStart?.(assistantId);
           const accumulated: string[] = [];
           let parsedStats: LLMStats | null = null;
           const toolCallsMap = new Map<number, { id: string; name: string; args: string }>();
