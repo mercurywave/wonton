@@ -18,6 +18,7 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
   const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [projectMeta, setProjectMeta] = useState<ProjectMeta | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [processingChatIds, setProcessingChatIds] = useState<Set<string>>(new Set());
   const skipMetaRef = useRef(false);
 
   const loadMeta = useCallback(async () => {
@@ -121,12 +122,25 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
 
   const activeChat = chats.find((c) => c.id === activeChatId);
 
+  const setChatProcessing = useCallback((chatId: string, processing: boolean) => {
+    setProcessingChatIds((prev) => {
+      const next = new Set(prev);
+      if (processing) {
+        next.add(chatId);
+      } else {
+        next.delete(chatId);
+      }
+      return next;
+    });
+  }, []);
+
   return {
     chats,
     activeChatId,
     activeChat,
     projectMeta,
     isLoading,
+    processingChatIds,
     createChat,
     deleteChat,
     renameChat,
@@ -137,5 +151,6 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
     refreshChats,
     setProjectMeta,
     loadMeta,
+    setChatProcessing,
   };
 }

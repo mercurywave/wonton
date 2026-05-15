@@ -10,6 +10,7 @@ import {
   Pencil,
   Clock,
   DraftingCompass,
+  Loader2,
 } from "lucide-react";
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
@@ -20,6 +21,7 @@ interface ChatItem {
   name: string;
   updatedAt: number;
   draft?: string;
+  isProcessing?: boolean;
 }
 
 interface SidebarProps {
@@ -206,7 +208,11 @@ export default function Sidebar({
                     />
                   ) : (
                     <>
-                      <MessageSquare size={14} className={styles.chatIcon} />
+                      {chat.isProcessing ? (
+                        <Loader2 size={14} className={`${styles.chatIcon} ${styles.spinner}`} />
+                      ) : (
+                        <MessageSquare size={14} className={styles.chatIcon} />
+                      )}
                       <span className={styles.chatName}>{chat.name}</span>
                       {chat.draft ? (
                         <DraftingCompass 

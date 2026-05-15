@@ -240,7 +240,9 @@ export function useChatApi(
   agentSystemPrompt?: string,
   onTitleGenerated?: (chatId: string, name: string) => void,
   tools?: ToolDefinition[],
-  folderPath?: string
+  folderPath?: string,
+  onProcessingStart?: () => void,
+  onProcessingEnd?: () => void
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -309,6 +311,7 @@ export function useChatApi(
 
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
+      onProcessingStart?.();
 
       try {
         abortRef.current?.abort();
@@ -536,9 +539,10 @@ export function useChatApi(
         setMessages((prev) => [...prev, errorMessage]);
       } finally {
         setIsLoading(false);
+        onProcessingEnd?.();
       }
     },
-    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath]
+    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, onProcessingStart, onProcessingEnd]
   );
 
   const clearChat = useCallback(() => {
@@ -548,7 +552,8 @@ export function useChatApi(
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
     setIsLoading(false);
-  }, []);
+    onProcessingEnd?.();
+  }, [onProcessingEnd]);
 
   return {
     messages,

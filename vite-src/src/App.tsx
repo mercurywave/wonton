@@ -54,6 +54,8 @@ function App() {
     loadChatMessages,
     setChatDraft,
     refreshChats,
+    setChatProcessing,
+    processingChatIds,
   } = useProjectChats(
     isNeutralinoConnected() ? activeProjectId : undefined,
     projectsInitialized
@@ -84,7 +86,17 @@ function App() {
     activeAgent?.systemPrompt,
     renameChat,
     availableTools,
-    activeProject?.folderPath
+    activeProject?.folderPath,
+    () => {
+      if (activeChatId) {
+        setChatProcessing(activeChatId, true);
+      }
+    },
+    () => {
+      if (activeChatId) {
+        setChatProcessing(activeChatId, false);
+      }
+    }
   );
 
   useEffect(() => {
@@ -304,7 +316,13 @@ function App() {
         showProjectFeatures={showProjectFeatures}
         projectsLoading={projectsLoading}
         projects={projects}
-        chats={chats.map((c) => ({ id: c.id, name: c.name, updatedAt: c.updatedAt, draft: c.draft }))}
+        chats={chats.map((c) => ({
+          id: c.id,
+          name: c.name,
+          updatedAt: c.updatedAt,
+          draft: c.draft,
+          isProcessing: processingChatIds.has(c.id),
+        }))}
         activeChatId={activeChatId}
         onChatSelect={(chat) => {
           const fullChat = chats.find((c) => c.id === chat.id);
@@ -315,11 +333,12 @@ function App() {
       />
       <div className={`main ${isMobile ? "" : sidebarOpen ? "expanded" : ""}`}>
         {currentPage === "chat" && (
-           <ChatPanel
-              messages={messages}
-              isLoading={isLoading}
-              onSend={sendMessage}
-              onStop={stopGeneration}
+         <ChatPanel
+               messages={messages}
+               isLoading={isLoading}
+               isProcessing={activeChatId ? processingChatIds.has(activeChatId) : false}
+               onSend={sendMessage}
+               onStop={stopGeneration}
               models={visibleModels}
               activeModel={activeModel}
               onModelChange={handleModelChange}

@@ -16,6 +16,7 @@ import { getDisplayName } from "../utils/modelUtils";
 interface ChatPanelProps {
   messages: ChatMessageType[];
   isLoading: boolean;
+  isProcessing: boolean;
   onSend: (content: string, modelId: string) => void;
   onStop: () => void;
   models: ServerModel[];
@@ -201,6 +202,7 @@ function MessageBubble({ message, modelAliases, toolResultMessages }: { message:
 export default function ChatPanel({
   messages,
   isLoading,
+  isProcessing,
   onSend,
   onStop,
   models,
@@ -255,6 +257,8 @@ export default function ChatPanel({
     },
     [draft, isLoading, onSend, activeModel, setDraft]
   );
+
+  const shouldShowStopButton = isProcessing;
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -338,7 +342,7 @@ export default function ChatPanel({
             placeholder="Type a message..."
             rows={1}
           />
-          {isLoading ? (
+          {shouldShowStopButton ? (
             <button
               type="button"
               className={styles.stopButton}
