@@ -184,6 +184,13 @@ export async function deleteChat(projectId: string, chatId: string): Promise<voi
     if (meta.logId) {
       await filesystem.remove(`${msgsDir}/${meta.logId}.jsonl`);
     }
+    if (meta.subagents?.length) {
+      for (const subagent of meta.subagents) {
+        if (subagent.logId) {
+          await filesystem.remove(`${msgsDir}/${subagent.logId}.jsonl`);
+        }
+      }
+    }
   } catch (err) {
     console.error("deleteChat: failed to remove chat files", err);
   }
@@ -236,7 +243,8 @@ export async function loadMessages(projectId: string, chatId: string, chatExecut
 export async function appendMessage(
   projectId: string,
   chatId: string,
-  message: ChatMessage
+  message: ChatMessage,
+  logId?: string
 ): Promise<void> {
   if (!isNeutralinoConnected()) return;
 
@@ -244,23 +252,20 @@ export async function appendMessage(
   const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
   const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
 
-  try {
-    const metaContent = await filesystem.readFile(`${chatsDir}/${chatId}.json`);
-    const meta = JSON.parse(metaContent) as ChatMeta;
-    const logId = meta.logId || chatId;
-    const jsonlPath = `${msgsDir}/${logId}.jsonl`;
-    const line = JSON.stringify(message) + "\n";
-    await filesystem.appendFile(jsonlPath, line);
-  } catch (err) {
-    console.error("appendMessage: failed to append to jsonl", err);
+  const targetLogId = logId || chatId;
+  const jsonlPath = `${msgsDir}/${targetLogId}.jsonl`;
+  const line = JSON.stringify(message) + "\n";
+  await filesystem.appendFile(jsonlPath, line);
+
+  if (logId) {
+    return;
   }
 
   try {
-    const metaPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.json`;
-    const content = await filesystem.readFile(metaPath);
-    const meta = JSON.parse(content) as ChatMeta;
+    const metaContent = await filesystem.readFile(`${chatsDir}/${chatId}.json`);
+    const meta = JSON.parse(metaContent) as ChatMeta;
     meta.updatedAt = Date.now();
-    await filesystem.writeFile(metaPath, JSON.stringify(meta, null, 2));
+    await filesystem.writeFile(`${chatsDir}/${chatId}.json`, JSON.stringify(meta, null, 2));
   } catch (err) {
     console.error("appendMessage: failed to update chat meta", err);
   }
