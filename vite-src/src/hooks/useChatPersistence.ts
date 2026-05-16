@@ -438,7 +438,13 @@ export async function saveSubagentMeta(
     const content = await filesystem.readFile(metaPath);
     const meta = JSON.parse(content) as ChatMeta;
     const subagents = meta.subagents || [];
-    subagents.push(subagentMeta);
+    const idx = subagents.findIndex(s => s.id === subagentMeta.id);
+    if (idx !== -1) {
+      subagents[idx] = subagentMeta;
+    }
+    else {
+      subagents.push(subagentMeta);
+    }
     await filesystem.writeFile(metaPath, JSON.stringify({ ...meta, subagents }, null, 2));
   } catch (err) {
     console.error("saveSubagentMeta: failed to save subagent meta", err);
