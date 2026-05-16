@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { ChatMessage, LLMStats, ProjectMeta, ToolCall, ToolDefinition } from "../types/chat";
+import { ChatMessage, ChatMeta, LLMStats, ProjectMeta, ToolCall, ToolDefinition } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
 import { appendMessage, loadMessages, updateChatMeta } from "./useChatPersistence";
 import { executeToolCall } from "../tools";
@@ -283,7 +283,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
   // First message is the user message, persist it
   const userMessage = initialMessages[initialMessages.length - 1];
   if (round === 0 && projectId && logId && userMessage) {
-    await appendMessage(projectId, logId, userMessage);
+    await appendMessage(projectId, logId, userMessage, chatId);
     persistedMessageIds.add(userMessage.id);
   }
 
@@ -419,10 +419,10 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
 
       // Persist assistant message and its tool results in order
       if (projectId && logId) {
-        await appendMessage(projectId, logId, assistantMessage);
+        await appendMessage(projectId, logId, assistantMessage, chatId);
         persistedMessageIds.add(assistantMessage.id);
         for (const tr of toolResults) {
-          await appendMessage(projectId, logId, tr);
+          await appendMessage(projectId, logId, tr, chatId);
           persistedMessageIds.add(tr.id);
         }
       }
@@ -445,7 +445,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
   if (projectId && logId) {
     for (const msg of allAssistantMessages) {
       if (persistedMessageIds.has(msg.id)) continue;
-      await appendMessage(projectId, logId, msg);
+      await appendMessage(projectId, logId, msg, chatId);
     }
   }
 
@@ -463,8 +463,8 @@ export function useChatApi(
   settings: ChatSettings,
   chatExecutionIds: Map<string, string>,
   setChatExecutionId: (chatId: string, executionId: string | null) => void,
+  chat?: ChatMeta,
   projectId?: string,
-  chatId?: string,
   projectMeta?: ProjectMeta,
   agentSystemPrompt?: string,
   onTitleGenerated?: (chatId: string, name: string) => void,
@@ -476,6 +476,7 @@ export function useChatApi(
   const abortRef = useRef<AbortController | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
+  const chatId = chat?.id;
 
   useEffect(() => {
     if (projectId && chatId) {
@@ -571,7 +572,7 @@ export function useChatApi(
           signal: controller.signal,
           projectId,
           chatId,
-          logId: chatId,
+          logId: chat?.logId,
           onUpdateMessage: (messageId, messageContent, messageToolCalls) => {
             setChatExecutionId(chatId!, messageId);
             setMessages((prev) => {

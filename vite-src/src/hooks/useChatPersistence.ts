@@ -242,9 +242,9 @@ export async function loadMessages(projectId: string, chatId: string, chatExecut
 
 export async function appendMessage(
   projectId: string,
-  chatId: string,
+  logId: string,
   message: ChatMessage,
-  logId?: string
+  chatId?: string,
 ): Promise<void> {
   if (!isNeutralinoConnected()) return;
 
@@ -252,12 +252,11 @@ export async function appendMessage(
   const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
   const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
 
-  const targetLogId = logId || chatId;
-  const jsonlPath = `${msgsDir}/${targetLogId}.jsonl`;
+  const jsonlPath = `${msgsDir}/${logId}.jsonl`;
   const line = JSON.stringify(message) + "\n";
   await filesystem.appendFile(jsonlPath, line);
 
-  if (logId) {
+  if (!chatId) {
     return;
   }
 

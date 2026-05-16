@@ -25,7 +25,7 @@ export async function getProjectDataDir(projectId: string): Promise<string> {
   let dataDir: string;
   if (platform.includes("windows")) {
     const local = await os.getEnv("LOCALAPPDATA");
-    dataDir = `${local}\\${DATA_DIR_NAME}`;
+    dataDir = `${local}/${DATA_DIR_NAME}`;
   } else if (platform.includes("mac")) {
     const home = await os.getEnv("HOME");
     dataDir = `${home}/Library/Application Support/${DATA_DIR_NAME}`;
@@ -50,7 +50,7 @@ export async function getRootDataDir(): Promise<string> {
   let dataDir: string;
   if (platform.includes("windows")) {
     const local = await os.getEnv("LOCALAPPDATA");
-    dataDir = `${local}\\${DATA_DIR_NAME}`;
+    dataDir = `${local}/${DATA_DIR_NAME}`;
   } else if (platform.includes("mac")) {
     const home = await os.getEnv("HOME");
     dataDir = `${home}/Library/Application Support/${DATA_DIR_NAME}`;
