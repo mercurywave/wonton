@@ -5,6 +5,7 @@ import {
   useCallback,
   ReactNode,
   useEffect,
+  useMemo,
 } from "react";
 import { Page } from "../types/chat";
 
@@ -47,14 +48,17 @@ export function UIProvider({ children }: { children: ReactNode }) {
     [isMobile]
   );
 
-  const value = {
-    currentPage,
-    setCurrentPage,
-    sidebarOpen,
-    setSidebarOpen,
-    isMobile,
-    navigate,
-  };
+  const value = useMemo(
+    () => ({
+      currentPage,
+      setCurrentPage,
+      sidebarOpen,
+      setSidebarOpen,
+      isMobile,
+      navigate,
+    }),
+    [currentPage, sidebarOpen, isMobile, navigate]
+  );
 
   return <UIContext.Provider value={value}>{children}</UIContext.Provider>;
 }
