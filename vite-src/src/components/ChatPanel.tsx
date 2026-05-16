@@ -3,15 +3,16 @@ import { Send, StopCircle, Hammer } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
-import { ChatMessage as ChatMessageType, Agent, LLMStats, ServerModel, ToolCall, ToolDefinition } from "../types/chat";
-import { ChatSettings } from "../hooks/useChatSettings";
+import { ChatMessage as ChatMessageType, LLMStats, ToolCall } from "../types/chat";
 import { useContextWindow } from "../hooks/useContextWindow";
 import { useChatDraft } from "../hooks/useChatDraft";
+import { useSettings, useAgentsContext, useChats, useProjects } from "../contexts";
 import ModelPicker from "./ModelPicker";
 import AgentPicker from "./AgentPicker";
 import ContextRing from "./ContextRing";
 import ToolPicker from "./ToolPicker";
 import { getDisplayName } from "../utils/modelUtils";
+import { getAvailableTools } from "../tools";
 
 interface ChatPanelProps {
   messages: ChatMessageType[];
@@ -19,18 +20,11 @@ interface ChatPanelProps {
   isProcessing: boolean;
   onSend: (content: string, modelId: string) => void;
   onStop: () => void;
-  models: ServerModel[];
   activeModel: string;
   onModelChange: (modelId: string) => void;
-  agents: Agent[];
   activeAgentId: string;
   onAgentChange: (agentId: string) => void;
   chatName?: string;
-  settings: ChatSettings;
-  projectId?: string;
-  chatId?: string;
-  setChatDraft?: (chatId: string, draft: string) => Promise<void>;
-  tools?: ToolDefinition[];
 }
 
 function formatTokensPerSecond(completionTokens: number, timeMs: number): string {
@@ -205,19 +199,21 @@ export default function ChatPanel({
   isProcessing,
   onSend,
   onStop,
-  models,
   activeModel,
   onModelChange,
-  agents,
   activeAgentId,
   onAgentChange,
   chatName,
-  settings,
-  projectId,
-  chatId,
-  setChatDraft,
-  tools,
 }: ChatPanelProps) {
+  const { visibleModels, settings } = useSettings();
+  const { allAgents } = useAgentsContext();
+  const { setChatDraft, activeChatId } = useChats();
+  const { activeProject, activeProjectId } = useProjects();
+
+  const availableTools = useMemo(
+    () => getAvailableTools(activeProject?.folderPath),
+    [activeProject?.folderPath]
+  );
   const { maxTokens } = useContextWindow(activeModel, settings);
 
   const { usageTokens, showRing } = useMemo(() => {
@@ -229,7 +225,7 @@ export default function ChatPanel({
     const usage = (stats.promptTokens || 0) + (stats.completionTokens || 0);
     return { usageTokens: usage, showRing: true };
   }, [messages]);
-  const { draft, setDraft, handleBlur } = useChatDraft(projectId, chatId, setChatDraft);
+  const { draft, setDraft, handleBlur } = useChatDraft(activeProjectId, activeChatId || undefined, setChatDraft);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -368,19 +364,19 @@ export default function ChatPanel({
         <div className={styles.footerContainer}>
           <div className={styles.footerSelectors}>
             <ModelPicker
-              models={models}
+              models={visibleModels}
               activeModel={activeModel}
               onModelChange={onModelChange}
               modelAliases={settings.modelAliases}
             />
             <AgentPicker
-              agents={agents}
+              agents={allAgents}
               activeAgentId={activeAgentId}
               onAgentChange={onAgentChange}
             />
           </div>
           <div className={styles.footerRight}>
-            <ToolPicker tools={tools || []} />
+            <ToolPicker tools={availableTools} />
             {showRing && (
               <ContextRing
                 usageTokens={usageTokens}

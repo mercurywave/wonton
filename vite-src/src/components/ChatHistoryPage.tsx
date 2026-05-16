@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Search, MessageSquare } from "lucide-react";
-import { ChatMeta, ChatMessage } from "../types/chat";
+import { ChatMessage, ChatMeta } from "../types/chat";
 import styles from "../components/ChatHistoryPage.module.css";
+import { useChats } from "../contexts";
 
 const WORDS_AROUND = 4;
 const SEARCH_DEBOUNCE_MS = 200;
@@ -12,9 +13,6 @@ interface SearchResult {
 }
 
 interface ChatHistoryPageProps {
-  chats: ChatMeta[];
-  messagesByChat: Record<string, ChatMessage[]>;
-  isLoadingMessages: boolean;
   onChatSelect: (chatId: string) => void;
 }
 
@@ -101,14 +99,18 @@ function buildSearchResults(
 }
 
 export default function ChatHistoryPage({
-  chats,
-  messagesByChat,
-  isLoadingMessages,
   onChatSelect,
 }: ChatHistoryPageProps) {
+  const { chats, historyMessages, isLoadingHistoryMessages, loadHistoryMessages } = useChats();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (!isLoadingHistoryMessages && Object.keys(historyMessages).length === 0) {
+      loadHistoryMessages();
+    }
+  }, [isLoadingHistoryMessages, historyMessages, loadHistoryMessages]);
 
   useEffect(() => {
     if (debounceRef.current) {
@@ -126,8 +128,8 @@ export default function ChatHistoryPage({
   }, [query]);
 
   const searchResults = useMemo(
-    () => buildSearchResults(chats, messagesByChat, debouncedQuery),
-    [chats, messagesByChat, debouncedQuery]
+    () => buildSearchResults(chats, historyMessages, debouncedQuery),
+    [chats, historyMessages, debouncedQuery]
   );
 
   const filteredChats = useMemo(() => {
@@ -138,7 +140,7 @@ export default function ChatHistoryPage({
   }, [chats, searchResults, debouncedQuery]);
 
   const getFirstUserMessage = useCallback((chatId: string): string => {
-    const messages = messagesByChat[chatId];
+    const messages = historyMessages[chatId];
     if (!messages) return "";
     const userMsg = messages.find((m) => m.role === "user");
     if (!userMsg) return "";
@@ -146,7 +148,7 @@ export default function ChatHistoryPage({
       return userMsg.content.slice(0, 200) + "...";
     }
     return userMsg.content;
-  }, [messagesByChat]);
+  }, [historyMessages]);
 
   const formatDate = (timestamp: number): string => {
     return new Date(timestamp).toLocaleDateString("en-US", {
@@ -184,7 +186,7 @@ export default function ChatHistoryPage({
           )}
         </div>
 
-        {isLoadingMessages && (
+        {isLoadingHistoryMessages && (
           <div className={styles.loading}>Loading messages...</div>
         )}
 

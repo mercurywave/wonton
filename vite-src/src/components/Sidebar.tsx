@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
+import { useUI, useProjects, useChats } from "../contexts";
 import ProjectSelector from "../components/ProjectSelector";
 
 interface ChatItem {
@@ -25,46 +26,35 @@ interface ChatItem {
 }
 
 interface SidebarProps {
-  isOpen: boolean;
-  onToggle: () => void;
-  onOverlayClick: () => void;
-  currentPage: Page;
-  onNavigate: (page: Page) => void;
   onNewChat: () => void;
-  currentProjectId: string;
-  projectCount: number;
-  onProjectSelect: (projectId: string) => void;
   showProjectFeatures: boolean;
-  projectsLoading: boolean;
-  projects: import("../types/project").Project[];
-  chats?: ChatItem[];
-  activeChatId?: string | null;
+  onProjectSelect: (projectId: string) => void;
   onChatSelect?: (chat: ChatItem) => void;
   onRenameChat?: (chatId: string, name: string) => void;
   onDeleteChat?: (chatId: string) => void;
 }
 
 export default function Sidebar({
-  isOpen,
-  onToggle,
-  onOverlayClick,
-  currentPage,
-  onNavigate,
   onNewChat,
-  currentProjectId,
-  projectCount,
-  onProjectSelect,
   showProjectFeatures,
-  projectsLoading,
-  projects,
-  chats = [],
-  activeChatId = null,
+  onProjectSelect,
   onChatSelect,
   onRenameChat,
   onDeleteChat,
 }: SidebarProps) {
+  const { sidebarOpen, setSidebarOpen, currentPage, navigate } = useUI();
+  const { projects, activeProjectId, isLoading: projectsLoading } = useProjects();
+  const { chats, activeChatId, chatExecutionIds } = useChats();
+
+  const displayChats = chats.slice(0, 5).map((c) => ({
+    id: c.id,
+    name: c.name,
+    updatedAt: c.updatedAt,
+    draft: c.draft,
+    isProcessing: chatExecutionIds.has(c.id),
+  }));
   const navItems: { page: Page; icon: React.ReactNode; label: string; filterOut?: () => boolean }[] = [
-    { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => isOpen },
+    { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => sidebarOpen },
     { page: "projects", icon: <Folder size={18} />, label: "Projects" },
     { page: "history", icon: <Clock size={18} />, label: "History" },
     { page: "settings", icon: <Settings size={18} />, label: "Settings" },
@@ -75,8 +65,6 @@ export default function Sidebar({
   const [renameValue, setRenameValue] = useState("");
   const renameInputRef = useRef<HTMLInputElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
-
-  const displayChats = chats.slice(0, 5);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -130,42 +118,42 @@ export default function Sidebar({
     <>
       <button
         className={styles.mobileToggle}
-        onClick={onToggle}
+        onClick={() => setSidebarOpen(!sidebarOpen)}
         title="Toggle sidebar"
       >
         <Menu size={18} />
       </button>
       <div
-        className={`${styles.overlay} ${isOpen ? styles.overlayVisible : ""}`}
-        onClick={onOverlayClick}
+        className={`${styles.overlay} ${sidebarOpen ? styles.overlayVisible : ""}`}
+        onClick={() => setSidebarOpen(false)}
       />
       <div
-        className={`${styles.sidebar} ${isOpen ? styles.open : ""}`}
+        className={`${styles.sidebar} ${sidebarOpen ? styles.open : ""}`}
       >
         <div className={styles.header}>
-          <button className={styles.toggle} onClick={onToggle} title="Toggle sidebar">
+          <button className={styles.toggle} onClick={() => setSidebarOpen(!sidebarOpen)} title="Toggle sidebar">
             <Menu size={18} />
           </button>
           <span className={styles.title}>Wonton</span>
           <img
-            className={`${styles.logo} ${isOpen ? styles.visible : ""}`}
+            className={`${styles.logo} ${sidebarOpen ? styles.visible : ""}`}
             src="/takeout.svg"
             alt="Takeout"
           />
         </div>
 
-        {isOpen && showProjectFeatures && !projectsLoading && (
+        {sidebarOpen && showProjectFeatures && !projectsLoading && (
           <div className={styles.projectSection}>
             <ProjectSelector
               projects={projects}
-              activeProjectId={currentProjectId}
+              activeProjectId={activeProjectId}
               onProjectSelect={onProjectSelect}
-              isOpen={isOpen}
+              isOpen={sidebarOpen}
             />
           </div>
         )}
 
-        {!isOpen && (
+        {!sidebarOpen && (
           <div className={styles.chatActions}>
             <button className={styles.action} onClick={onNewChat} title="New chat">
               <Plus size={16} />
@@ -174,7 +162,7 @@ export default function Sidebar({
           </div>
         )}
 
-        {isOpen && chats.length > 0 && (
+        {sidebarOpen && chats.length > 0 && (
           <div className={styles.chatListSection}>
             <div className={styles.chatListHeader}>
               <span className={styles.chatListTitle}>Chats</span>
@@ -247,7 +235,7 @@ export default function Sidebar({
             <button
               key={item.page}
               className={`${styles.navItem} ${currentPage === item.page ? styles.active : ""}`}
-              onClick={() => onNavigate(item.page)}
+              onClick={() => navigate(item.page)}
             >
               {item.icon}
               <span>{item.label}</span>
@@ -257,7 +245,7 @@ export default function Sidebar({
 
         <div className={styles.footer}>
           <img
-            className={`${styles.logo} ${!isOpen ? styles.visible : ""}`}
+            className={`${styles.logo} ${!sidebarOpen ? styles.visible : ""}`}
             src="/takeout.svg"
             alt="Takeout"
           />

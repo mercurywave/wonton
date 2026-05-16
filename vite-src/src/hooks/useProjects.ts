@@ -23,7 +23,7 @@ function createDefaultProject(): Project {
   };
 }
 
-export function useProjects() {
+export function useProjectsData() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [initialized, setInitialized] = useState(false);

@@ -4,32 +4,17 @@ import styles from "../components/Settings.module.css";
 import { ChatSettings as ChatSettingsType } from "../hooks/useChatSettings";
 import { ServerModel, Agent } from "../types/chat";
 import { BUILTIN_AGENTS } from "../utils/agents";
+import { useSettings, useAgentsContext } from "../contexts";
 
 interface SettingsProps {
-  settings: ChatSettingsType;
-  onUpdate: (updates: Partial<ChatSettingsType>) => void;
-  models: ServerModel[];
-  modelsLoading: boolean;
-  modelsError: string | null;
-  onRefetch: () => void;
-  customAgents: Agent[];
-  onAddAgent: (agent: Omit<Agent, "id">) => Promise<void>;
-  onUpdateAgent: (id: string, name: string, systemPrompt: string) => Promise<void>;
-  onDeleteAgent: (id: string) => Promise<void>;
+  onUpdateProjectSettings?: (updates: Partial<ChatSettingsType>) => void;
 }
 
-export default function Settings({
-  settings,
-  onUpdate,
-  models,
-  modelsLoading,
-  modelsError,
-  onRefetch,
-  customAgents,
-  onAddAgent,
-  onUpdateAgent,
-  onDeleteAgent,
-}: SettingsProps) {
+export default function Settings({ onUpdateProjectSettings }: SettingsProps) {
+  const { settings, updateSettings, models, modelsLoading, modelsError, refetchModels } = useSettings();
+  const { customAgents, addAgent, updateAgent, deleteAgent } = useAgentsContext();
+
+  const onUpdate = onUpdateProjectSettings || updateSettings;
   const allModels = models;
   const [showAddAgent, setShowAddAgent] = useState(false);
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
@@ -76,14 +61,14 @@ export default function Settings({
 
   const handleAddAgent = async () => {
     if (!agentName.trim() || !agentPrompt.trim()) return;
-    await onAddAgent({ name: agentName.trim(), systemPrompt: agentPrompt.trim(), main: true });
+    await addAgent({ name: agentName.trim(), systemPrompt: agentPrompt.trim(), main: true });
     setAgentName("");
     setAgentPrompt("");
     setShowAddAgent(false);
   };
 
   const handleDeleteAgent = async (id: string) => {
-    await onDeleteAgent(id);
+    await deleteAgent(id);
   };
 
   const handleStartEdit = (agent: Agent) => {
@@ -94,7 +79,7 @@ export default function Settings({
 
   const handleSaveEdit = async (id: string) => {
     if (!editName.trim() || !editPrompt.trim()) return;
-    await onUpdateAgent(id, editName.trim(), editPrompt.trim());
+    await updateAgent(id, editName.trim(), editPrompt.trim());
     setEditingAgentId(null);
     setEditName("");
     setEditPrompt("");
@@ -183,7 +168,7 @@ export default function Settings({
                 <div className={styles.modelsErrorText}>{modelsError}</div>
                 <button
                   className={styles.retryButton}
-                  onClick={onRefetch}
+                  onClick={refetchModels}
                   type="button"
                 >
                   Retry

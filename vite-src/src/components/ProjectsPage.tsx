@@ -2,10 +2,9 @@ import { useState, useRef, useEffect } from "react";
 import { Folder, Plus, Trash2, Pencil, FolderOpen } from "lucide-react";
 import { Project } from "../types/project";
 import styles from "../components/ProjectsPage.module.css";
+import { useProjects } from "../contexts";
 
 interface ProjectsPageProps {
-  projects: Project[];
-  activeProjectId: string;
   onProjectSelect: (projectId: string) => void;
   onCreateProjectFromFolder: () => void;
   onNewBlankProject: () => void;
@@ -18,8 +17,6 @@ interface ProjectsPageProps {
 }
 
 export default function ProjectsPage({
-  projects,
-  activeProjectId,
   onProjectSelect,
   onCreateProjectFromFolder,
   onNewBlankProject,
@@ -30,6 +27,7 @@ export default function ProjectsPage({
   onChangeFolder,
   onOpenFolder,
 }: ProjectsPageProps) {
+  const { projects, activeProjectId } = useProjects();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
