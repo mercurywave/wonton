@@ -1,4 +1,4 @@
-import { ChatMeta, ProjectMeta } from "../types/chat";
+import { ChatMeta, ProjectMeta, SubagentMeta } from "../types/chat";
 import { ChatMessage } from "../types/chat";
 import {
   PROJ_FILE_NAME,
@@ -394,5 +394,53 @@ export async function loadProjectMeta(projectId: string): Promise<ProjectMeta> {
     return JSON.parse(content) as ProjectMeta;
   } catch {
     return {};
+  }
+}
+
+export async function createSubagentLog(
+  projectId: string,
+  _chatId: string,
+  _agentId: string,
+  _query: string
+): Promise<{ subagentId: string; logId: string }> {
+  if (!isNeutralinoConnected()) {
+    const subagentId = generateGuid();
+    const logId = generateGuid();
+    return { subagentId, logId };
+  }
+
+  const projectDir = await getProjectDataDir(projectId);
+  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
+
+  const subagentId = generateGuid();
+  const logId = generateGuid();
+
+  try {
+    await filesystem.writeFile(`${msgsDir}/${logId}.jsonl`, "");
+  } catch (err) {
+    console.error("createSubagentLog: failed to create subagent jsonl", err);
+  }
+
+  return { subagentId, logId };
+}
+
+export async function saveSubagentMeta(
+  projectId: string,
+  chatId: string,
+  subagentMeta: SubagentMeta
+): Promise<void> {
+  if (!isNeutralinoConnected()) return;
+
+  const projectDir = await getProjectDataDir(projectId);
+  const metaPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.json`;
+
+  try {
+    const content = await filesystem.readFile(metaPath);
+    const meta = JSON.parse(content) as ChatMeta;
+    const subagents = meta.subagents || [];
+    subagents.push(subagentMeta);
+    await filesystem.writeFile(metaPath, JSON.stringify({ ...meta, subagents }, null, 2));
+  } catch (err) {
+    console.error("saveSubagentMeta: failed to save subagent meta", err);
   }
 }

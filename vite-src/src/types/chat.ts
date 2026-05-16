@@ -52,6 +52,18 @@ export interface Agent {
   name: string;
   systemPrompt: string;
   main: boolean;
+  defaultToolSet?: string[];
+}
+
+export interface SubagentMeta {
+  id: string;
+  agentId: string;
+  toolSet: string[];
+  query: string;
+  status: "running" | "completed" | "failed";
+  createdAt: number;
+  updatedAt: number;
+  logId: string;
 }
 
 export interface ChatMeta {
@@ -64,6 +76,7 @@ export interface ChatMeta {
   activeAgentId?: string;
   logId?: string;
   draft?: string;
+  subagents?: SubagentMeta[];
 }
 
 export interface ProjectMeta {

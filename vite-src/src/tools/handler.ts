@@ -1,7 +1,11 @@
 import { ToolResult } from "../types/chat";
+import { ChatSettings } from "../hooks/useChatSettings";
 
 export interface ToolContext {
   folderPath?: string;
+  projectId?: string;
+  chatId?: string;
+  settings?: ChatSettings;
 }
 
 export interface ToolDefinition {

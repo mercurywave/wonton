@@ -6,6 +6,7 @@ import { SearchContentsHandler } from "./searchContents";
 import { ReadFileHandler } from "./readFile";
 import { WriteFileHandler } from "./writeFile";
 import { EditFileHandler } from "./editFile";
+import { ExecuteSubagentHandler } from "./executeSubagent";
 
 const toolHandlers: Record<string, ToolHandler> = {};
 
@@ -18,6 +19,7 @@ registerTool(SearchContentsHandler.getInstance());
 registerTool(ReadFileHandler.getInstance());
 registerTool(WriteFileHandler.getInstance());
 registerTool(EditFileHandler.getInstance());
+registerTool(ExecuteSubagentHandler.getInstance());
 
 export function getToolHandler(toolName: string): ToolHandler | undefined {
   return toolHandlers[toolName];
