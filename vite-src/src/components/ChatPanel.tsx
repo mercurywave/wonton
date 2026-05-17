@@ -112,7 +112,7 @@ function ToolCallSection({ toolCall, result }: { toolCall: ToolCall; result?: st
       return { raw: toolCall.arguments };
     }
   });
-  const [parsedResult] = useState<{ formatted: string; isJson: boolean }>(() => {
+  const parsedResult = useMemo(() => {
     if (result == null) return { formatted: "", isJson: false };
     try {
       const obj = JSON.parse(result);
@@ -120,7 +120,7 @@ function ToolCallSection({ toolCall, result }: { toolCall: ToolCall; result?: st
     } catch {
       return { formatted: result, isJson: false };
     }
-  });
+  }, [result]);
 
   return (
     <div className={styles.toolCallSection}>

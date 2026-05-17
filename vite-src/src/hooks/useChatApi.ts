@@ -388,7 +388,27 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     } else {
       const toolResults: ChatMessage[] = [];
 
+      // Create partial tool result messages before executing tool calls
       for (const tc of toolCalls) {
+        const toolResultMessage: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "tool",
+          content: "",
+          timestamp: Date.now(),
+          toolCallId: tc.id,
+        };
+        toolResults.push(toolResultMessage);
+
+        // Broadcast partial tool result message immediately
+        onUpdateMessage?.(toolResultMessage.id, toolResultMessage.content, [], "tool", toolResultMessage.toolCallId);
+      }
+
+      // Notify caller of updated assistant message
+      onUpdateMessage?.(assistantId, assistantMessage.content, toolCalls, "assistant");
+
+      // Execute tool calls and update results
+      for (let i = 0; i < toolCalls.length; i++) {
+        const tc = toolCalls[i];
         let args: object = {};
         try {
           args = JSON.parse(tc.arguments);
@@ -402,20 +422,11 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
           chatId,
           settings,
         });
-        const toolResultMessage: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: "tool",
-          content: result.content,
-          timestamp: Date.now(),
-          toolCallId: tc.id,
-        };
-        toolResults.push(toolResultMessage);
-      }
 
-      // Notify caller of updated assistant message + tool results
-      onUpdateMessage?.(assistantId, assistantMessage.content, toolCalls, "assistant");
-      for (const tr of toolResults) {
-        onUpdateMessage?.(tr.id, tr.content, [], "tool", tr.toolCallId);
+        // Update the tool result message with actual content
+        const toolResultMessage = toolResults[i];
+        toolResultMessage.content = result.content;
+        onUpdateMessage?.(toolResultMessage.id, result.content, [], "tool", toolResultMessage.toolCallId);
       }
 
       // Persist assistant message and its tool results in order
