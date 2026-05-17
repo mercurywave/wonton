@@ -176,3 +176,21 @@
   color: #ffa500;
   font-style: italic;
 }
+
+.matchList {
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-size: 11px;
+}
+
+.matchLine {
+  color: #6a8eff;
+}
+
+.matchContent {
+  color: #ccc;
+}
+
+.otherArray {
+  font-size: 11px;
+  color: #999;
+}

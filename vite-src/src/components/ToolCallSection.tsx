@@ -169,13 +169,13 @@ function ResultsTable({ results, truncated }: { results: Array<Record<string, un
       );
       if (allMatches) {
         return (
-          <div style={{ fontFamily: '"Cascadia Code", "Fira Code", "Consolas", monospace', fontSize: "11px" }}>
+          <div className={styles.matchList}>
             {val.map((item, j) => {
               const m = item as { line: number; content: string };
               return (
                 <div key={j}>
-                  <span style={{ color: "#6a8eff" }}>{m.line}</span>
-                  <span style={{ color: "#ccc" }}>: {m.content}</span>
+                  <span className={styles.matchLine}>{m.line}</span>
+                  <span className={styles.matchContent}>: {m.content}</span>
                 </div>
               );
             })}
@@ -183,11 +183,9 @@ function ResultsTable({ results, truncated }: { results: Array<Record<string, un
         );
       }
       return (
-        <div>
+        <div className={styles.otherArray}>
           {val.map((item, j) => (
-            <div key={j} style={{ fontSize: "11px", color: "#999" }}>
-              {typeof item === "string" ? item : JSON.stringify(item)}
-            </div>
+            <div key={j}>{typeof item === "string" ? item : JSON.stringify(item)}</div>
           ))}
         </div>
       );
