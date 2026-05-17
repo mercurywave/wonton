@@ -206,7 +206,7 @@ export default function ChatPanel({
   chatName,
 }: ChatPanelProps) {
   const { visibleModels, settings } = useSettings();
-  const { allAgents } = useAgentsContext();
+  const { mainAgents } = useAgentsContext();
   const { setChatDraft, activeChatId } = useChats();
   const { activeProject, activeProjectId } = useProjects();
 
@@ -370,7 +370,7 @@ export default function ChatPanel({
               modelAliases={settings.modelAliases}
             />
             <AgentPicker
-              agents={allAgents}
+              agents={mainAgents}
               activeAgentId={activeAgentId}
               onAgentChange={onAgentChange}
             />

@@ -12,6 +12,7 @@ import { Agent } from "../types/chat";
 interface AgentsContextValue {
   customAgents: Agent[];
   allAgents: Agent[];
+  mainAgents: Agent[];
   addAgent: (agent: Omit<Agent, "id">) => Promise<void>;
   updateAgent: (id: string, name: string, systemPrompt: string) => Promise<void>;
   deleteAgent: (id: string) => Promise<void>;
@@ -22,11 +23,13 @@ const AgentsContext = createContext<AgentsContextValue | null>(null);
 export function AgentsProvider({ children }: { children: ReactNode }) {
   const [customAgents, addAgent, updateAgent, deleteAgent] = useAgents();
   const [allAgents, setAllAgents] = useState<Agent[]>([]);
+  const [mainAgents, setMainAgents] = useState<Agent[]>([]);
 
   useEffect(() => {
-    import("../hooks/useAgents").then(({ loadAgentsFile, getAllAgents }) => {
+    import("../hooks/useAgents").then(({ loadAgentsFile, getAllAgents, getMainAgents }) => {
       loadAgentsFile().then((custom) => {
         setAllAgents(getAllAgents(custom));
+        setMainAgents(getMainAgents(custom));
       });
     });
   }, []);
@@ -35,11 +38,12 @@ export function AgentsProvider({ children }: { children: ReactNode }) {
     () => ({
       customAgents,
       allAgents,
+      mainAgents,
       addAgent,
       updateAgent,
       deleteAgent,
     }),
-    [customAgents, allAgents, addAgent, updateAgent, deleteAgent]
+    [customAgents, allAgents, mainAgents, addAgent, updateAgent, deleteAgent]
   );
 
   return <AgentsContext.Provider value={value}>{children}</AgentsContext.Provider>;
