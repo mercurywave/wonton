@@ -113,6 +113,15 @@ const toolConfigs: Record<string, ToolConfig> = {
     },
     content: (_parsedArgs, parsedResult) => {
       const result = parsedResult.formatted;
+      if (parsedResult.isJson && parsedResult.parsed) {
+        const obj = parsedResult.parsed as Record<string, unknown>;
+        if (Array.isArray(obj.results)) {
+          const results = obj.results as Array<Record<string, unknown>>;
+          return (
+            <ResultsTable results={results} truncated={obj.truncated === true} />
+          );
+        }
+      }
       return result ? <pre className={styles.toolCallContent}>{result}</pre> : null;
     },
   },
@@ -123,10 +132,95 @@ const toolConfigs: Record<string, ToolConfig> = {
     },
     content: (_parsedArgs, parsedResult) => {
       const result = parsedResult.formatted;
+      if (parsedResult.isJson && parsedResult.parsed) {
+        const obj = parsedResult.parsed as Record<string, unknown>;
+        if (Array.isArray(obj.results)) {
+          const results = obj.results as Array<Record<string, unknown>>;
+          return (
+            <ResultsTable results={results} truncated={obj.truncated === true} />
+          );
+        }
+      }
       return result ? <pre className={styles.toolCallContent}>{result}</pre> : null;
     },
   },
 };
+
+function ResultsTable({ results, truncated }: { results: Array<Record<string, unknown>>; truncated?: boolean }) {
+  const columns = useMemo(() => {
+    const keys = new Set<string>();
+    for (const r of results) {
+      for (const k of Object.keys(r)) {
+        keys.add(k);
+      }
+    }
+    const ordered: string[] = [];
+    for (const k of ["path", "size", "matches", ...Array.from(keys)]) {
+      if (keys.has(k) && !ordered.includes(k)) ordered.push(k);
+    }
+    return ordered;
+  }, [results]);
+
+  function formatCellValue(val: unknown): React.ReactNode {
+    if (Array.isArray(val)) {
+      const allMatches = val.every(
+        (item): item is { line: number; content: string } =>
+          item !== null && typeof item === "object" && "line" in item && "content" in item
+      );
+      if (allMatches) {
+        return (
+          <div style={{ fontFamily: '"Cascadia Code", "Fira Code", "Consolas", monospace', fontSize: "11px" }}>
+            {val.map((item, j) => {
+              const m = item as { line: number; content: string };
+              return (
+                <div key={j}>
+                  <span style={{ color: "#6a8eff" }}>{m.line}</span>
+                  <span style={{ color: "#ccc" }}>: {m.content}</span>
+                </div>
+              );
+            })}
+          </div>
+        );
+      }
+      return (
+        <div>
+          {val.map((item, j) => (
+            <div key={j} style={{ fontSize: "11px", color: "#999" }}>
+              {typeof item === "string" ? item : JSON.stringify(item)}
+            </div>
+          ))}
+        </div>
+      );
+    }
+    if (typeof val === "string") return val;
+    return JSON.stringify(val);
+  }
+
+  return (
+    <div>
+      <table className={styles.resultsTable}>
+        <thead>
+          <tr>
+            {columns.map((col) => (
+              <th key={col} className={styles.resultsTh}>{col}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {results.map((row, i) => (
+            <tr key={i} className={styles.resultsTr}>
+              {columns.map((col) => {
+                const val = row[col];
+                return <td key={col} className={styles.resultsTd}>{formatCellValue(val)}</td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {truncated && <div className={styles.resultsTruncated}>⚠ Results truncated</div>}
+    </div>
+  );
+}
 
 export default function ToolCallSection({ toolCall, result }: { toolCall: ToolCall; result?: string }) {
   const [isExpanded, setIsExpanded] = useState(false);
