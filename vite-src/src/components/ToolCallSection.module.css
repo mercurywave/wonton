@@ -1,0 +1,82 @@
+.toolCallSection {
+  background: transparent;
+}
+
+.toolCallHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: transparent;
+  border: none;
+  color: #e0e0e0;
+  padding: 8px 0;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.1s ease;
+  text-align: left;
+}
+
+.toolCallHeader:hover {
+  background: transparent;
+}
+
+.toolCallIcon {
+  color: #e0e0e0;
+  flex-shrink: 0;
+}
+
+.toolCallName {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 400;
+  color: #e0e0e0;
+}
+
+.toolCallArrow {
+  font-size: 8px;
+  color: #888;
+}
+
+.toolCallBody {
+  padding: 10px 0;
+  margin-left: 30px;
+}
+
+.toolCallSectionLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  margin-top: 4px;
+  margin-left: 4px;
+  font-weight: 600;
+}
+
+.toolCallArgs {
+  margin: 0;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #1a1a2e;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  color: #ccc;
+  overflow-x: auto;
+  line-height: 1.5;
+}
+
+.toolCallResponse {
+  margin: 0;
+  padding: 8px 10px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #1a1a2e;
+  border-radius: 6px;
+  font-size: 11px;
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  color: #ccc;
+  overflow-x: auto;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
