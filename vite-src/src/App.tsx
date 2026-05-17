@@ -55,23 +55,9 @@ function App() {
 
   const [perChatModel, setPerChatModel] = useState<string | null>(null);
   const [perChatAgent, setPerChatAgent] = useState<string | null>(null);
-  const [restoredProject, setRestoredProject] = useState(false);
   const [projectSettingsId, setProjectSettingsId] = useState<string | null>(null);
 
   const activeAgentId = perChatAgent || "builtin:default";
-
-  useEffect(() => {
-    if (projects.length > 0 && !restoredProject) {
-      setRestoredProject(true);
-      const hasDefault = projects.some((p) => p.id === "default");
-      const lastId = settings.lastProjectId;
-      if (lastId && lastId !== "default" && projects.some((p) => p.id === lastId)) {
-        setActiveProjectId(lastId);
-      } else if (hasDefault) {
-        setActiveProjectId("default");
-      }
-    }
-  }, [projects, restoredProject, settings.lastProjectId, setActiveProjectId]);
 
   useEffect(() => {
     if (activeChat?.activeModel !== undefined) {
