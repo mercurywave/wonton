@@ -22,20 +22,26 @@
 }
 
 .toolCallIcon {
-  color: #e0e0e0;
+  color: #888;
   flex-shrink: 0;
 }
 
 .toolCallName {
-  flex: 1;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 500;
   color: #e0e0e0;
+}
+
+.toolCallPath {
+  font-size: 13px;
+  font-weight: 400;
+  color: #888;
 }
 
 .toolCallArrow {
   font-size: 8px;
   color: #888;
+  flex-shrink: 0;
 }
 
 .toolCallBody {
@@ -43,14 +49,19 @@
   margin-left: 30px;
 }
 
-.toolCallSectionLabel {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: #888;
-  margin-top: 4px;
-  margin-left: 4px;
-  font-weight: 600;
+.toolCallContent {
+  margin: 0;
+  padding: 12px 14px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid #1a1a2e;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  color: #ccc;
+  overflow-x: auto;
+  line-height: 1.6;
+  max-height: 400px;
+  overflow-y: auto;
 }
 
 .toolCallArgs {
@@ -79,4 +90,53 @@
   line-height: 1.5;
   white-space: pre-wrap;
   word-wrap: break-word;
+}
+
+.toolCallSectionLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #888;
+  margin-top: 8px;
+  margin-left: 4px;
+  font-weight: 600;
+}
+
+.debugSection {
+  margin-top: 8px;
+}
+
+.debugHeader {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  color: #666;
+  padding: 4px 0;
+  font-family: inherit;
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.debugHeader:hover {
+  color: #999;
+}
+
+.debugBody {
+  padding-left: 18px;
+  margin-top: 4px;
+}
+
+.binaryNotice {
+  padding: 8px 12px;
+  background: rgba(255, 165, 0, 0.1);
+  border: 1px solid rgba(255, 165, 0, 0.3);
+  border-radius: 6px;
+  font-size: 12px;
+  color: #ffa500;
+  font-style: italic;
 }
