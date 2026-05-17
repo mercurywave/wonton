@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { ChatMeta } from "./types/chat";
 import { updateChatMeta as updateChatMetaNative } from "./hooks/useChatPersistence";
 import { isNeutralinoConnected } from "./utils/neuUtils";
@@ -15,6 +15,7 @@ import { os } from "@neutralinojs/lib";
 function App() {
   const {
     settings,
+    updateSettings,
   } = useSettings();
 
   const {
@@ -110,10 +111,11 @@ function App() {
     setCurrentPage("chat");
     setPerChatModel(chat.activeModel || null);
     setPerChatAgent(chat.activeAgentId || null);
+    updateSettings({ lastChatId: chat.id });
     if (isMobile) {
       setSidebarOpen(false);
     }
-  }, [setActiveChat, setCurrentPage, setPerChatModel, setPerChatAgent, isMobile, setSidebarOpen]);
+  }, [setActiveChat, setCurrentPage, setPerChatModel, setPerChatAgent, updateSettings, isMobile, setSidebarOpen]);
 
   const handleProjectSelect = useCallback((projectId: string) => {
     setActiveProjectId(projectId);
@@ -192,6 +194,23 @@ function App() {
     setProjectSettingsId(id);
     setCurrentPage("projectSettings");
   }, [setCurrentPage]);
+
+  const projectsLoadedRef = useRef(false);
+
+  useEffect(() => {
+    if (!projectsLoadedRef.current && projects.length > 0 && activeProjectId) {
+      projectsLoadedRef.current = true;
+      return;
+    }
+    if (!projectsLoadedRef.current || !activeProjectId || chats.length === 0) return;
+
+    const lastChatId = settings.lastChatId;
+    const chatToSelect = chats.find((c) => c.id === lastChatId) ?? chats[0];
+
+    if (chatToSelect && (!activeChatId || activeChatId !== chatToSelect.id)) {
+      handleChatSelect(chatToSelect);
+    }
+  }, [activeProjectId, chats, activeChatId, settings.lastChatId, handleChatSelect]);
 
   const showProjectFeatures = isNeutralinoConnected() && projects.length > 0;
 

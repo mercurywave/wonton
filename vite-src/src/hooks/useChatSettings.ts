@@ -12,6 +12,7 @@ export interface ChatSettings {
   contextWindows: Record<string, number>;
   modelAliases: Record<string, string>;
   lastProjectId: string;
+  lastChatId: string;
 }
 
 const DEFAULT_SETTINGS: ChatSettings = {
@@ -24,6 +25,7 @@ const DEFAULT_SETTINGS: ChatSettings = {
   contextWindows: {},
   modelAliases: {},
   lastProjectId: "default",
+  lastChatId: "",
 };
 
 function loadSettings(): ChatSettings {
