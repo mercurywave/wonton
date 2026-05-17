@@ -2,7 +2,7 @@ import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult, ChatMessage } from "../types/chat";
 import { runToolCallLoop } from "../hooks/useChatApi";
 import { createSubagentLog, saveSubagentMeta } from "../hooks/useChatPersistence";
-import { getAgentById, getAgentByName } from "../utils/agents";
+import { getAgentByName } from "../utils/agents";
 import { getAllAgents, loadAgentsFile } from "../hooks/useAgents";
 import { SubagentMeta } from "../types/chat";
 
@@ -45,7 +45,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
     return ExecuteSubagentHandler.instance;
   }
 
-  async execute(toolName: string, args: object, context: ToolContext): Promise<ToolResult> {
+  async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { agentName, query } = args as { agentName: string; query: string };
     const { folderPath, projectId, chatId, settings } = context;
 

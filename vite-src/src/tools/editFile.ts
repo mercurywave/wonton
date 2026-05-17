@@ -56,7 +56,7 @@ export class EditFileHandler implements ToolHandler {
     return EditFileHandler.instance;
   }
 
-  async execute(toolName: string, args: object, context: ToolContext): Promise<ToolResult> {
+  async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { path, edits } = args as { path: string; edits: { oldText: string; newText: string }[] };
     const { folderPath } = context;
 

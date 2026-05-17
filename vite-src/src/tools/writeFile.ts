@@ -42,7 +42,7 @@ export class WriteFileHandler implements ToolHandler {
     return WriteFileHandler.instance;
   }
 
-  async execute(toolName: string, args: object, context: ToolContext): Promise<ToolResult> {
+  async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { path, content } = args as { path: string; content: string | null };
     const { folderPath } = context;
 

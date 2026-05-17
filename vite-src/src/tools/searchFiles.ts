@@ -174,7 +174,7 @@ export class SearchFilesHandler implements ToolHandler {
     return results.length >= maxResults;
   }
 
-  async execute(toolName: string, args: object, context: ToolContext): Promise<ToolResult> {
+  async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { query, maxResults = 20 } = args as { query: string; maxResults?: number };
     const { folderPath } = context;
 

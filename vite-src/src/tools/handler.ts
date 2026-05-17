@@ -20,5 +20,5 @@ export interface ToolDefinition {
 export interface ToolHandler {
   readonly name: string;
   readonly definition: ToolDefinition;
-  execute(toolName: string, args: object, context: ToolContext): Promise<ToolResult>;
+  execute(args: object, context: ToolContext): Promise<ToolResult>;
 }

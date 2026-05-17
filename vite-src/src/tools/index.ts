@@ -38,7 +38,7 @@ export async function executeToolCall(
       isError: true,
     };
   }
-  return handler.execute(toolName, args, context);
+  return handler.execute(args, context);
 }
 
 export function getAvailableTools(folderPath?: string): ToolDefinition[] {

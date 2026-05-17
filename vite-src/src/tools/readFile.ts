@@ -50,7 +50,7 @@ export class ReadFileHandler implements ToolHandler {
     return ReadFileHandler.instance;
   }
 
-  async execute(toolName: string, args: object, context: ToolContext): Promise<ToolResult> {
+  async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { path, offset: offsetArg, limit: limitArg } = args as { 
       path: string; 
       offset?: number; 
