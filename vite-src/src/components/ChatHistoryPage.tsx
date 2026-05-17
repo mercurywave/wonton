@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Search, MessageSquare } from "lucide-react";
 import { ChatMessage, ChatMeta } from "../types/chat";
 import styles from "../components/ChatHistoryPage.module.css";
-import { useChats } from "../contexts";
+import { useChats, useUI } from "../contexts";
 
 const WORDS_AROUND = 4;
 const SEARCH_DEBOUNCE_MS = 200;
@@ -102,15 +102,22 @@ export default function ChatHistoryPage({
   onChatSelect,
 }: ChatHistoryPageProps) {
   const { chats, historyMessages, isLoadingHistoryMessages, loadHistoryMessages } = useChats();
+  const { currentPage } = useUI();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (!isLoadingHistoryMessages && Object.keys(historyMessages).length === 0) {
+    if (currentPage !== "history") {
+      hasLoadedRef.current = false;
+      return;
+    }
+    if (!hasLoadedRef.current) {
+      hasLoadedRef.current = true;
       loadHistoryMessages();
     }
-  }, [isLoadingHistoryMessages, historyMessages, loadHistoryMessages]);
+  }, [currentPage, loadHistoryMessages]);
 
   useEffect(() => {
     if (debounceRef.current) {

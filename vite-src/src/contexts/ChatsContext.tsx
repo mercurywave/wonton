@@ -98,17 +98,20 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   const loadHistoryMessages = useCallback(async () => {
     if (!isNeutralinoConnected()) return;
-    if (historyLoadedRef.current) return;
-    historyLoadedRef.current = true;
     setIsLoadingHistoryMessages(true);
-    const allMessages: Record<string, ChatMessage[]> = {};
+    const remaining: Record<string, ChatMessage[]> = {};
     for (const chat of chats) {
-      const msgs = await loadChatMessages(chat.id);
-      allMessages[chat.id] = msgs;
+      if (!(chat.id in historyMessages)) {
+        const msgs = await loadChatMessages(chat.id);
+        remaining[chat.id] = msgs;
+      }
     }
-    setHistoryMessages(allMessages);
+    if (Object.keys(remaining).length > 0) {
+      setHistoryMessages((prev) => ({ ...prev, ...remaining }));
+    }
+    historyLoadedRef.current = true;
     setIsLoadingHistoryMessages(false);
-  }, [chats, loadChatMessages]);
+  }, [chats, historyMessages, loadChatMessages]);
 
   const value = useMemo(
     () => ({
