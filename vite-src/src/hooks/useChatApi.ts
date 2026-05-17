@@ -244,7 +244,7 @@ interface ToolCallLoopOptions {
   projectId?: string;
   chatId?: string;
   logId?: string;
-  onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[]) => void;
+  onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string) => void;
 }
 
 interface ToolCallLoopResult {
@@ -302,7 +302,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     const toolCallsMap = new Map<number, { id: string; name: string; args: string }>();
 
     // Notify caller of new assistant message
-    onUpdateMessage?.(assistantId, "", []);
+    onUpdateMessage?.(assistantId, "", [], "assistant");
 
     const decoder = new TextDecoder();
     let buffer = "";
@@ -323,7 +323,8 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
           accumulated.push(result.text);
           onUpdateMessage?.(assistantId, accumulated.join(""), Array.from(toolCallsMap.entries())
             .filter(([, call]) => call.id && call.name)
-            .map(([, call]) => ({ id: call.id, name: call.name, arguments: call.args })));
+            .map(([, call]) => ({ id: call.id, name: call.name, arguments: call.args })),
+            "assistant");
         }
         parsedStats = mergeStats(parsedStats, result.stats);
 
@@ -412,9 +413,9 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
       }
 
       // Notify caller of updated assistant message + tool results
-      onUpdateMessage?.(assistantId, assistantMessage.content, toolCalls);
+      onUpdateMessage?.(assistantId, assistantMessage.content, toolCalls, "assistant");
       for (const tr of toolResults) {
-        onUpdateMessage?.(tr.id, tr.content);
+        onUpdateMessage?.(tr.id, tr.content, [], "tool", tr.toolCallId);
       }
 
       // Persist assistant message and its tool results in order
@@ -573,7 +574,7 @@ export function useChatApi(
           projectId,
           chatId,
           logId: chat?.logId,
-          onUpdateMessage: (messageId, messageContent, messageToolCalls) => {
+          onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId) => {
             setChatExecutionId(chatId!, messageId);
             setMessages((prev) => {
               const existing = prev.find(m => m.id === messageId);
@@ -586,10 +587,11 @@ export function useChatApi(
               }
               return [...prev, {
                 id: messageId,
-                role: "assistant" as const,
+                role: messageRole || "assistant" as const,
                 content: messageContent,
                 timestamp: Date.now(),
                 toolCalls: messageToolCalls || [],
+                toolCallId: messageToolCallId,
               } as ChatMessageWithToolCalls];
             });
           },
