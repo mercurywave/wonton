@@ -16,11 +16,12 @@ function parseArgs(toolCall: ToolCall): object | null {
 }
 
 function parseResult(result: string | undefined) {
-  if (result == null) return { formatted: "", isJson: false };
+  if (result == null) return { formatted: "", isJson: false, parsed: null };
   try {
-    return { formatted: JSON.stringify(JSON.parse(result), null, 2), isJson: true };
+    const parsed = JSON.parse(result);
+    return { formatted: JSON.stringify(parsed, null, 2), isJson: true, parsed };
   } catch {
-    return { formatted: result, isJson: false };
+    return { formatted: result, isJson: false, parsed: null };
   }
 }
 
@@ -72,7 +73,7 @@ function DebugSection({ args, formatted }: { args: object | null; formatted: str
 
 interface ToolConfig {
   header: (parsedArgs: object | null) => React.ReactNode;
-  content: (parsedArgs: object | null, parsedResult: { formatted: string; isJson: boolean }) => React.ReactNode;
+  content: (parsedArgs: object | null, parsedResult: { formatted: string; isJson: boolean; parsed: Record<string, unknown> | null }) => React.ReactNode;
 }
 
 const toolConfigs: Record<string, ToolConfig> = {
@@ -86,6 +87,11 @@ const toolConfigs: Record<string, ToolConfig> = {
       const isBinary = result.includes("<type>binary</type>");
       if (isBinary) {
         return <div className={styles.binaryNotice}>Binary file - content not displayed</div>;
+      }
+      if (parsedResult.isJson && parsedResult.parsed) {
+        if (typeof parsedResult.parsed.content === "string" && parsedResult.parsed.content) {
+          return <pre className={styles.toolCallContent}>{parsedResult.parsed.content}</pre>;
+        }
       }
       return result ? <pre className={styles.toolCallContent}>{result}</pre> : null;
     },
