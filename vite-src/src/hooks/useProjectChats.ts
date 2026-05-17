@@ -20,10 +20,13 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
   const [isLoading, setIsLoading] = useState(false);
   const [chatExecutionIds, setChatExecutionIds] = useState<Map<string, string>>(new Map());
   const skipMetaRef = useRef(false);
+  const loadCountRef = useRef(0);
 
   const loadMeta = useCallback(async () => {
     if (!projectId) return;
+    const currentLoad = ++loadCountRef.current;
     const meta = await loadProjectMetaNative(projectId);
+    if (currentLoad !== loadCountRef.current) return;
     setProjectMeta(meta);
     if (meta.activeChatId) {
       setActiveChatId(meta.activeChatId);
@@ -35,8 +38,10 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
       setChats([]);
       return;
     }
+    const currentLoad = ++loadCountRef.current;
     setIsLoading(true);
     const metas = await listChatMeta(projectId);
+    if (currentLoad !== loadCountRef.current) return;
     setChats(metas);
     setIsLoading(false);
   }, [projectId]);

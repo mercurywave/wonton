@@ -107,17 +107,21 @@ export default function ChatHistoryPage({
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const hasLoadedRef = useRef(false);
+  const loadedChatIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
     if (currentPage !== "history") {
       hasLoadedRef.current = false;
+      loadedChatIdsRef.current = new Set();
       return;
     }
-    if (!hasLoadedRef.current) {
+    const currentChatIds = new Set(chats.map((c) => c.id));
+    if (!hasLoadedRef.current || !loadedChatIdsRef.current.size || !currentChatIds.size || [...currentChatIds].some((id) => !loadedChatIdsRef.current.has(id))) {
       hasLoadedRef.current = true;
+      loadedChatIdsRef.current = currentChatIds;
       loadHistoryMessages();
     }
-  }, [currentPage, loadHistoryMessages]);
+  }, [currentPage, chats, loadHistoryMessages]);
 
   useEffect(() => {
     if (debounceRef.current) {
