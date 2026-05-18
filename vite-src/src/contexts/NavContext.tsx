@@ -18,8 +18,10 @@ import { isNeutralinoConnected } from "../utils/neuUtils";
 export interface NavContextValue {
   state: NavState;
   activeProjectId: string | null;
+  logId: string | null;
   navigateToProject: (projectId: string) => void;
   navigateToChat: (chatId: string) => void;
+  navigateToLog: (logId: string) => void;
   navigateToNewChat: () => Promise<void>;
   navigateToDeleteChat: (chatId: string) => Promise<void>;
   navigateToRenameChat: (chatId: string, name: string) => Promise<void>;
@@ -39,6 +41,7 @@ export function NavProvider({ children }: { children: ReactNode }) {
     projectId: null,
     chatId: null,
     chat: null,
+    logId: null,
     page: "chat" as Page,
     model: null,
     agentId: null,
@@ -119,6 +122,13 @@ export function NavProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const navigateToLog = useCallback(
+    (logId: string) => {
+      dispatch({ type: "LOG_SELECT", logId });
+    },
+    []
+  );
+
   const navigateToNewChat = useCallback(async () => {
     if (!state.projectId) return;
     dispatch({ type: "NEW_CHAT_REQUESTED" });
@@ -167,8 +177,10 @@ export function NavProvider({ children }: { children: ReactNode }) {
     () => ({
       state,
       activeProjectId: state.projectId,
+      logId: state.logId,
       navigateToProject,
       navigateToChat,
+      navigateToLog,
       navigateToNewChat,
       navigateToDeleteChat,
       navigateToRenameChat,
@@ -177,7 +189,7 @@ export function NavProvider({ children }: { children: ReactNode }) {
       navigateToPage,
       dispatch,
     }),
-    [state, navigateToProject, navigateToChat, navigateToNewChat, navigateToDeleteChat, navigateToRenameChat, navigateToModelChange, navigateToAgentChange, navigateToPage, dispatch]
+    [state, navigateToProject, navigateToChat, navigateToLog, navigateToNewChat, navigateToDeleteChat, navigateToRenameChat, navigateToModelChange, navigateToAgentChange, navigateToPage, dispatch]
   );
 
   return <NavContext.Provider value={value}>{children}</NavContext.Provider>;

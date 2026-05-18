@@ -42,7 +42,7 @@ const ChatsContext = createContext<ChatsContextValue | null>(null);
 
 export function ChatsProvider({ children }: { children: ReactNode }) {
   const projectsCtx = useProjects();
-  const { activeProjectId, dispatch: navDispatch } = useNav();
+  const { activeProjectId, logId: navLogId, dispatch: navDispatch } = useNav();
   const { settings } = useSettings();
   const { allAgents } = useAgentsContext();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -77,8 +77,14 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const selectedChatMeta = useMemo(() => {
     if (!selectedChatId) return undefined;
     const chat = chats.find((c) => c.id === selectedChatId);
-    return chat?.logId;
+    return chat;
   }, [chats, selectedChatId]);
+
+  // Active logId: navLogId if set (explicit log selection), otherwise fall back to chat's main log
+  const activeLogId = useMemo(() => {
+    if (navLogId) return navLogId;
+    return selectedChatMeta?.logId;
+  }, [navLogId, selectedChatMeta]);
 
   // Resolve the selected agent's system prompt
   const activeAgentSystemPrompt = useMemo(() => {
@@ -102,7 +108,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     },
     availableTools,
     activeProject?.folderPath,
-    selectedChatMeta,
+    activeLogId,
   );
 
   const [historyMessages, setHistoryMessages] = useState<Record<string, ChatMessage[]>>({});
@@ -160,7 +166,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       refreshChats,
       sendMessage,
       stopGeneration,
-      updateChatMeta: (projectId: string, chatId: string, updates: Partial<ChatMeta>) => projectChatsUpdateChatMeta(chatId, updates),
+      updateChatMeta: (_projectId: string, chatId: string, updates: Partial<ChatMeta>) => projectChatsUpdateChatMeta(chatId, updates),
       selectedChatId,
       setSelectedChatId,
     }),

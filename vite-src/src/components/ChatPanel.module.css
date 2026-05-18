@@ -22,11 +22,24 @@
   padding: 8px 0 16px 0;
   margin-bottom: 8px;
   border-bottom: 1px solid #1a1a2e;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .chatHeaderName {
   font-size: 13px;
   color: #666;
+  font-weight: 500;
+}
+
+.headerSeparator {
+  color: #444;
+  margin: 0 4px;
+}
+
+.headerSubtitle {
+  color: #4a6cf7;
   font-weight: 500;
 }
 

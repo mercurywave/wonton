@@ -9,6 +9,7 @@ export interface NavState {
   projectId: string | null;
   chatId: string | null;
   chat: ChatMeta | null;
+  logId: string | null;
   page: Page;
   model: string | null;
   agentId: string | null;
@@ -52,6 +53,9 @@ export type Action =
   // Navigate to a page
   | { type: "PAGE_SET"; page: Page }
 
+  // User selected a specific log within a chat
+  | { type: "LOG_SELECT"; logId: string }
+
   // Project was deleted; switch to another project
   | { type: "PROJECT_DELETED"; fallbackProjectId: string }
 
@@ -90,6 +94,7 @@ export function navReducer(state: NavState, action: Action): NavState {
         projectId,
         chatId: null,
         chat: null,
+        logId: null,
         model: null,
         agentId: null,
         page: "chat",
@@ -137,11 +142,18 @@ export function navReducer(state: NavState, action: Action): NavState {
         ...state,
         chatId: chat.id,
         chat,
+        logId: null,
         model: chat.activeModel ?? null,
         agentId: chat.activeAgentId ?? null,
         page: "chat",
       };
     }
+
+    case "LOG_SELECT":
+      return {
+        ...state,
+        logId: action.logId,
+      };
 
     case "CHAT_CREATED": {
       const chat = action.chat;
@@ -267,6 +279,7 @@ export function navReducer(state: NavState, action: Action): NavState {
         page: "chat",
         chatId: null,
         chat: null,
+        logId: null,
         model: null,
         agentId: null,
       };

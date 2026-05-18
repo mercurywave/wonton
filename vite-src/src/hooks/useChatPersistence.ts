@@ -240,6 +240,36 @@ export async function loadMessages(projectId: string, chatId: string, chatExecut
   }
 }
 
+export async function loadMessagesByLogId(projectId: string, logId: string): Promise<ChatMessage[]> {
+  if (!isNeutralinoConnected()) return [];
+
+  const projectDir = await getProjectDataDir(projectId);
+  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
+
+  try {
+    const jsonlPath = `${msgsDir}/${logId}.jsonl`;
+    const content = await filesystem.readFile(jsonlPath);
+    if (!content.trim()) return [];
+
+    const lines = content.trim().split("\n");
+    const messages: ChatMessage[] = [];
+    const seenIds = new Set<string>();
+    for (const line of lines) {
+      try {
+        const msg = JSON.parse(line) as ChatMessage;
+        if (seenIds.has(msg.id)) continue;
+        seenIds.add(msg.id);
+        messages.push(msg);
+      } catch {
+        // ignore malformed lines
+      }
+    }
+    return messages;
+  } catch {
+    return [];
+  }
+}
+
 export async function appendMessage(
   projectId: string,
   logId: string,

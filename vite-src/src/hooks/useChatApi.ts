@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ChatMessage, LLMStats, ProjectMeta, ToolCall, ToolDefinition } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
-import { appendMessage, loadMessages, updateChatMeta } from "./useChatPersistence";
+import { appendMessage, loadMessages, loadMessagesByLogId, updateChatMeta } from "./useChatPersistence";
 import { executeToolCall } from "../tools";
 import { getAvailableTools } from "../tools";
 
@@ -492,11 +492,15 @@ export function useChatApi(
 
   useEffect(() => {
     if (projectId && chatId) {
-      loadMessages(projectId, chatId, chatExecutionIds).then(setMessages);
+      if (logId) {
+        loadMessagesByLogId(projectId, logId).then(setMessages);
+      } else {
+        loadMessages(projectId, chatId, chatExecutionIds).then(setMessages);
+      }
     } else {
       setMessages([]);
     }
-  }, [projectId, chatId]);
+  }, [projectId, chatId, logId]);
 
   const generateTitle = useCallback(
     async (userContent: string, model: string) => {

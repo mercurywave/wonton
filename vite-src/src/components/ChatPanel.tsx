@@ -11,6 +11,7 @@ import ModelPicker from "./ModelPicker";
 import AgentPicker from "./AgentPicker";
 import ContextRing from "./ContextRing";
 import ToolPicker from "./ToolPicker";
+import LogSelector from "./LogSelector";
 import { getDisplayName } from "../utils/modelUtils";
 import { getAvailableTools } from "../tools";
 import ToolCallSection from "./ToolCallSection";
@@ -158,11 +159,44 @@ export default function ChatPanel({
   chatName,
 }: ChatPanelProps) {
   const { visibleModels, settings } = useSettings();
-  const { mainAgents } = useAgentsContext();
+  const { mainAgents, allAgents } = useAgentsContext();
   const { setChatDraft } = useChats();
   const { projects } = useProjects();
-  const { state: nav, activeProjectId } = useNav();
+  const { state: nav, activeProjectId, logId, navigateToLog } = useNav();
   const activeProject = projects.find((p) => p.id === activeProjectId);
+
+  // Build log options: main log + subagents
+  const logOptions = useMemo(() => {
+    if (!nav.chat) return [];
+    const options: Array<{ id: string; label: string }> = [
+      { id: nav.chat.logId, label: "Main" },
+    ];
+    const subagents = nav.chat.subagents || [];
+    for (let i = 0; i < subagents.length; i++) {
+      const subagent = subagents[i];
+      const agent = allAgents.find((a) => a.id === subagent.agentId);
+      const agentName = agent?.name || "Subagent";
+      options.push({
+        id: subagent.logId,
+        label: `${agentName} ${i + 1}`,
+      });
+    }
+    return options;
+  }, [nav.chat, allAgents]);
+
+  const effectiveLogId = logId || nav.chat?.logId;
+
+  // Derive subtitle when a subagent log is selected
+  const logSubtitle = useMemo(() => {
+    if (!logId || !nav.chat) return null;
+    if (logId === nav.chat.logId) return null;
+    const subagent = nav.chat.subagents?.find((s) => s.logId === logId);
+    if (!subagent) return null;
+    const agent = allAgents.find((a) => a.id === subagent.agentId);
+    const agentName = agent?.name || "Subagent";
+    const index = (nav.chat.subagents || []).findIndex((s) => s.logId === logId);
+    return `${agentName} ${index + 1}`;
+  }, [logId, nav.chat, allAgents]);
 
   const availableTools = useMemo(
     () => getAvailableTools(activeProject?.folderPath),
@@ -225,7 +259,20 @@ export default function ChatPanel({
       <div className={styles.mainContent}>
         {chatName && (
           <div className={styles.chatHeader}>
-            <span className={styles.chatHeaderName}>{chatName}</span>
+            <span className={styles.chatHeaderName}>
+              {chatName}
+              {logSubtitle && (
+                <>
+                  <span className={styles.headerSeparator}>{" > "}</span>
+                  <span className={styles.headerSubtitle}>{logSubtitle}</span>
+                </>
+              )}
+            </span>
+            <LogSelector
+              logs={logOptions}
+              activeLogId={effectiveLogId || nav.chat?.logId || ""}
+              onLogChange={navigateToLog}
+            />
           </div>
         )}
         <div className={styles.messages}>
