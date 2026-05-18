@@ -1,11 +1,13 @@
 import { useState, useMemo } from "react";
-import { Hammer, FileText, ChevronDown, ChevronRight } from "lucide-react";
+import { Hammer, FileText, ChevronDown, ChevronRight, ArrowUpRight } from "lucide-react";
 import styles from "../components/ToolCallSection.module.css";
 import { ToolCall } from "../types/chat";
 import { READ_FILE_TOOL_NAME } from "../tools/readFile";
 import { SEARCH_FILES_TOOL_NAME } from "../tools/searchFiles";
 import { SEARCH_CONTENTS_TOOL_NAME } from "../tools/searchContents";
 import { WRITE_FILE_TOOL_NAME } from "../tools/writeFile";
+import { EXECUTE_SUBAGENT_TOOL_NAME } from "../tools/executeSubagent";
+import { useNav } from "../contexts/NavContext";
 
 function parseArgs(toolCall: ToolCall): object | null {
   try {
@@ -65,6 +67,56 @@ function DebugSection({ args, formatted }: { args: object | null; formatted: str
               <pre className={styles.toolCallResponse}>{formatted}</pre>
             </>
           )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SubagentSection({ toolCall, result }: { toolCall: ToolCall; result?: string }) {
+  const { navigateToLog } = useNav();
+  const [isExpanded, setIsExpanded] = useState(false);
+  const parsedArgs = useMemo(() => parseArgs(toolCall), [toolCall]);
+  const parsedResult = useMemo(() => parseResult(result), [result]);
+
+  const agentName = extractArgString(parsedArgs, "agentName");
+  const query = extractArgString(parsedArgs, "query");
+  const logId = parsedResult.parsed?.logId as string | undefined;
+
+  const handleHeaderClick = (e: React.MouseEvent) => {
+    const target = e.target as HTMLElement;
+    if (target.closest(".subagent-debug-btn")) {
+      setIsExpanded((prev) => !prev);
+      return;
+    }
+    if (logId) {
+      navigateToLog(logId);
+    }
+  };
+
+  return (
+    <div className={styles.toolCallSection}>
+      <div className={styles.subagentSection}>
+        <button className={styles.subagentHeader} onClick={handleHeaderClick}>
+          <div className={styles.subagentInfo}>
+            <Hammer className={styles.toolCallIcon} size={14} />
+            <span className={styles.toolCallName}>{agentName || "unknown"}</span>
+            {query && <span className={styles.toolCallPath}>{query}</span>}
+          </div>
+          <div className={styles.subagentHeaderActions}>
+            <button
+              className={styles.subagentDebugBtn}
+              onClick={(e) => { e.stopPropagation(); setIsExpanded((prev) => !prev); }}
+            >
+              {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+            </button>
+            <ArrowUpRight className={styles.subagentLinkIcon} size={14} />
+          </div>
+        </button>
+      </div>
+      {isExpanded && (
+        <div className={styles.toolCallBody}>
+          <DebugSection args={parsedArgs} formatted={parsedResult.formatted} />
         </div>
       )}
     </div>
@@ -221,6 +273,10 @@ function ResultsTable({ results, truncated }: { results: Array<Record<string, un
 }
 
 export default function ToolCallSection({ toolCall, result }: { toolCall: ToolCall; result?: string }) {
+  if (toolCall.name === EXECUTE_SUBAGENT_TOOL_NAME) {
+    return <SubagentSection toolCall={toolCall} result={result} />;
+  }
+
   const [isExpanded, setIsExpanded] = useState(false);
   const parsedArgs = useMemo(() => parseArgs(toolCall), [toolCall]);
   const parsedResult = useMemo(() => parseResult(result), [result]);

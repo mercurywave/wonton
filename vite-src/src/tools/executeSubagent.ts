@@ -145,6 +145,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
       response: result.finalMessage.content,
       toolCalls: result.finalMessage.toolCalls?.length || 0,
       tokens: result.finalMessage.stats?.totalTokens || 0,
+      logId: subagentLogId,
     });
 
     return {
