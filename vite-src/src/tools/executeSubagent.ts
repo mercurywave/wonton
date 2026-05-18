@@ -47,7 +47,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
 
   async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { agentName, query } = args as { agentName: string; query: string };
-    const { folderPath, projectId, chatId, settings } = context;
+    const { folderPath, projectId, chatId, settings, onChatUpdated } = context;
 
     if (!agentName || !query) {
       return {
@@ -103,6 +103,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
     };
 
     await saveSubagentMeta(projectId, chatId, subagentMeta);
+    onChatUpdated?.();
 
     // Build the user message for the subagent
     const subagentUserMessage: ChatMessage = {
@@ -130,12 +131,14 @@ export class ExecuteSubagentHandler implements ToolHandler {
       onUpdateMessage: () => {
         // No UI update needed for subagent — it's a background tool call
       },
+      onChatUpdated,
     });
 
     // Update subagent meta to completed
     subagentMeta.status = "completed";
     subagentMeta.updatedAt = Date.now();
     await saveSubagentMeta(projectId, chatId, subagentMeta);
+    onChatUpdated?.();
 
     // Format the result
     const resultContent = JSON.stringify({

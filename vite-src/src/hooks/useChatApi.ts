@@ -245,6 +245,7 @@ interface ToolCallLoopOptions {
   chatId?: string;
   logId?: string;
   onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string) => void;
+  onChatUpdated?: () => void;
 }
 
 interface ToolCallLoopResult {
@@ -266,6 +267,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     chatId,
     logId,
     onUpdateMessage,
+    onChatUpdated,
   } = options;
 
   const tools = getAvailableTools(folderPath).filter(t => toolNames.includes(t.function.name));
@@ -421,6 +423,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
           projectId,
           chatId,
           settings,
+          onChatUpdated,
         });
 
         // Update the tool result message with actual content
@@ -483,6 +486,7 @@ export function useChatApi(
   tools?: ToolDefinition[],
   folderPath?: string,
   logId?: string,
+  onChatUpdated?: () => void,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -610,6 +614,7 @@ export function useChatApi(
               } as ChatMessageWithToolCalls];
             });
           },
+          onChatUpdated,
         });
 
         // Tool result messages are added inline in onUpdateMessage

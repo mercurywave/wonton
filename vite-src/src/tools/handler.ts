@@ -6,6 +6,7 @@ export interface ToolContext {
   projectId?: string;
   chatId?: string;
   settings?: ChatSettings;
+  onChatUpdated?: () => void;
 }
 
 export interface ToolDefinition {

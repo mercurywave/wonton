@@ -163,15 +163,21 @@ export default function ChatPanel({
   const { setChatDraft } = useChats();
   const { projects } = useProjects();
   const { state: nav, activeProjectId, logId, navigateToLog } = useNav();
+  const { chats } = useChats();
   const activeProject = projects.find((p) => p.id === activeProjectId);
+
+  const currentChat = useMemo(() => {
+    if (!nav.chatId) return null;
+    return chats.find((c) => c.id === nav.chatId) ?? null;
+  }, [chats, nav.chatId]);
 
   // Build log options: main log + subagents
   const logOptions = useMemo(() => {
-    if (!nav.chat) return [];
+    if (!currentChat) return [];
     const options: Array<{ id: string; label: string }> = [
-      { id: nav.chat.logId, label: "Main" },
+      { id: currentChat.logId, label: "Main" },
     ];
-    const subagents = nav.chat.subagents || [];
+    const subagents = currentChat.subagents || [];
     for (let i = 0; i < subagents.length; i++) {
       const subagent = subagents[i];
       const agent = allAgents.find((a) => a.id === subagent.agentId);
@@ -182,21 +188,21 @@ export default function ChatPanel({
       });
     }
     return options;
-  }, [nav.chat, allAgents]);
+  }, [currentChat, allAgents]);
 
-  const effectiveLogId = logId || nav.chat?.logId;
+  const effectiveLogId = logId || currentChat?.logId;
 
   // Derive subtitle when a subagent log is selected
   const logSubtitle = useMemo(() => {
-    if (!logId || !nav.chat) return null;
-    if (logId === nav.chat.logId) return null;
-    const subagent = nav.chat.subagents?.find((s) => s.logId === logId);
+    if (!logId || !currentChat) return null;
+    if (logId === currentChat.logId) return null;
+    const subagent = currentChat.subagents?.find((s) => s.logId === logId);
     if (!subagent) return null;
     const agent = allAgents.find((a) => a.id === subagent.agentId);
     const agentName = agent?.name || "Subagent";
-    const index = (nav.chat.subagents || []).findIndex((s) => s.logId === logId);
+    const index = (currentChat.subagents || []).findIndex((s) => s.logId === logId);
     return `${agentName} ${index + 1}`;
-  }, [logId, nav.chat, allAgents]);
+  }, [logId, currentChat, allAgents]);
 
   const availableTools = useMemo(
     () => getAvailableTools(activeProject?.folderPath),
@@ -270,7 +276,7 @@ export default function ChatPanel({
             </span>
             <LogSelector
               logs={logOptions}
-              activeLogId={effectiveLogId || nav.chat?.logId || ""}
+              activeLogId={effectiveLogId || currentChat?.logId || ""}
               onLogChange={navigateToLog}
             />
           </div>

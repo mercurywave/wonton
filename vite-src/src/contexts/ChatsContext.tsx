@@ -63,6 +63,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     isNeutralinoConnected() ? (activeProjectId ?? undefined) : undefined
   );
 
+  const chatsRef = useRef(chats);
+  chatsRef.current = chats;
+
   const activeProject = useMemo(
     () => projectsCtx.projects.find((p) => p.id === activeProjectId),
     [projectsCtx.projects, activeProjectId]
@@ -95,6 +98,14 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     return agent?.systemPrompt;
   }, [chats, selectedChatId, allAgents]);
 
+  const refreshAndNotify = useCallback(async () => {
+    await refreshChats();
+    const refreshedChat = chatsRef.current.find((c) => c.id === selectedChatId);
+    if (refreshedChat) {
+      navDispatch({ type: "CHAT_CREATED", chat: refreshedChat });
+    }
+  }, [refreshChats, selectedChatId, navDispatch]);
+
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     settings,
     chatExecutionIds,
@@ -109,6 +120,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     availableTools,
     activeProject?.folderPath,
     activeLogId,
+    refreshAndNotify,
   );
 
   const [historyMessages, setHistoryMessages] = useState<Record<string, ChatMessage[]>>({});
