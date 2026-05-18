@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { ChatMessage, ChatMeta, LLMStats, ProjectMeta, ToolCall, ToolDefinition } from "../types/chat";
+import { ChatMessage, LLMStats, ProjectMeta, ToolCall, ToolDefinition } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
 import { appendMessage, loadMessages, updateChatMeta } from "./useChatPersistence";
 import { executeToolCall } from "../tools";
@@ -475,20 +475,20 @@ export function useChatApi(
   settings: ChatSettings,
   chatExecutionIds: Map<string, string>,
   setChatExecutionId: (chatId: string, executionId: string | null) => void,
-  chat?: ChatMeta,
+  chatId?: string,
   projectId?: string,
   projectMeta?: ProjectMeta,
   agentSystemPrompt?: string,
   onTitleGenerated?: (chatId: string, name: string) => void,
   tools?: ToolDefinition[],
   folderPath?: string,
+  logId?: string,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
-  const chatId = chat?.id;
 
   useEffect(() => {
     if (projectId && chatId) {
@@ -584,7 +584,7 @@ export function useChatApi(
           signal: controller.signal,
           projectId,
           chatId,
-          logId: chat?.logId,
+          logId,
           onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId) => {
             setChatExecutionId(chatId!, messageId);
             setMessages((prev) => {

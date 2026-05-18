@@ -1,8 +1,12 @@
 import { useState, useCallback, useEffect, useRef } from "react";
-import { ChatMeta } from "./types/chat";
-import { updateChatMeta as updateChatMetaNative } from "./hooks/useChatPersistence";
+import { Page } from "./types/chat";
 import { isNeutralinoConnected } from "./utils/neuUtils";
-import { useSettings, useProjects, useChats, useUI } from "./contexts";
+import { os } from "@neutralinojs/lib";
+import { useSettings } from "./contexts";
+import { useProjects } from "./contexts";
+import { useChats } from "./contexts";
+import { useUI } from "./contexts";
+import { useNav } from "./contexts";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
 import Settings from "./components/Settings";
@@ -10,116 +14,91 @@ import ProjectsPage from "./components/ProjectsPage";
 import ProjectSettingsPage from "./components/ProjectSettingsPage";
 import ChatHistoryPage from "./components/ChatHistoryPage";
 import "./App.css";
-import { os } from "@neutralinojs/lib";
 
 function App() {
-  const {
-    settings,
-  } = useSettings();
-
+  const { settings } = useSettings();
   const {
     projects,
-    activeProjectId,
-    setActiveProjectId,
-    getProjectById,
     createProject,
     createProjectFromFolder,
     updateProjectFolder,
     updateProject,
     deleteProject,
+    getProjectById,
   } = useProjects();
+const { messages, isLoading, chatExecutionIds, sendMessage, stopGeneration, updateChatMeta, setSelectedChatId, createChat, deleteChat, renameChat } = useChats();
+   const { sidebarOpen, isMobile } = useUI();
+const {
+      state: nav,
+      activeProjectId,
+      navigateToProject,
+      navigateToChat,
+      navigateToNewChat,
+      navigateToDeleteChat,
+      navigateToRenameChat,
+      navigateToModelChange,
+      navigateToAgentChange,
+      navigateToPage,
+    } = useNav();
 
-  const {
-    chats,
-    activeChatId,
-    activeChat,
-    messages,
-    isLoading,
-    chatExecutionIds,
-    createChat,
-    deleteChat,
-    renameChat,
-    setActiveChat,
-    refreshChats,
-    sendMessage,
-    stopGeneration,
-  } = useChats();
+   // Local state for project settings sub-page
+   const [projectSettingsId, setProjectSettingsId] = useState<string | null>(null);
 
-  const {
-    currentPage,
-    setCurrentPage,
-    sidebarOpen,
-    setSidebarOpen,
-    isMobile,
-  } = useUI();
+  // Track pending nav actions that require both NavContext and ChatsContext
+    const pendingNavRef = useRef<{ type: string; chatId?: string; name?: string } | null>(null);
+    const [pendingTick, setPendingTick] = useState(0);
 
-  const [perChatModel, setPerChatModel] = useState<string | null>(null);
-  const [perChatAgent, setPerChatAgent] = useState<string | null>(null);
-  const [projectSettingsId, setProjectSettingsId] = useState<string | null>(null);
+    // Bridge NavContext actions to ChatsContext operations
+    useEffect(() => {
+      const pending = pendingNavRef.current;
+      if (!pending) return;
+      pendingNavRef.current = null;
 
-  const activeAgentId = perChatAgent || "builtin:default";
+      (async () => {
+        try {
+          if (pending.type === "NEW_CHAT_REQUESTED") {
+            const chat = await createChat();
+            navigateToChat(chat.id);
+          } else if (pending.type === "CHAT_DELETE_REQUESTED" && pending.chatId) {
+            await deleteChat(pending.chatId);
+          } else if (pending.type === "CHAT_RENAME_REQUESTED" && pending.chatId) {
+            await renameChat(pending.chatId, pending.name!);
+          }
+        } catch (err) {
+          console.error("Nav operation failed:", err);
+        }
+      })();
+    }, [pendingTick, createChat, deleteChat, renameChat, navigateToChat]);
 
+   // Override nav actions that need ChatsContext to use the pending ref pattern
+const handleNewChat = useCallback(async () => {
+      pendingNavRef.current = { type: "NEW_CHAT_REQUESTED" };
+      setPendingTick(t => t + 1);
+      await navigateToNewChat();
+    }, [navigateToNewChat]);
+
+    const handleDeleteChat = useCallback(async (chatId: string) => {
+      pendingNavRef.current = { type: "CHAT_DELETE_REQUESTED", chatId };
+      setPendingTick(t => t + 1);
+      await navigateToDeleteChat(chatId);
+    }, [navigateToDeleteChat]);
+
+    const handleRenameChatNav = useCallback(async (chatId: string, name: string) => {
+      pendingNavRef.current = { type: "CHAT_RENAME_REQUESTED", chatId, name };
+      setPendingTick(t => t + 1);
+      await navigateToRenameChat(chatId, name);
+    }, [navigateToRenameChat]);
+
+  // Sync selected chat from nav state to chats context
   useEffect(() => {
-    if (activeChat?.activeModel !== undefined) {
-      setPerChatModel(activeChat.activeModel || null);
+    if (nav.chatId !== null) {
+      setSelectedChatId(nav.chatId);
     }
-    if (activeChat?.activeAgentId !== undefined) {
-      setPerChatAgent(activeChat.activeAgentId || null);
-    }
-  }, [activeChat?.id, activeChat?.activeModel, activeChat?.activeAgentId]);
+  }, [nav.chatId, setSelectedChatId]);
 
-  const activeModel = perChatModel ?? settings.defaultModel;
-
+  const activeAgentId = nav.agentId || "builtin:default";
+  const activeModel = nav.model ?? settings.defaultModel;
   const settingsProject = projectSettingsId ? getProjectById(projectSettingsId) : undefined;
-
-  const handleNewChat = useCallback(async () => {
-    await createChat();
-    setCurrentPage("chat");
-    setPerChatAgent(null);
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
-  }, [createChat, isMobile, setCurrentPage, setSidebarOpen]);
-
-  const handleModelChange = useCallback(async (modelId: string) => {
-    setPerChatModel(modelId);
-    if (activeChatId && isNeutralinoConnected()) {
-      if (modelId === settings.defaultModel) {
-        await updateChatMetaNative(activeProjectId, activeChatId, { activeModel: undefined });
-      } else {
-        await updateChatMetaNative(activeProjectId, activeChatId, { activeModel: modelId });
-      }
-      await refreshChats();
-    }
-  }, [activeChatId, activeProjectId, settings.defaultModel, refreshChats]);
-
-  const handleAgentChange = useCallback(async (agentId: string) => {
-    setPerChatAgent(agentId);
-    if (activeChatId && isNeutralinoConnected()) {
-      if (agentId === "builtin:default") {
-        await updateChatMetaNative(activeProjectId, activeChatId, { activeAgentId: undefined });
-      } else {
-        await updateChatMetaNative(activeProjectId, activeChatId, { activeAgentId: agentId });
-      }
-      await refreshChats();
-    }
-  }, [activeChatId, activeProjectId, refreshChats]);
-
-  const handleChatSelect = useCallback((chat: ChatMeta) => {
-    setActiveChat(chat.id);
-    setCurrentPage("chat");
-    setPerChatModel(chat.activeModel || null);
-    setPerChatAgent(chat.activeAgentId || null);
-    if (isMobile) {
-      setSidebarOpen(false);
-    }
-  }, [setActiveChat, setCurrentPage, setPerChatModel, setPerChatAgent, isMobile, setSidebarOpen]);
-
-  const handleProjectSelect = useCallback((projectId: string) => {
-    setActiveProjectId(projectId);
-    setCurrentPage("chat");
-    setProjectSettingsId(null);
-  }, [setActiveProjectId, setCurrentPage]);
 
   const handleNewProject = useCallback(async () => {
     const now = new Date();
@@ -128,8 +107,7 @@ function App() {
       day: "numeric",
       year: "numeric",
     });
-    const name = `Project ${dateStr}`;
-    await createProject(name);
+    await createProject(`Project ${dateStr}`);
   }, [createProject]);
 
   const handleCreateProjectFromFolder = useCallback(async () => {
@@ -184,22 +162,14 @@ function App() {
   const handleDeleteProject = useCallback(async (id: string) => {
     await deleteProject(id);
     if (activeProjectId === id) {
-      setActiveProjectId("default");
+      navigateToProject("default");
     }
-  }, [deleteProject, activeProjectId]);
+  }, [deleteProject, activeProjectId, navigateToProject]);
 
   const handleNavigateToProjectSettings = useCallback((id: string) => {
     setProjectSettingsId(id);
-    setCurrentPage("projectSettings");
-  }, [setCurrentPage]);
-
-  const projectsLoadedRef = useRef(false);
-
-  useEffect(() => {
-    if (!projectsLoadedRef.current && projects.length > 0 && activeProjectId) {
-      projectsLoadedRef.current = true;
-    }
-  }, [projects, activeProjectId]);
+    navigateToPage("projectSettings" as Page);
+  }, [navigateToPage]);
 
   const showProjectFeatures = isNeutralinoConnected() && projects.length > 0;
 
@@ -208,35 +178,48 @@ function App() {
       <Sidebar
         onNewChat={handleNewChat}
         showProjectFeatures={showProjectFeatures}
-        onProjectSelect={handleProjectSelect}
-        onChatSelect={(chat) => {
-          const fullChat = chats.find((c) => c.id === chat.id);
-          if (fullChat) handleChatSelect(fullChat);
-        }}
-        onRenameChat={renameChat}
-        onDeleteChat={deleteChat}
+        onProjectSelect={navigateToProject}
+        onChatSelect={(chatId) => navigateToChat(chatId)}
+        onRenameChat={handleRenameChatNav}
+        onDeleteChat={handleDeleteChat}
       />
       <div className={`main ${isMobile ? "" : sidebarOpen ? "expanded" : ""}`}>
-        {currentPage === "chat" && (
+        {nav.page === "chat" && (
           <ChatPanel
             messages={messages}
             isLoading={isLoading}
-            isProcessing={activeChatId ? chatExecutionIds.has(activeChatId) : false}
+            isProcessing={nav.chatId ? chatExecutionIds.has(nav.chatId) : false}
             onSend={sendMessage}
             onStop={stopGeneration}
             activeModel={activeModel}
-            onModelChange={handleModelChange}
+            onModelChange={async (modelId) => {
+              if (!nav.chatId || !activeProjectId) return;
+              if (modelId !== settings.defaultModel) {
+                await updateChatMeta(activeProjectId, nav.chatId, { activeModel: modelId });
+              } else {
+                await updateChatMeta(activeProjectId, nav.chatId, { activeModel: undefined });
+              }
+              navigateToModelChange(nav.chatId, modelId);
+            }}
             activeAgentId={activeAgentId}
-            onAgentChange={handleAgentChange}
-            chatName={activeChat?.name}
+            onAgentChange={async (agentId) => {
+              if (!nav.chatId || !activeProjectId) return;
+              if (agentId !== "builtin:default") {
+                await updateChatMeta(activeProjectId, nav.chatId, { activeAgentId: agentId });
+              } else {
+                await updateChatMeta(activeProjectId, nav.chatId, { activeAgentId: undefined });
+              }
+              navigateToAgentChange(nav.chatId, agentId);
+            }}
+            chatName={nav.chat?.name}
           />
         )}
-        {currentPage === "settings" && (
+        {nav.page === "settings" && (
           <Settings />
         )}
-        {currentPage === "projects" && !projectSettingsId && (
+        {nav.page === "projects" && !projectSettingsId && (
           <ProjectsPage
-            onProjectSelect={handleProjectSelect}
+            onProjectSelect={navigateToProject}
             onCreateProjectFromFolder={handleCreateProjectFromFolder}
             onNewBlankProject={handleNewProject}
             onRenameProject={handleRenameProject}
@@ -247,20 +230,17 @@ function App() {
             onOpenFolder={handleOpenFolder}
           />
         )}
-        {currentPage === "projectSettings" && settingsProject && (
+        {nav.page === "projectSettings" && settingsProject && (
           <ProjectSettingsPage
             project={settingsProject}
-            onBack={() => setCurrentPage("projects")}
+            onBack={() => navigateToPage("projects" as Page)}
             onRename={handleRenameProject}
             onDelete={handleDeleteProject}
           />
         )}
-        {currentPage === "history" && (
+        {nav.page === "history" && (
           <ChatHistoryPage
-            onChatSelect={(chatId) => {
-              const chat = chats.find((c) => c.id === chatId);
-              if (chat) handleChatSelect(chat);
-            }}
+            onChatSelect={(chatId) => navigateToChat(chatId)}
           />
         )}
       </div>

@@ -4,23 +4,27 @@ import { ProjectsProvider } from "./ProjectsContext";
 import { AgentsProvider } from "./AgentsContext";
 import { ChatsProvider } from "./ChatsContext";
 import { UIProvider } from "./UIContext";
+import { NavProvider } from "./NavContext";
 
 export { SettingsProvider, useSettings } from "./SettingsContext";
 export { ProjectsProvider, useProjects } from "./ProjectsContext";
 export { AgentsProvider, useAgentsContext } from "./AgentsContext";
 export { ChatsProvider, useChats } from "./ChatsContext";
 export { UIProvider, useUI } from "./UIContext";
+export { NavProvider, useNav } from "./NavContext";
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <SettingsProvider>
       <ProjectsProvider>
         <AgentsProvider>
-          <ChatsProvider>
-            <UIProvider>
-              {children}
-            </UIProvider>
-          </ChatsProvider>
+          <NavProvider>
+            <ChatsProvider>
+              <UIProvider>
+                {children}
+              </UIProvider>
+            </ChatsProvider>
+          </NavProvider>
         </AgentsProvider>
       </ProjectsProvider>
     </SettingsProvider>

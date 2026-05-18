@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { Search, MessageSquare } from "lucide-react";
 import { ChatMessage, ChatMeta } from "../types/chat";
 import styles from "../components/ChatHistoryPage.module.css";
-import { useChats, useUI } from "../contexts";
+import { useChats } from "../contexts";
+import { useNav } from "../contexts";
 
 const WORDS_AROUND = 4;
 const SEARCH_DEBOUNCE_MS = 200;
@@ -102,7 +103,7 @@ export default function ChatHistoryPage({
   onChatSelect,
 }: ChatHistoryPageProps) {
   const { chats, historyMessages, isLoadingHistoryMessages, loadHistoryMessages } = useChats();
-  const { currentPage } = useUI();
+  const { state: nav } = useNav();
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -110,7 +111,7 @@ export default function ChatHistoryPage({
   const loadedChatIdsRef = useRef<Set<string>>(new Set());
 
   useEffect(() => {
-    if (currentPage !== "history") {
+    if (nav.page !== "history") {
       hasLoadedRef.current = false;
       loadedChatIdsRef.current = new Set();
       return;
@@ -121,7 +122,7 @@ export default function ChatHistoryPage({
       loadedChatIdsRef.current = currentChatIds;
       loadHistoryMessages();
     }
-  }, [currentPage, chats, loadHistoryMessages]);
+  }, [nav.page, chats, loadHistoryMessages]);
 
   useEffect(() => {
     if (debounceRef.current) {

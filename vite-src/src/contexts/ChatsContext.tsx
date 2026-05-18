@@ -11,6 +11,7 @@ import { useProjectChats } from "../hooks/useProjectChats";
 import { useChatApi } from "../hooks/useChatApi";
 import { useSettings } from "./SettingsContext";
 import { useProjects } from "./ProjectsContext";
+import { useNav } from "./NavContext";
 import { useAgentsContext } from "./AgentsContext";
 import { isNeutralinoConnected } from "../utils/neuUtils";
 import { getAvailableTools } from "../tools";
@@ -18,78 +19,90 @@ import { ChatMessage, ChatMeta, ToolDefinition } from "../types/chat";
 
 interface ChatsContextValue {
   chats: ChatMeta[];
-  activeChatId: string | null;
-  activeChat: ChatMeta | undefined;
   messages: ChatMessage[];
   isLoading: boolean;
   isLoadingHistoryMessages: boolean;
   historyMessages: Record<string, ChatMessage[]>;
   loadHistoryMessages: () => Promise<void>;
   chatExecutionIds: Map<string, string>;
-  createChat: () => Promise<void>;
+  createChat: () => Promise<ChatMeta>;
   deleteChat: (chatId: string) => Promise<void>;
   renameChat: (chatId: string, name: string) => Promise<void>;
-  setActiveChat: (chatId: string) => void;
   loadChatMessages: (chatId: string) => Promise<ChatMessage[]>;
   setChatDraft: (chatId: string, draft: string) => Promise<void>;
-  refreshChats: () => Promise<void>;
+  refreshChats: () => Promise<ChatMeta[]>;
   sendMessage: (content: string, modelId: string) => Promise<void>;
   stopGeneration: () => void;
+  updateChatMeta: (projectId: string, chatId: string, updates: Partial<ChatMeta>) => Promise<void>;
+  selectedChatId: string | null;
+  setSelectedChatId: (id: string | null) => void;
 }
 
 const ChatsContext = createContext<ChatsContextValue | null>(null);
 
 export function ChatsProvider({ children }: { children: ReactNode }) {
-  const { activeProjectId, projects, initialized } = useProjects();
+  const projectsCtx = useProjects();
+  const { activeProjectId, dispatch: navDispatch } = useNav();
   const { settings } = useSettings();
   const { allAgents } = useAgentsContext();
+  const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
 
   const {
     chats,
-    activeChatId,
-    activeChat,
     projectMeta,
     createChat,
     deleteChat,
     renameChat,
-    setActiveChat,
     loadChatMessages,
     setChatDraft,
     refreshChats,
     setChatExecutionId,
     chatExecutionIds,
+    updateChatMeta: projectChatsUpdateChatMeta,
   } = useProjectChats(
-    isNeutralinoConnected() ? activeProjectId : undefined,
-    initialized
+    isNeutralinoConnected() ? (activeProjectId ?? undefined) : undefined
   );
 
   const activeProject = useMemo(
-    () => projects.find((p) => p.id === activeProjectId),
-    [projects, activeProjectId]
+    () => projectsCtx.projects.find((p) => p.id === activeProjectId),
+    [projectsCtx.projects, activeProjectId]
   );
-
-  const activeAgentSystemPrompt = useMemo(() => {
-    if (!activeChat?.activeAgentId) return undefined;
-    const agent = allAgents.find((a) => a.id === activeChat.activeAgentId);
-    return agent?.systemPrompt;
-  }, [activeChat?.activeAgentId, allAgents]);
 
   const availableTools: ToolDefinition[] = useMemo(
     () => getAvailableTools(activeProject?.folderPath),
     [activeProject?.folderPath]
   );
 
+  // Derive logId from the selected chat's meta
+  const selectedChatMeta = useMemo(() => {
+    if (!selectedChatId) return undefined;
+    const chat = chats.find((c) => c.id === selectedChatId);
+    return chat?.logId;
+  }, [chats, selectedChatId]);
+
+  // Resolve the selected agent's system prompt
+  const activeAgentSystemPrompt = useMemo(() => {
+    if (!selectedChatId) return undefined;
+    const chat = chats.find((c) => c.id === selectedChatId);
+    if (!chat?.activeAgentId) return undefined;
+    const agent = allAgents.find((a) => a.id === chat.activeAgentId);
+    return agent?.systemPrompt;
+  }, [chats, selectedChatId, allAgents]);
+
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     settings,
     chatExecutionIds,
     setChatExecutionId,
-    activeChat,
-    isNeutralinoConnected() ? activeProjectId : undefined,
+    selectedChatId || undefined,
+    isNeutralinoConnected() ? (activeProjectId ?? undefined) : undefined,
     projectMeta || undefined,
     activeAgentSystemPrompt,
-    renameChat,
+    async (chatId: string, name: string) => {
+      projectChatsUpdateChatMeta(chatId, { name });
+    },
     availableTools,
     activeProject?.folderPath,
+    selectedChatMeta,
   );
 
   const [historyMessages, setHistoryMessages] = useState<Record<string, ChatMessage[]>>({});
@@ -113,28 +126,45 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     setIsLoadingHistoryMessages(false);
   }, [chats, historyMessages, loadChatMessages]);
 
+  const wrappedCreateChat = useCallback(async (): Promise<ChatMeta> => {
+    const chat = await createChat();
+    navDispatch({ type: "CHAT_CREATED", chat });
+    return chat;
+  }, [createChat, navDispatch]);
+
+  const wrappedDeleteChat = useCallback(async (chatId: string) => {
+    await deleteChat(chatId);
+    navDispatch({ type: "CHAT_DELETED", chatId });
+  }, [deleteChat, navDispatch]);
+
+  const wrappedRenameChat = useCallback(async (chatId: string, name: string) => {
+    const now = Date.now();
+    await renameChat(chatId, name);
+    navDispatch({ type: "CHAT_RENAMED", chatId, name, updatedAt: now });
+  }, [renameChat, navDispatch]);
+
   const value = useMemo(
     () => ({
       chats,
-      activeChatId,
-      activeChat,
       messages,
       isLoading,
       isLoadingHistoryMessages,
       historyMessages,
       loadHistoryMessages,
       chatExecutionIds,
-      createChat,
-      deleteChat,
-      renameChat,
-      setActiveChat,
+      createChat: wrappedCreateChat,
+      deleteChat: wrappedDeleteChat,
+      renameChat: wrappedRenameChat,
       loadChatMessages,
       setChatDraft,
       refreshChats,
       sendMessage,
       stopGeneration,
+      updateChatMeta: (projectId: string, chatId: string, updates: Partial<ChatMeta>) => projectChatsUpdateChatMeta(chatId, updates),
+      selectedChatId,
+      setSelectedChatId,
     }),
-    [chats, activeChatId, activeChat, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, createChat, deleteChat, renameChat, setActiveChat, loadChatMessages, setChatDraft, refreshChats, sendMessage, stopGeneration]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, setChatDraft, refreshChats, sendMessage, stopGeneration, selectedChatId]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

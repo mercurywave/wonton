@@ -5,7 +5,7 @@ import styles from "../components/ProjectSelector.module.css";
 
 interface ProjectSelectorProps {
   projects: Project[];
-  activeProjectId: string;
+  activeProjectId?: string;
   onProjectSelect: (projectId: string) => void;
  
   isOpen: boolean;

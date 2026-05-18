@@ -1,12 +1,12 @@
-import { useRef, useEffect, useCallback, useMemo, useState } from "react";
-import { Send, StopCircle, Hammer } from "lucide-react";
+import { useRef, useEffect, useCallback, useMemo } from "react";
+import { Send, StopCircle } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
-import { ChatMessage as ChatMessageType, LLMStats, ToolCall } from "../types/chat";
+import { ChatMessage as ChatMessageType, LLMStats } from "../types/chat";
 import { useContextWindow } from "../hooks/useContextWindow";
 import { useChatDraft } from "../hooks/useChatDraft";
-import { useSettings, useAgentsContext, useChats, useProjects } from "../contexts";
+import { useSettings, useAgentsContext, useChats, useProjects, useNav } from "../contexts";
 import ModelPicker from "./ModelPicker";
 import AgentPicker from "./AgentPicker";
 import ContextRing from "./ContextRing";
@@ -159,8 +159,10 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const { visibleModels, settings } = useSettings();
   const { mainAgents } = useAgentsContext();
-  const { setChatDraft, activeChatId } = useChats();
-  const { activeProject, activeProjectId } = useProjects();
+  const { setChatDraft } = useChats();
+  const { projects } = useProjects();
+  const { state: nav, activeProjectId } = useNav();
+  const activeProject = projects.find((p) => p.id === activeProjectId);
 
   const availableTools = useMemo(
     () => getAvailableTools(activeProject?.folderPath),
@@ -177,7 +179,7 @@ export default function ChatPanel({
     const usage = (stats.promptTokens || 0) + (stats.completionTokens || 0);
     return { usageTokens: usage, showRing: true };
   }, [messages]);
-  const { draft, setDraft, handleBlur } = useChatDraft(activeProjectId, activeChatId || undefined, setChatDraft);
+  const { draft, setDraft, handleBlur } = useChatDraft(activeProjectId || undefined, nav.chatId || undefined, setChatDraft);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 

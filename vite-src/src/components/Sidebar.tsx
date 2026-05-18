@@ -15,21 +15,14 @@ import {
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
 import { useUI, useProjects, useChats } from "../contexts";
+import { useNav } from "../contexts";
 import ProjectSelector from "../components/ProjectSelector";
-
-interface ChatItem {
-  id: string;
-  name: string;
-  updatedAt: number;
-  draft?: string;
-  isProcessing?: boolean;
-}
 
 interface SidebarProps {
   onNewChat: () => void;
   showProjectFeatures: boolean;
   onProjectSelect: (projectId: string) => void;
-  onChatSelect?: (chat: ChatItem) => void;
+  onChatSelect?: (chatId: string) => void;
   onRenameChat?: (chatId: string, name: string) => void;
   onDeleteChat?: (chatId: string) => void;
 }
@@ -42,9 +35,10 @@ export default function Sidebar({
   onRenameChat,
   onDeleteChat,
 }: SidebarProps) {
-  const { sidebarOpen, setSidebarOpen, currentPage, navigate } = useUI();
-  const { projects, activeProjectId, isLoading: projectsLoading } = useProjects();
-  const { chats, activeChatId, chatExecutionIds } = useChats();
+  const { sidebarOpen, setSidebarOpen } = useUI();
+  const { projects, isLoading: projectsLoading } = useProjects();
+  const { chats, chatExecutionIds } = useChats();
+  const { state: nav, activeProjectId, navigateToPage } = useNav();
 
   const displayChats = chats.slice(0, 5).map((c) => ({
     id: c.id,
@@ -146,7 +140,7 @@ export default function Sidebar({
           <div className={styles.projectSection}>
             <ProjectSelector
               projects={projects}
-              activeProjectId={activeProjectId}
+              activeProjectId={activeProjectId || undefined}
               onProjectSelect={onProjectSelect}
               isOpen={sidebarOpen}
             />
@@ -178,10 +172,10 @@ export default function Sidebar({
               {displayChats.map((chat) => (
                 <div
                   key={chat.id}
-                  className={`${styles.chatItem} ${currentPage === "chat" && chat.id === activeChatId ? styles.active : ""}`}
+                  className={`${styles.chatItem} ${nav.page === "chat" && chat.id === nav.chatId ? styles.active : ""}`}
                   onClick={() => {
                     setContextMenu(null);
-                    onChatSelect?.(chat);
+                    onChatSelect?.(chat.id);
                   }}
                   onContextMenu={(e) => handleContextMenu(e, chat.id)}
                 >
@@ -234,8 +228,8 @@ export default function Sidebar({
           {navItems.filter(item => !item.filterOut?.()).map((item) => (
             <button
               key={item.page}
-              className={`${styles.navItem} ${currentPage === item.page ? styles.active : ""}`}
-              onClick={() => navigate(item.page)}
+              className={`${styles.navItem} ${nav.page === item.page ? styles.active : ""}`}
+              onClick={() => navigateToPage(item.page)}
             >
               {item.icon}
               <span>{item.label}</span>

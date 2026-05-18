@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { ChatMeta, ProjectMeta, ChatMessage } from "../types/chat";
+import { ChatMeta, ChatMessage, ProjectMeta } from "../types/chat";
 import {
   listChatMeta,
   createChat as createChatNative,
@@ -8,21 +8,17 @@ import {
   loadMessages as loadMessagesNative,
   clearChat as clearChatNative,
   loadProjectMeta as loadProjectMetaNative,
-  updateProjectMeta as updateProjectMetaNative,
 } from "./useChatPersistence";
 
 const chatCache = new Map<string, ChatMessage[]>();
 
-export function useProjectChats(projectId: string | undefined, projectsInitialized?: boolean) {
+export function useProjectChats(projectId: string | undefined) {
   const [chats, setChats] = useState<ChatMeta[]>([]);
-  const [activeChatId, setActiveChatId] = useState<string | null>(null);
   const [projectMeta, setProjectMeta] = useState<ProjectMeta | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [chatExecutionIds, setChatExecutionIds] = useState<Map<string, string>>(new Map());
-  const skipMetaRef = useRef(false);
   const loadMetaCountRef = useRef(0);
   const loadChatsCountRef = useRef(0);
-  const activeChatIdFromMetaRef = useRef(false);
 
   const loadMeta = useCallback(async () => {
     if (!projectId) return;
@@ -30,9 +26,6 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
     const meta = await loadProjectMetaNative(projectId);
     if (currentLoad !== loadMetaCountRef.current) return;
     setProjectMeta(meta);
-    if (meta.activeChatId) {
-      activeChatIdFromMetaRef.current = true;
-    }
   }, [projectId]);
 
   const loadChats = useCallback(async () => {
@@ -49,68 +42,34 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
   }, [projectId]);
 
   useEffect(() => {
-    if (skipMetaRef.current) {
-      skipMetaRef.current = false;
-      return;
-    }
-    if (projectId && projectsInitialized !== false) {
+    if (projectId) {
       loadMeta();
       loadChats();
     }
-  }, [projectId, projectsInitialized, loadMeta, loadChats]);
+  }, [projectId, loadMeta, loadChats]);
 
-  useEffect(() => {
-    if (!projectMeta || chats.length === 0) return;
-    if (activeChatId && chats.some((c) => c.id === activeChatId)) return;
-    const lastActiveId = projectMeta.activeChatId;
-    if (lastActiveId && chats.some((c) => c.id === lastActiveId)) {
-      setActiveChatId(lastActiveId);
-      activeChatIdFromMetaRef.current = true;
-    } else if (chats.length > 0) {
-      setActiveChatId(chats[0].id);
-      activeChatIdFromMetaRef.current = true;
-    }
-  }, [projectId, chats, projectMeta]);
-
-  const createChat = useCallback(async () => {
-    if (!projectId) return;
+  const createChat = useCallback(async (): Promise<ChatMeta> => {
+    if (!projectId) throw new Error("No project ID");
     const chat = await createChatNative(projectId);
     setChats((prev) => [chat, ...prev]);
-    activeChatIdFromMetaRef.current = false;
-    setActiveChatId(chat.id);
-    skipMetaRef.current = true;
-    await loadMeta();
-  }, [projectId, loadMeta]);
+    return chat;
+  }, [projectId]);
 
   const deleteChat = useCallback(async (chatId: string) => {
     if (!projectId) return;
     await deleteChatNative(projectId, chatId);
     setChats((prev) => prev.filter((c) => c.id !== chatId));
     chatCache.delete(chatId);
-    if (activeChatId === chatId) {
-      const remaining = chats.filter((c) => c.id !== chatId);
-      if (remaining.length > 0) {
-        setActiveChatId(remaining[0].id);
-        skipMetaRef.current = true;
-        await updateProjectMetaNative(projectId, { activeChatId: remaining[0].id });
-      } else {
-        setActiveChatId(null);
-      }
-    }
-  }, [projectId, activeChatId, chats]);
+  }, [projectId]);
 
   const renameChat = useCallback(async (chatId: string, name: string) => {
     if (!projectId) return;
-    await updateChatMetaNative(projectId, chatId, { name, updatedAt: Date.now() });
+    const now = Date.now();
+    await updateChatMetaNative(projectId, chatId, { name, updatedAt: now });
     setChats((prev) =>
-      prev.map((c) => (c.id === chatId ? { ...c, name, updatedAt: Date.now() } : c))
+      prev.map((c) => (c.id === chatId ? { ...c, name, updatedAt: now } : c))
     );
   }, [projectId]);
-
-  const setChatActive = useCallback((chatId: string) => {
-    activeChatIdFromMetaRef.current = false;
-    setActiveChatId(chatId);
-  }, []);
 
   const loadChatMessages = useCallback(async (chatId: string): Promise<ChatMessage[]> => {
     if (!projectId) return [];
@@ -137,12 +96,11 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
   }, [projectId]);
 
   const refreshChats = useCallback(async () => {
-    if (!projectId) return;
+    if (!projectId) return [];
     const metas = await listChatMeta(projectId);
     setChats(metas);
+    return metas;
   }, [projectId]);
-
-  const activeChat = chats.find((c) => c.id === activeChatId);
 
   const setChatExecutionId = useCallback((chatId: string, executionId: string | null) => {
     setChatExecutionIds((prev) => {
@@ -156,17 +114,23 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
     })
   }, []);
 
+  const updateChatMeta = useCallback(async (chatId: string, updates: Partial<ChatMeta>) => {
+    if (!projectId) return;
+    const now = Date.now();
+    await updateChatMetaNative(projectId, chatId, updates);
+    setChats((prev) =>
+      prev.map((c) => (c.id === chatId ? { ...c, ...updates, updatedAt: now } : c))
+    );
+  }, [projectId]);
+
   return {
     chats,
-    activeChatId,
-    activeChat,
     projectMeta,
     isLoading,
     chatExecutionIds,
     createChat,
     deleteChat,
     renameChat,
-    setActiveChat: setChatActive,
     loadChatMessages,
     clearChatMessages,
     setChatDraft,
@@ -174,5 +138,6 @@ export function useProjectChats(projectId: string | undefined, projectsInitializ
     setProjectMeta,
     loadMeta,
     setChatExecutionId,
+    updateChatMeta,
   };
 }
