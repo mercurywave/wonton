@@ -266,12 +266,19 @@ export default function ChatPanel({
         {chatName && (
           <div className={styles.chatHeader}>
             <span className={styles.chatHeaderName}>
-              {chatName}
-              {logSubtitle && (
+              {logSubtitle ? (
                 <>
+                  <span
+                    onClick={() => navigateToLog(currentChat!.logId)}
+                    className={styles.chatHeaderNameClickable}
+                  >
+                    {chatName}
+                  </span>
                   <span className={styles.headerSeparator}>{" > "}</span>
                   <span className={styles.headerSubtitle}>{logSubtitle}</span>
                 </>
+              ) : (
+                chatName
               )}
             </span>
             <LogSelector

@@ -31,6 +31,7 @@
   font-size: 13px;
   color: #666;
   font-weight: 500;
+  user-select: none;
 }
 
 .headerSeparator {
@@ -41,6 +42,15 @@
 .headerSubtitle {
   color: #4a6cf7;
   font-weight: 500;
+  cursor: default;
+}
+
+.chatHeaderNameClickable {
+  cursor: pointer;
+}
+
+.chatHeaderNameClickable:hover {
+  color: #aaa;
 }
 
 .messages {
