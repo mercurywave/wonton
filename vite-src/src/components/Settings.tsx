@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Settings as SettingsIcon, Eye, EyeOff, Check, Plus, Trash2, Pencil, Save, X } from "lucide-react";
 import styles from "../components/Settings.module.css";
 import { ChatSettings as ChatSettingsType } from "../hooks/useChatSettings";
-import { ServerModel, Agent } from "../types/chat";
+import { Agent } from "../types/chat";
 import { BUILTIN_AGENTS } from "../utils/agents";
 import { useSettings, useAgentsContext } from "../contexts";
 

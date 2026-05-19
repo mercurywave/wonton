@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from "react";
 import { Folder, Plus, Trash2, Pencil, FolderOpen } from "lucide-react";
-import { Project } from "../types/project";
 import styles from "../components/ProjectsPage.module.css";
 import { useProjects, useNav } from "../contexts";
 
@@ -22,7 +21,6 @@ export default function ProjectsPage({
   onNewBlankProject,
   onRenameProject,
   onDeleteProject,
-  onNavigateToSettings,
   onLinkFolder,
   onChangeFolder,
   onOpenFolder,

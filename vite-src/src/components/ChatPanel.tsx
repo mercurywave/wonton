@@ -162,7 +162,7 @@ export default function ChatPanel({
   const { mainAgents, allAgents } = useAgentsContext();
   const { setChatDraft } = useChats();
   const { projects } = useProjects();
-  const { state: nav, activeProjectId, logId, navigateToLog } = useNav();
+  const { activeProjectId, logId, navigateToLog } = useNav();
   const { chats, selectedChatId } = useChats();
   const activeProject = projects.find((p) => p.id === activeProjectId);
 

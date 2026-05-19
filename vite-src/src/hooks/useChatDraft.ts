@@ -7,7 +7,6 @@ const DRAFT_SAVE_INTERVAL_MS = 5000;
 export function useChatDraft(projectId?: string, chatId?: string, setChatDraft?: (chatId: string, draft: string) => Promise<void>) {
   const [draft, setDraft] = useState("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const prevKeyRef = useRef<string>("");
   const [writeProjectId, setWriteProjectId] = useState<string | undefined>();
   const [writeChatId, setWriteChatId] = useState<string | undefined>();
 
