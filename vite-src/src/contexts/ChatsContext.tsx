@@ -7,6 +7,7 @@ import {
   ReactNode,
   useMemo,
 } from "react";
+import { useEffect } from "react";
 import { useProjectChats } from "../hooks/useProjectChats";
 import { useChatApi } from "../hooks/useChatApi";
 import { useSettings } from "./SettingsContext";
@@ -42,10 +43,11 @@ const ChatsContext = createContext<ChatsContextValue | null>(null);
 
 export function ChatsProvider({ children }: { children: ReactNode }) {
   const projectsCtx = useProjects();
-  const { activeProjectId, logId: navLogId, dispatch: navDispatch } = useNav();
+  const { activeProjectId, logId: navLogId } = useNav();
   const { settings } = useSettings();
   const { allAgents } = useAgentsContext();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const autoSelectDoneRef = useRef(false);
 
   const {
     chats,
@@ -62,6 +64,21 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   } = useProjectChats(
     isNeutralinoConnected() ? (activeProjectId ?? undefined) : undefined
   );
+
+  // Auto-select the last active chat when project data loads (once per project switch)
+  useEffect(() => {
+    autoSelectDoneRef.current = false;
+  }, [activeProjectId]);
+
+  useEffect(() => {
+    if (autoSelectDoneRef.current) return;
+    if (!projectMeta?.activeChatId || chats.length === 0) return;
+    const chatExists = chats.some((c) => c.id === projectMeta.activeChatId);
+    if (chatExists) {
+      setSelectedChatId(projectMeta.activeChatId);
+      autoSelectDoneRef.current = true;
+    }
+  }, [projectMeta?.activeChatId, chats]);
 
   const chatsRef = useRef(chats);
   chatsRef.current = chats;
@@ -100,11 +117,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   const refreshAndNotify = useCallback(async () => {
     await refreshChats();
-    const refreshedChat = chatsRef.current.find((c) => c.id === selectedChatId);
-    if (refreshedChat) {
-      navDispatch({ type: "CHAT_CREATED", chat: refreshedChat });
-    }
-  }, [refreshChats, selectedChatId, navDispatch]);
+  }, [refreshChats]);
 
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     settings,
@@ -145,21 +158,16 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   }, [chats, historyMessages, loadChatMessages]);
 
   const wrappedCreateChat = useCallback(async (): Promise<ChatMeta> => {
-    const chat = await createChat();
-    navDispatch({ type: "CHAT_CREATED", chat });
-    return chat;
-  }, [createChat, navDispatch]);
+    return await createChat();
+  }, [createChat]);
 
   const wrappedDeleteChat = useCallback(async (chatId: string) => {
     await deleteChat(chatId);
-    navDispatch({ type: "CHAT_DELETED", chatId });
-  }, [deleteChat, navDispatch]);
+  }, [deleteChat]);
 
   const wrappedRenameChat = useCallback(async (chatId: string, name: string) => {
-    const now = Date.now();
     await renameChat(chatId, name);
-    navDispatch({ type: "CHAT_RENAMED", chatId, name, updatedAt: now });
-  }, [renameChat, navDispatch]);
+  }, [renameChat]);
 
   const value = useMemo(
     () => ({

@@ -8,12 +8,10 @@ import {
   ReactNode,
   useMemo,
 } from "react";
-import { ChatMeta, Page, ProjectMeta } from "../types/chat";
+import { Page } from "../types/chat";
 import { navReducer, NavState, Action } from "./navReducer";
 import { useSettings } from "./SettingsContext";
 import { useProjects } from "./ProjectsContext";
-import { loadProjectMeta, listChatMeta } from "../hooks/useChatPersistence";
-import { isNeutralinoConnected } from "../utils/neuUtils";
 
 export interface NavContextValue {
   state: NavState;
@@ -25,8 +23,6 @@ export interface NavContextValue {
   navigateToNewChat: () => Promise<void>;
   navigateToDeleteChat: (chatId: string) => Promise<void>;
   navigateToRenameChat: (chatId: string, name: string) => Promise<void>;
-  navigateToModelChange: (chatId: string, model: string) => Promise<void>;
-  navigateToAgentChange: (chatId: string, agentId: string) => Promise<void>;
   navigateToPage: (page: Page) => void;
   dispatch: React.Dispatch<Action>;
 }
@@ -40,20 +36,13 @@ export function NavProvider({ children }: { children: ReactNode }) {
   const initialState: NavState = {
     projectId: null,
     chatId: null,
-    chat: null,
     logId: null,
     page: "chat" as Page,
-    model: null,
-    agentId: null,
-    projectMeta: null,
-    chats: [],
-    projects: [],
     status: "initializing",
     error: null,
   };
 
   const [state, dispatch] = useReducer(navReducer, initialState);
-  const loadCountRef = useRef(0);
   const initializedRef = useRef(false);
 
   // ── Side effect: when projects are loaded, restore last project ──────────
@@ -74,30 +63,6 @@ export function NavProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "PROJECT_SWITCH", projectId: "default" });
     }
   }, [projects, initialized, settings.lastProjectId]);
-
-  // ── Side effect: when project switch is dispatched, load data ───────────
-  useEffect(() => {
-    if (state.status !== "loading" || !state.projectId) return;
-
-    const currentLoad = ++loadCountRef.current;
-    const projectId = state.projectId;
-
-    Promise.all([
-      loadProjectMeta(projectId).catch(() => ({} as ProjectMeta)),
-      isNeutralinoConnected() ? listChatMeta(projectId) : Promise.resolve([] as ChatMeta[]),
-    ]).then(([meta, chats]) => {
-      // Guard against stale results
-      if (currentLoad !== loadCountRef.current) return;
-      if (state.projectId !== projectId) return;
-
-      dispatch({
-        type: "PROJECT_DATA_LOADED",
-        projectId,
-        meta,
-        chats,
-      });
-    });
-  }, [state.status, state.projectId]);
 
   // ── Persist lastProjectId whenever it changes ───────────────────────────
   useEffect(() => {
@@ -130,40 +95,21 @@ export function NavProvider({ children }: { children: ReactNode }) {
   );
 
   const navigateToNewChat = useCallback(async () => {
-    if (!state.projectId) return;
     dispatch({ type: "NEW_CHAT_REQUESTED" });
-  }, [state.projectId]);
+  }, []);
 
   const navigateToDeleteChat = useCallback(
     async (chatId: string) => {
-      if (!state.projectId) return;
       dispatch({ type: "CHAT_DELETE_REQUESTED", chatId });
     },
-    [state.projectId]
+    []
   );
 
   const navigateToRenameChat = useCallback(
     async (chatId: string, name: string) => {
-      if (!state.projectId) return;
       dispatch({ type: "CHAT_RENAME_REQUESTED", chatId, name });
     },
-    [state.projectId]
-  );
-
- const navigateToModelChange = useCallback(
-    async (chatId: string, modelId: string) => {
-      if (!state.projectId) return;
-      dispatch({ type: "CHAT_MODEL_CHANGE", chatId, model: modelId === settings.defaultModel ? undefined : modelId });
-    },
-    [state.projectId, settings.defaultModel]
-  );
-
-  const navigateToAgentChange = useCallback(
-    async (chatId: string, agentId: string) => {
-      if (!state.projectId) return;
-      dispatch({ type: "CHAT_AGENT_CHANGE", chatId, agentId: agentId === "builtin:default" ? undefined : agentId });
-    },
-    [state.projectId]
+    []
   );
 
   const navigateToPage = useCallback(
@@ -173,7 +119,7 @@ export function NavProvider({ children }: { children: ReactNode }) {
     []
   );
 
- const value = useMemo(
+  const value = useMemo(
     () => ({
       state,
       activeProjectId: state.projectId,
@@ -184,12 +130,10 @@ export function NavProvider({ children }: { children: ReactNode }) {
       navigateToNewChat,
       navigateToDeleteChat,
       navigateToRenameChat,
-      navigateToModelChange,
-      navigateToAgentChange,
       navigateToPage,
       dispatch,
     }),
-    [state, navigateToProject, navigateToChat, navigateToLog, navigateToNewChat, navigateToDeleteChat, navigateToRenameChat, navigateToModelChange, navigateToAgentChange, navigateToPage, dispatch]
+    [state, navigateToProject, navigateToChat, navigateToLog, navigateToNewChat, navigateToDeleteChat, navigateToRenameChat, navigateToPage, dispatch]
   );
 
   return <NavContext.Provider value={value}>{children}</NavContext.Provider>;

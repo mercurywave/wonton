@@ -26,9 +26,9 @@ function App() {
     deleteProject,
     getProjectById,
   } = useProjects();
-const { messages, isLoading, chatExecutionIds, sendMessage, stopGeneration, updateChatMeta, setSelectedChatId, createChat, deleteChat, renameChat } = useChats();
+   const { messages, isLoading, chatExecutionIds, sendMessage, stopGeneration, updateChatMeta, setSelectedChatId, createChat, deleteChat, renameChat, chats, selectedChatId } = useChats();
    const { sidebarOpen, isMobile } = useUI();
-const {
+   const {
       state: nav,
       activeProjectId,
       navigateToProject,
@@ -36,8 +36,6 @@ const {
       navigateToNewChat,
       navigateToDeleteChat,
       navigateToRenameChat,
-      navigateToModelChange,
-      navigateToAgentChange,
       navigateToPage,
     } = useNav();
 
@@ -89,15 +87,16 @@ const handleNewChat = useCallback(async () => {
       await navigateToRenameChat(chatId, name);
     }, [navigateToRenameChat]);
 
-  // Sync selected chat from nav state to chats context
+  // Sync nav state ↔ chats context
   useEffect(() => {
     if (nav.chatId !== null) {
       setSelectedChatId(nav.chatId);
     }
   }, [nav.chatId, setSelectedChatId]);
 
-  const activeAgentId = nav.agentId || "builtin:default";
-  const activeModel = nav.model ?? settings.defaultModel;
+  const selectedChat = chats.find((c) => c.id === selectedChatId);
+  const activeAgentId = selectedChat?.activeAgentId || "builtin:default";
+  const activeModel = selectedChat?.activeModel ?? settings.defaultModel;
   const settingsProject = projectSettingsId ? getProjectById(projectSettingsId) : undefined;
 
   const handleNewProject = useCallback(async () => {
@@ -188,30 +187,28 @@ const handleNewChat = useCallback(async () => {
           <ChatPanel
             messages={messages}
             isLoading={isLoading}
-            isProcessing={nav.chatId ? chatExecutionIds.has(nav.chatId) : false}
+            isProcessing={selectedChatId ? chatExecutionIds.has(selectedChatId) : false}
             onSend={sendMessage}
             onStop={stopGeneration}
             activeModel={activeModel}
             onModelChange={async (modelId) => {
-              if (!nav.chatId || !activeProjectId) return;
+              if (!selectedChatId || !activeProjectId) return;
               if (modelId !== settings.defaultModel) {
-                await updateChatMeta(activeProjectId, nav.chatId, { activeModel: modelId });
+                await updateChatMeta(activeProjectId, selectedChatId, { activeModel: modelId });
               } else {
-                await updateChatMeta(activeProjectId, nav.chatId, { activeModel: undefined });
+                await updateChatMeta(activeProjectId, selectedChatId, { activeModel: undefined });
               }
-              navigateToModelChange(nav.chatId, modelId);
             }}
             activeAgentId={activeAgentId}
             onAgentChange={async (agentId) => {
-              if (!nav.chatId || !activeProjectId) return;
+              if (!selectedChatId || !activeProjectId) return;
               if (agentId !== "builtin:default") {
-                await updateChatMeta(activeProjectId, nav.chatId, { activeAgentId: agentId });
+                await updateChatMeta(activeProjectId, selectedChatId, { activeAgentId: agentId });
               } else {
-                await updateChatMeta(activeProjectId, nav.chatId, { activeAgentId: undefined });
+                await updateChatMeta(activeProjectId, selectedChatId, { activeAgentId: undefined });
               }
-              navigateToAgentChange(nav.chatId, agentId);
             }}
-            chatName={nav.chat?.name}
+            chatName={selectedChat?.name}
           />
         )}
         {nav.page === "settings" && (

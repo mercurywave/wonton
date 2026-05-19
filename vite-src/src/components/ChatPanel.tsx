@@ -163,13 +163,13 @@ export default function ChatPanel({
   const { setChatDraft } = useChats();
   const { projects } = useProjects();
   const { state: nav, activeProjectId, logId, navigateToLog } = useNav();
-  const { chats } = useChats();
+  const { chats, selectedChatId } = useChats();
   const activeProject = projects.find((p) => p.id === activeProjectId);
 
   const currentChat = useMemo(() => {
-    if (!nav.chatId) return null;
-    return chats.find((c) => c.id === nav.chatId) ?? null;
-  }, [chats, nav.chatId]);
+    if (!selectedChatId) return null;
+    return chats.find((c) => c.id === selectedChatId) ?? null;
+  }, [chats, selectedChatId]);
 
   // Build log options: main log + subagents
   const logOptions = useMemo(() => {
@@ -219,7 +219,7 @@ export default function ChatPanel({
     const usage = (stats.promptTokens || 0) + (stats.completionTokens || 0);
     return { usageTokens: usage, showRing: true };
   }, [messages]);
-  const { draft, setDraft, handleBlur } = useChatDraft(activeProjectId || undefined, nav.chatId || undefined, setChatDraft);
+  const { draft, setDraft, handleBlur } = useChatDraft(activeProjectId || undefined, selectedChatId || undefined, setChatDraft);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 

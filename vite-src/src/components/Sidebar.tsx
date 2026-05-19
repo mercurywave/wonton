@@ -37,7 +37,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const { sidebarOpen, setSidebarOpen } = useUI();
   const { projects, isLoading: projectsLoading } = useProjects();
-  const { chats, chatExecutionIds } = useChats();
+  const { chats, chatExecutionIds, selectedChatId } = useChats();
   const { state: nav, activeProjectId, navigateToPage } = useNav();
 
   const displayChats = chats.slice(0, 5).map((c) => ({
@@ -172,7 +172,7 @@ export default function Sidebar({
               {displayChats.map((chat) => (
                 <div
                   key={chat.id}
-                  className={`${styles.chatItem} ${nav.page === "chat" && chat.id === nav.chatId ? styles.active : ""}`}
+                  className={`${styles.chatItem} ${nav.page === "chat" && chat.id === selectedChatId ? styles.active : ""}`}
                   onClick={() => {
                     setContextMenu(null);
                     onChatSelect?.(chat.id);
