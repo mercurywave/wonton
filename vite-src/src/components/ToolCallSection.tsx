@@ -104,12 +104,15 @@ function SubagentSection({ toolCall, result }: { toolCall: ToolCall; result?: st
             {query && <span className={styles.toolCallPath}>{query}</span>}
           </div>
           <div className={styles.subagentHeaderActions}>
-            <button
-              className={styles.subagentDebugBtn}
+            <span
+              className={`${styles.subagentDebugBtn} subagent-debug-btn`}
               onClick={(e) => { e.stopPropagation(); setIsExpanded((prev) => !prev); }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.stopPropagation(); setIsExpanded((prev) => !prev); } }}
             >
               {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-            </button>
+            </span>
             <ArrowUpRight className={styles.subagentLinkIcon} size={14} />
           </div>
         </button>
