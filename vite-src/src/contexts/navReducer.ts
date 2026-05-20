@@ -123,7 +123,11 @@ export function navReducer(state: NavState, action: Action): NavState {
       };
 
     case "CHAT_DELETE_REQUESTED":
-      return state;
+      return {
+        ...state,
+        chatId: null,
+        logId: null,
+      };
 
     case "CHAT_RENAME_REQUESTED":
       return state;

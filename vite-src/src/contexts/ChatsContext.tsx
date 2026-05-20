@@ -47,7 +47,6 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
   const { allAgents } = useAgentsContext();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
-  const autoSelectDoneRef = useRef(false);
 
   const {
     chats,
@@ -65,20 +64,18 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     isNeutralinoConnected() ? (activeProjectId ?? undefined) : undefined
   );
 
-  // Auto-select the last active chat when project data loads (once per project switch)
+  // Auto-select most recent chat when the currently selected one is deleted
   useEffect(() => {
-    autoSelectDoneRef.current = false;
-  }, [activeProjectId]);
-
-  useEffect(() => {
-    if (autoSelectDoneRef.current) return;
-    if (!projectMeta?.activeChatId || chats.length === 0) return;
-    const chatExists = chats.some((c) => c.id === projectMeta.activeChatId);
-    if (chatExists) {
-      setSelectedChatId(projectMeta.activeChatId);
-      autoSelectDoneRef.current = true;
+    if (selectedChatId && chats.some((c) => c.id === selectedChatId)) return;
+    if (chats.length === 0) {
+      setSelectedChatId(null);
+      return;
     }
-  }, [projectMeta?.activeChatId, chats]);
+    const mostRecent = chats.reduce((a, b) =>
+      a.updatedAt > b.updatedAt ? a : b
+    );
+    setSelectedChatId(mostRecent.id);
+  }, [selectedChatId, chats]);
 
   const chatsRef = useRef(chats);
   chatsRef.current = chats;

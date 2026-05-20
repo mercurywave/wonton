@@ -61,7 +61,7 @@ export function useProjectsData() {
     if (isNeutralinoConnected()) {
       try {
         const projMeta = await loadProjectMeta(DEFAULT_PROJECT_ID);
-        if (!projMeta.activeChatId) {
+        if (!projMeta.createdAt) {
           await ensureChatFolderNative(DEFAULT_PROJECT_ID);
         }
       } catch (err) {

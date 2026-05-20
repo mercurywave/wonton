@@ -80,7 +80,7 @@ export interface ChatMeta {
 }
 
 export interface ProjectMeta {
-  activeChatId?: string;
+  createdAt: number;
   systemPrompt?: string;
   defaultModel?: string;
 }

@@ -75,7 +75,9 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
     return;
   }
 
-  const meta: ProjectMeta = { activeChatId: chatId };
+  const meta: ProjectMeta = { 
+    createdAt: Date.now(),
+  };
   try {
     await filesystem.writeFile(projPath, JSON.stringify(meta, null, 2));
   } catch (err) {
@@ -155,16 +157,6 @@ export async function createChat(
     await filesystem.writeFile(`${msgsDir}/${logId}.jsonl`, "");
   } catch (err) {
     console.error("createChat: failed to write chat files", err);
-  }
-
-  try {
-    const projPath = `${projectDir}/${PROJ_FILE_NAME}`;
-    const content = await filesystem.readFile(projPath);
-    const existingMeta: ProjectMeta = JSON.parse(content);
-    existingMeta.activeChatId = chatId;
-    await filesystem.writeFile(projPath, JSON.stringify(existingMeta, null, 2));
-  } catch (err) {
-    console.error("createChat: failed to update activeChatId", err);
   }
 
   return chatMeta;
@@ -418,7 +410,7 @@ export async function updateProjectMeta(
 }
 
 export async function loadProjectMeta(projectId: string): Promise<ProjectMeta> {
-  if (!isNeutralinoConnected()) return {};
+  if (!isNeutralinoConnected()) return { createdAt: Date.now(), };
 
   const projectDir = await getProjectDataDir(projectId);
   const projPath = `${projectDir}/${PROJ_FILE_NAME}`;
@@ -427,7 +419,7 @@ export async function loadProjectMeta(projectId: string): Promise<ProjectMeta> {
     const content = await filesystem.readFile(projPath);
     return JSON.parse(content) as ProjectMeta;
   } catch {
-    return {};
+    return { createdAt: Date.now(), };
   }
 }
 
