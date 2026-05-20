@@ -469,3 +469,46 @@
   margin-left: 12px;
   width: 90%;
 }
+
+.systemPromptCollapse {
+  max-width: 800px;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.systemPromptCollapse summary {
+  font-size: 11px;
+  color: #444;
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 0;
+  list-style: none;
+}
+
+.systemPromptCollapse summary::-webkit-details-marker {
+  display: none;
+}
+
+.systemPromptCollapse summary::before {
+  content: "▾ ";
+  font-size: 10px;
+  color: #555;
+}
+
+.systemPromptCollapse[open] > summary::before {
+  content: "▸ ";
+}
+
+.systemPromptContent {
+  font-size: 11px;
+  color: #555;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin: 4px 0 0 0;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  line-height: 1.5;
+  max-height: 200px;
+  overflow-y: auto;
+}

@@ -166,6 +166,15 @@ export default function ChatPanel({
   const { chats, selectedChatId } = useChats();
   const activeProject = projects.find((p) => p.id === activeProjectId);
 
+  // Resolve the effective system prompt for display
+  const resolvedSystemPrompt = useMemo(() => {
+    const currentChat = chats.find((c) => c.id === selectedChatId);
+    const agentId = currentChat?.activeAgentId || activeAgentId;
+    const agent = allAgents.find((a) => a.id === agentId);
+    const agentSystemPrompt = agent?.systemPrompt;
+    return agentSystemPrompt || settings.systemPrompt;
+  }, [allAgents, activeAgentId, selectedChatId, settings.systemPrompt]);
+
   const currentChat = useMemo(() => {
     if (!selectedChatId) return null;
     return chats.find((c) => c.id === selectedChatId) ?? null;
@@ -288,6 +297,10 @@ export default function ChatPanel({
             />
           </div>
         )}
+        <details className={styles.systemPromptCollapse}>
+          <summary className={styles.systemPromptSummary}>system prompt</summary>
+          <pre className={styles.systemPromptContent}>{resolvedSystemPrompt}</pre>
+        </details>
         <div className={styles.messages}>
           {messages.length === 0 && (
             <div className={styles.empty}>
