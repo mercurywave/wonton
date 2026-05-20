@@ -180,6 +180,7 @@ interface ApiRequestBody {
   stream: boolean;
   tools?: ToolDefinition[];
   tool_choice?: string;
+  chat_template_kwargs?: { enable_thinking: boolean };
 }
 
 async function makeApiCall(
@@ -187,7 +188,8 @@ async function makeApiCall(
   messages: ApiRequestBody["messages"],
   model: string,
   tools?: ToolDefinition[],
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  isSubagent?: boolean
 ): Promise<{ body: ApiRequestBody; stream: ReadableStreamDefaultReader<Uint8Array> }> {
   const baseUrl = settings.serverUrl.replace(/\/+$/, "");
   const apiUrl = `${baseUrl}/v1/chat/completions`;
@@ -208,6 +210,10 @@ async function makeApiCall(
       },
     }));
     body.tool_choice = "auto";
+  }
+
+  if (isSubagent) {
+    body.chat_template_kwargs = { enable_thinking: true };
   }
 
   const response = await fetch(apiUrl, {
@@ -244,6 +250,7 @@ interface ToolCallLoopOptions {
   projectId?: string;
   chatId?: string;
   logId?: string;
+  isSubagent?: boolean;
   onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string) => void;
   onChatUpdated?: () => void;
 }
@@ -266,6 +273,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     projectId,
     chatId,
     logId,
+    isSubagent,
     onUpdateMessage,
     onChatUpdated,
   } = options;
@@ -295,7 +303,8 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
       currentApiMessages,
       model,
       tools,
-      signal
+      signal,
+      isSubagent
     );
 
     const assistantId = crypto.randomUUID();
