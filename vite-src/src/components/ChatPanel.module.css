@@ -467,7 +467,7 @@
   flex-direction: column;
   gap: 4px;
   margin-left: 12px;
-  width: 90%;
+  width: calc(100% - 10px);
 }
 
 .systemPromptCollapse {
