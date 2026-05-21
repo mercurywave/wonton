@@ -13,6 +13,7 @@ import Settings from "./components/Settings";
 import ProjectsPage from "./components/ProjectsPage";
 import ProjectSettingsPage from "./components/ProjectSettingsPage";
 import ChatHistoryPage from "./components/ChatHistoryPage";
+import WorkflowsPage from "./components/WorkflowsPage";
 import "./App.css";
 
 function App() {
@@ -239,6 +240,9 @@ const handleNewChat = useCallback(async () => {
           <ChatHistoryPage
             onChatSelect={(chatId) => navigateToChat(chatId)}
           />
+        )}
+        {nav.page === "workflows" && (
+          <WorkflowsPage />
         )}
       </div>
     </div>

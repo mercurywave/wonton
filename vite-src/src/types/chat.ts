@@ -83,9 +83,16 @@ export interface ProjectMeta {
   createdAt: number;
   systemPrompt?: string;
   defaultModel?: string;
+  disabledFlows?: string[];
 }
 
-export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history";
+export interface Flow {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows";
 
 export interface ServerModel {
   id: string;

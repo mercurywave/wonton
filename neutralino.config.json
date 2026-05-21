@@ -12,6 +12,7 @@
     "filesystem.*",
     "os.showFolderDialog",
     "os.open",
+    "os.execCommand",
     "computer.getOSInfo",
     "os.getEnv"
   ],

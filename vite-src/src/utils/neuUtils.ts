@@ -6,6 +6,7 @@ export const CHATS_DIR_NAME = "chats";
 export const MSGS_DIR_NAME = "msgs";
 export const PROJECTS_FILE_NAME = "projects.json";
 export const AGENTS_FILE_NAME = "agents.json";
+export const FLOWS_DIR_NAME = "flows";
 export const DEFAULT_PROJECT_ID = "default";
 
 export function isNeutralinoConnected() {
@@ -39,6 +40,14 @@ export async function getProjectDataDir(projectId: string): Promise<string> {
     }
   }
   return `${dataDir}/${projectId}`;
+}
+
+export function isWindows(): boolean {
+  try {
+    return (window as any).NL_OS?.toLowerCase().includes("windows") ?? false;
+  } catch {
+    return false;
+  }
 }
 
 export async function getRootDataDir(): Promise<string> {
