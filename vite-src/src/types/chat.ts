@@ -74,6 +74,7 @@ export interface ChatMeta {
   updatedAt: number;
   activeModel?: string;
   activeAgentId?: string;
+  workflowId?: string;
   logId: string;
   draft?: string;
   subagents?: SubagentMeta[];

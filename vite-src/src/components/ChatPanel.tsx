@@ -1,12 +1,12 @@
 import { useRef, useEffect, useCallback, useMemo } from "react";
-import { Send, StopCircle } from "lucide-react";
+import { Send, StopCircle, GitBranch, X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
-import { ChatMessage as ChatMessageType, LLMStats } from "../types/chat";
+import { ChatMessage as ChatMessageType, LLMStats, Flow } from "../types/chat";
 import { useContextWindow } from "../hooks/useContextWindow";
 import { useChatDraft } from "../hooks/useChatDraft";
-import { useSettings, useAgentsContext, useChats, useProjects, useNav } from "../contexts";
+import { useSettings, useAgentsContext, useChats, useProjects, useNav, useFlowsContext } from "../contexts";
 import ModelPicker from "./ModelPicker";
 import AgentPicker from "./AgentPicker";
 import ContextRing from "./ContextRing";
@@ -105,6 +105,59 @@ function MessageStats({ stats, modelAliases }: { stats: LLMStats; modelAliases: 
   );
 }
 
+function WorkflowSelector({ workflows, onSelect, selectedWorkflowId }: { workflows: Flow[]; onSelect: (id: string) => void; selectedWorkflowId?: string }) {
+  if (workflows.length === 0) {
+    return (
+      <div className={styles.empty}>
+        <p>No workflows available. Add <code>.flow</code> JSON files to your project's flows folder.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.workflowSelector}>
+      <p className={styles.workflowSelectorTitle}>Select a workflow to get started</p>
+      <div className={styles.workflowGrid}>
+        {workflows.map((flow) => (
+          <button
+            key={flow.id}
+            className={`${styles.workflowCard} ${selectedWorkflowId === flow.id ? styles.workflowCardSelected : ""}`}
+            onClick={() => onSelect(flow.id)}
+            type="button"
+          >
+            <div className={styles.workflowCardHeader}>
+              <GitBranch size={16} />
+              <span className={styles.workflowCardName}>{flow.name}</span>
+            </div>
+            {flow.description && (
+              <p className={styles.workflowCardDescription}>{flow.description}</p>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WorkflowBanner({ workflow, onRemove }: { workflow: Flow; onRemove: () => void }) {
+  return (
+    <div className={styles.workflowBanner}>
+      <div className={styles.workflowBannerContent}>
+        <GitBranch size={14} />
+        <span className={styles.workflowBannerName}>{workflow.name}</span>
+      </div>
+      <button
+        className={styles.workflowBannerRemove}
+        onClick={onRemove}
+        type="button"
+        title="Remove workflow"
+      >
+        <X size={14} />
+      </button>
+    </div>
+  );
+}
+
 function MessageBubble({ message, modelAliases, toolResultMessages }: { message: ChatMessageType; modelAliases: Record<string, string>; toolResultMessages?: ChatMessageType[] }) {
   const isUser = message.role === "user";
   const hasStats = message.role !== "user" && message.stats;
@@ -160,10 +213,11 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const { visibleModels, settings } = useSettings();
   const { mainAgents, allAgents } = useAgentsContext();
-  const { setChatDraft } = useChats();
+  const { setChatDraft, setSelectedChatWorkflowId } = useChats();
   const { projects } = useProjects();
   const { activeProjectId, logId, navigateToLog } = useNav();
   const { chats, selectedChatId } = useChats();
+  const { flows, enabledWorkflows } = useFlowsContext();
   const activeProject = projects.find((p) => p.id === activeProjectId);
 
   // Resolve the effective system prompt for display
@@ -179,6 +233,8 @@ export default function ChatPanel({
     if (!selectedChatId) return null;
     return chats.find((c) => c.id === selectedChatId) ?? null;
   }, [chats, selectedChatId]);
+
+  const resolvedWorkflow = flows.find((f) => f.id === currentChat?.workflowId);
 
   // Build log options: main log + subagents
   const logOptions = useMemo(() => {
@@ -297,15 +353,20 @@ export default function ChatPanel({
             />
           </div>
         )}
+        {resolvedWorkflow && (
+          <WorkflowBanner workflow={resolvedWorkflow} onRemove={() => setSelectedChatWorkflowId(undefined)} />
+        )}
         <details className={styles.systemPromptCollapse}>
           <summary className={styles.systemPromptSummary}>system prompt</summary>
           <pre className={styles.systemPromptContent}>{resolvedSystemPrompt}</pre>
         </details>
         <div className={styles.messages}>
           {messages.length === 0 && (
-            <div className={styles.empty}>
-              <p>Start a conversation by typing a message below.</p>
-            </div>
+            <WorkflowSelector
+              workflows={enabledWorkflows}
+              onSelect={setSelectedChatWorkflowId}
+              selectedWorkflowId={(resolvedWorkflow?.id)}
+            />
           )}
           {(() => {
              const skip: Set<number> = new Set();

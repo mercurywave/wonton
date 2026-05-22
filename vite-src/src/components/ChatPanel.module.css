@@ -70,6 +70,142 @@
   font-size: 14px;
 }
 
+.empty p {
+  margin: 0;
+  text-align: center;
+}
+
+.empty code {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #9090a0;
+}
+
+.workflowSelector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  padding: 20px 0;
+}
+
+.workflowSelectorTitle {
+  font-size: 14px;
+  color: #888;
+  margin: 0;
+}
+
+.workflowGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 8px;
+  max-width: 800px;
+  width: 100%;
+}
+
+.workflowCard {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+  font-family: inherit;
+  color: inherit;
+  text-align: left;
+  align-items: flex-start;
+}
+
+.workflowCard:hover {
+  border-color: #4a6cf7;
+  background: rgba(74, 108, 247, 0.05);
+}
+
+.workflowCardSelected {
+  border-color: #4a6cf7;
+  background: rgba(74, 108, 247, 0.1);
+}
+
+.workflowCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.workflowCardName {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0e0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.workflowCardDescription {
+  font-size: 12px;
+  color: #888;
+  line-height: 1.4;
+  margin: 0;
+}
+
+.workflowBanner {
+  max-width: 800px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  background: rgba(74, 108, 247, 0.08);
+  border: 1px solid #4a6cf7;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.workflowBannerContent {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow: hidden;
+  flex: 1;
+}
+
+.workflowBannerName {
+  font-size: 13px;
+  font-weight: 500;
+  color: #c0d0f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflowBannerRemove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.workflowBannerRemove:hover {
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .message {
   display: flex;
   animation: fadeIn 0.2s ease;

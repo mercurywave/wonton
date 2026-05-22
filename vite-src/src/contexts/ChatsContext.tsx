@@ -26,7 +26,7 @@ interface ChatsContextValue {
   historyMessages: Record<string, ChatMessage[]>;
   loadHistoryMessages: () => Promise<void>;
   chatExecutionIds: Map<string, string>;
-  createChat: () => Promise<ChatMeta>;
+  createChat: (workflowId?: string) => Promise<ChatMeta>;
   deleteChat: (chatId: string) => Promise<void>;
   renameChat: (chatId: string, name: string) => Promise<void>;
   loadChatMessages: (chatId: string) => Promise<ChatMessage[]>;
@@ -35,6 +35,8 @@ interface ChatsContextValue {
   sendMessage: (content: string, modelId: string) => Promise<void>;
   stopGeneration: () => void;
   updateChatMeta: (projectId: string, chatId: string, updates: Partial<ChatMeta>) => Promise<void>;
+  setWorkflowId: (chatId: string, workflowId: string | undefined) => Promise<void>;
+  setSelectedChatWorkflowId: (workflowId: string | undefined) => Promise<void>;
   selectedChatId: string | null;
   setSelectedChatId: (id: string | null) => void;
 }
@@ -166,6 +168,15 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     await renameChat(chatId, name);
   }, [renameChat]);
 
+  const wrappedSetWorkflowId = useCallback(async (chatId: string, workflowId: string | undefined) => {
+    await projectChatsUpdateChatMeta(chatId, { workflowId, updatedAt: Date.now() });
+  }, [projectChatsUpdateChatMeta]);
+
+  const setSelectedChatWorkflowId = useCallback(async (workflowId: string | undefined) => {
+    if (!selectedChatId) return;
+    await projectChatsUpdateChatMeta(selectedChatId, { workflowId, updatedAt: Date.now() });
+  }, [selectedChatId, projectChatsUpdateChatMeta]);
+
   const value = useMemo(
     () => ({
       chats,
@@ -184,10 +195,12 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       sendMessage,
       stopGeneration,
       updateChatMeta: (_projectId: string, chatId: string, updates: Partial<ChatMeta>) => projectChatsUpdateChatMeta(chatId, updates),
+      setWorkflowId: wrappedSetWorkflowId,
+      setSelectedChatWorkflowId,
       selectedChatId,
       setSelectedChatId,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, setChatDraft, refreshChats, sendMessage, stopGeneration, selectedChatId]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, setChatDraft, refreshChats, sendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

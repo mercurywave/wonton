@@ -48,9 +48,9 @@ export function useProjectChats(projectId: string | undefined) {
     }
   }, [projectId, loadMeta, loadChats]);
 
-  const createChat = useCallback(async (): Promise<ChatMeta> => {
+  const createChat = useCallback(async (workflowId?: string): Promise<ChatMeta> => {
     if (!projectId) throw new Error("No project ID");
-    const chat = await createChatNative(projectId);
+    const chat = await createChatNative(projectId, undefined, workflowId);
     setChats((prev) => [chat, ...prev]);
     return chat;
   }, [projectId]);

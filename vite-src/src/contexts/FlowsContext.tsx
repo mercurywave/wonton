@@ -13,6 +13,7 @@ import { useNav } from "./NavContext";
 interface FlowsContextValue {
   flows: Flow[];
   disabledFlows: string[];
+  enabledWorkflows: Flow[];
   isLoading: boolean;
   refreshFlows: () => Promise<void>;
   flowsPath: string;
@@ -68,16 +69,22 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const enabledWorkflows = useMemo(
+    () => flows.filter((f) => !disabledFlows.includes(f.id)),
+    [flows, disabledFlows]
+  );
+
   const value = useMemo(
     () => ({
       flows,
       disabledFlows,
+      enabledWorkflows,
       isLoading,
       refreshFlows,
       flowsPath,
       toggleFlow,
     }),
-    [flows, disabledFlows, isLoading, flowsPath]
+    [flows, disabledFlows, enabledWorkflows, isLoading, flowsPath]
   );
 
   return <FlowsContext.Provider value={value}>{children}</FlowsContext.Provider>;
