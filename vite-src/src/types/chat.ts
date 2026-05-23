@@ -91,7 +91,23 @@ export interface Flow {
   id: string;
   name: string;
   description: string;
-  [key: string]: unknown;
+  initialState: string;
+  schemaVersion: number;
+  states: Record<string, FlowState>;
+}
+
+export interface FlowActionButton {
+  label: string;
+  idx: number;
+}
+
+export interface FlowState {
+  message: string;
+  onStart?: string;
+  hookAdjustPrompt?: string;
+  onPrompt?: string;
+  onActionButton?: string;
+  actionButtons?: FlowActionButton[];
 }
 
 export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows";
