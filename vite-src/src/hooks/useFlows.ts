@@ -6,9 +6,10 @@ import {
   getRootDataDir,
 } from "../utils/neuUtils";
 import { filesystem } from "@neutralinojs/lib";
+import { parse as yamlParse } from "yaml";
 
 const STORAGE_KEY = "wonton_flows";
-const FLOW_EXT = ".flow";
+const FLOW_EXT = ".yaml";
 
 function loadCachedFlows(): Flow[] {
   try {
@@ -50,19 +51,16 @@ export async function loadFlowsFromDisk(): Promise<{ flows: Flow[]; flowsPath: s
     const name = entry.entry;
     if (!name.endsWith(FLOW_EXT)) continue;
 
-    const id = name.slice(0, -FLOW_EXT.length);
     const filePath = `${flowsDir}/${name}`;
 
     try {
       const content = await filesystem.readFile(filePath);
-      const data = JSON.parse(content) as { name?: string; description?: string };
-      flows.push({
-        id,
-        name: data.name || id,
-        description: data.description || "",
-      });
-    } catch {
-      // ignore malformed flow files
+      const data = yamlParse(content)! as Record<string, unknown>;
+      if(!data.id) throw new Error("id is required");
+      if(!data.name) throw new Error("name is required");
+      flows.push(data as any);
+    } catch (e) {
+      console.warn(`loadFlowsFromDisk: failed to parse ${name}:`, e);
     }
   }
 

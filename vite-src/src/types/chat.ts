@@ -91,6 +91,7 @@ export interface Flow {
   id: string;
   name: string;
   description: string;
+  [key: string]: unknown;
 }
 
 export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows";

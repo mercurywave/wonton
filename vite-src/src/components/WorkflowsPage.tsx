@@ -73,7 +73,7 @@ export default function WorkflowsPage() {
           <div className={styles.empty}>
             <p>No workflows found.</p>
             <p className={styles.emptyHint}>
-              Add <code>.flow</code> JSON files to the <code>flows/</code> directory.
+              Add <code>.yaml</code> files to the <code>flows/</code> directory.
             </p>
           </div>
         ) : (

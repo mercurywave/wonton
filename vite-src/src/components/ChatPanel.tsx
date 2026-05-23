@@ -109,7 +109,7 @@ function WorkflowSelector({ workflows, onSelect, selectedWorkflowId }: { workflo
   if (workflows.length === 0) {
     return (
       <div className={styles.empty}>
-        <p>No workflows available. Add <code>.flow</code> JSON files to your project's flows folder.</p>
+        <p>No workflows available. Add <code>.yaml</code> files to your project's flows folder.</p>
       </div>
     );
   }
