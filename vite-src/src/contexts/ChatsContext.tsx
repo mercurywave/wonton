@@ -36,7 +36,7 @@ interface ChatsContextValue {
   stopGeneration: () => void;
   updateChatMeta: (projectId: string, chatId: string, updates: Partial<ChatMeta>) => Promise<void>;
   setWorkflowId: (chatId: string, workflowId: string | undefined) => Promise<void>;
-  setSelectedChatWorkflowId: (workflowId: string | undefined) => Promise<void>;
+  setSelectedChatWorkflowId: (workflowId: string | undefined, workflowStateKey?: string) => Promise<void>;
   selectedChatId: string | null;
   setSelectedChatId: (id: string | null) => void;
 }
@@ -172,9 +172,13 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     await projectChatsUpdateChatMeta(chatId, { workflowId, updatedAt: Date.now() });
   }, [projectChatsUpdateChatMeta]);
 
-  const setSelectedChatWorkflowId = useCallback(async (workflowId: string | undefined) => {
+  const setSelectedChatWorkflowId = useCallback(async (workflowId: string | undefined, workflowStateKey?: string) => {
     if (!selectedChatId) return;
-    await projectChatsUpdateChatMeta(selectedChatId, { workflowId, updatedAt: Date.now() });
+    const updates: Partial<ChatMeta> = { workflowId, updatedAt: Date.now() };
+    if (workflowStateKey !== undefined) {
+      updates.workflowStateKey = workflowStateKey;
+    }
+    await projectChatsUpdateChatMeta(selectedChatId, updates);
   }, [selectedChatId, projectChatsUpdateChatMeta]);
 
   const value = useMemo(

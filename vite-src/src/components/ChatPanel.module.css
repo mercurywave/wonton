@@ -206,6 +206,46 @@
   background: rgba(255, 255, 255, 0.1);
 }
 
+.workflowStateMessageBar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.workflowStateMessageInner {
+  background: #595968;
+  border: 1px solid #111;
+  border-bottom: none;
+  max-width: 720px;
+  width: 100%;
+  padding: 10px 20px;
+  margin: 0 40px;
+  font-size: 13px;
+  color: #111;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: break-word;
+}
+
+.workflowStateMessageInner :global(ul),
+.workflowStateMessageInner :global(ol) {
+  margin: 4px 0;
+  padding-left: 20px;
+}
+
+.workflowStateMessageInner :global(li) {
+  margin: 0;
+}
+
+.workflowStateMessageInner :global(p) {
+  margin: 0;
+}
+
+.workflowStateMessageInner :global(strong) {
+  font-weight: 600;
+  color: #888;
+}
+
 .message {
   display: flex;
   animation: fadeIn 0.2s ease;

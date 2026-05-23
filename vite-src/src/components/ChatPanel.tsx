@@ -235,6 +235,7 @@ export default function ChatPanel({
   }, [chats, selectedChatId]);
 
   const resolvedWorkflow = flows.find((f) => f.id === currentChat?.workflowId);
+  const resolvedStateMessage = resolvedWorkflow?.states?.[currentChat?.workflowStateKey ?? ""]?.message;
 
   // Build log options: main log + subagents
   const logOptions = useMemo(() => {
@@ -354,8 +355,9 @@ export default function ChatPanel({
           </div>
         )}
         {resolvedWorkflow && (
-          <WorkflowBanner workflow={resolvedWorkflow} onRemove={() => setSelectedChatWorkflowId(undefined)} />
+          <WorkflowBanner workflow={resolvedWorkflow} onRemove={() => setSelectedChatWorkflowId(undefined, undefined)} />
         )}
+ 
         <details className={styles.systemPromptCollapse}>
           <summary className={styles.systemPromptSummary}>system prompt</summary>
           <pre className={styles.systemPromptContent}>{resolvedSystemPrompt}</pre>
@@ -364,7 +366,10 @@ export default function ChatPanel({
           {messages.length === 0 && (
             <WorkflowSelector
               workflows={enabledWorkflows}
-              onSelect={setSelectedChatWorkflowId}
+              onSelect={(id) => {
+                const flow = enabledWorkflows.find((f) => f.id === id);
+                setSelectedChatWorkflowId(id, flow?.initialState);
+              }}
               selectedWorkflowId={(resolvedWorkflow?.id)}
             />
           )}
@@ -413,6 +418,14 @@ export default function ChatPanel({
           <div ref={messagesEndRef} />
         </div>
       </div>
+
+      {resolvedStateMessage && (
+        <div className={styles.workflowStateMessageBar}>
+          <div className={styles.workflowStateMessageInner}>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{resolvedStateMessage}</ReactMarkdown>
+          </div>
+        </div>
+      )}
 
       <form className={styles.inputArea} onSubmit={handleSubmit}>
         <div className={styles.inputWrapper}>

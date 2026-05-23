@@ -118,7 +118,8 @@ export async function listChatMeta(projectId: string): Promise<ChatMeta[]> {
 export async function createChat(
   projectId: string,
   name?: string,
-  workflowId?: string
+  workflowId?: string,
+  workflowStateKey?: string
 ): Promise<ChatMeta> {
   if (!isNeutralinoConnected()) {
     const chatId = generateGuid();
@@ -130,6 +131,7 @@ export async function createChat(
       createdAt: Date.now(),
       updatedAt: Date.now(),
       workflowId,
+      workflowStateKey,
       logId: logId,
     };
   }
@@ -149,6 +151,7 @@ export async function createChat(
     createdAt: now,
     updatedAt: now,
     workflowId,
+    workflowStateKey,
     logId: logId,
   };
 
@@ -298,7 +301,7 @@ export async function appendMessage(
 export async function updateChatMeta(
   projectId: string,
   chatId: string,
-  updates: Partial<Pick<ChatMeta, "name" | "updatedAt" | "activeModel" | "activeAgentId" | "workflowId" | "draft" | "projectId">>
+  updates: Partial<Pick<ChatMeta, "name" | "updatedAt" | "activeModel" | "activeAgentId" | "workflowId" | "workflowStateKey" | "workflowData" | "draft" | "projectId">>
 ): Promise<void> {
   if (!isNeutralinoConnected()) return;
 
