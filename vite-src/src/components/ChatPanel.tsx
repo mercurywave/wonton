@@ -197,7 +197,7 @@ export default function ChatPanel({
   const { setChatDraft, setSelectedChatWorkflowId } = useChats();
   const { projects } = useProjects();
   const { activeProjectId, logId, navigateToLog } = useNav();
-  const { chats, selectedChatId } = useChats();
+  const { chats, selectedChatId, onActionButtonClick } = useChats();
   const { flows, enabledWorkflows } = useFlowsContext();
   const activeProject = projects.find((p) => p.id === activeProjectId);
 
@@ -217,6 +217,7 @@ export default function ChatPanel({
 
   const resolvedWorkflow = flows.find((f) => f.id === currentChat?.workflowId);
   const resolvedStateMessage = resolvedWorkflow?.states?.[currentChat?.workflowStateKey ?? ""]?.message;
+  const resolvedActionButtons = resolvedWorkflow?.states?.[currentChat?.workflowStateKey ?? ""]?.actionButtons;
 
   // Build log options: main log + subagents
   const logOptions = useMemo(() => {
@@ -401,16 +402,28 @@ export default function ChatPanel({
         <div className={styles.workflowStateMessageBar}>
           <div className={styles.workflowStateMessageInner}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{resolvedStateMessage}</ReactMarkdown>
-            {resolvedWorkflow && (
-              <button
-                className={styles.workflowStateMessageRemove}
-                onClick={() => setSelectedChatWorkflowId(undefined, undefined)}
-                type="button"
-                title="Remove workflow"
-              >
-                <X size={14} />
-              </button>
-            )}
+            <div className={styles.workflowStateActionButtons}>
+              {resolvedActionButtons?.map((btn) => (
+                <button
+                  key={`action-${btn.idx}`}
+                  className={styles.workflowStateActionButton}
+                  onClick={() => onActionButtonClick(btn)}
+                  type="button"
+                >
+                  {btn.label}
+                </button>
+              ))}
+              {resolvedWorkflow && (
+                <button
+                  className={styles.workflowStateMessageRemove}
+                  onClick={() => setSelectedChatWorkflowId(undefined, undefined)}
+                  type="button"
+                  title="Remove workflow"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}

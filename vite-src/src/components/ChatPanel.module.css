@@ -163,7 +163,7 @@
 }
 
 .workflowStateMessageInner {
-  background: #595968;
+  background: #6c6c7d;
   border: 1px solid #111;
   border-bottom: none;
   max-width: 720px;
@@ -204,6 +204,29 @@
 .workflowStateMessageRemove:hover {
   color: #333;
   background: rgba(0, 0, 0, 0.1);
+}
+
+.workflowStateActionButtons {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+.workflowStateActionButton {
+  background: #9494a3;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  color: #111;
+  transition: all 0.15s ease;
+}
+
+.workflowStateActionButton:hover {
+  background: #e0e0e0;
+  border-color: #aaa;
 }
 
 .workflowStateMessageInner :global(ul),

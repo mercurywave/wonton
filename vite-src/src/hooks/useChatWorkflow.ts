@@ -1,5 +1,5 @@
 import { useRef, useCallback, useMemo, useEffect } from "react";
-import { ChatMessage, Flow, FlowState, Won, WorkflowStateContext } from "../types/chat";
+import { ChatMessage, Flow, FlowState, FlowActionButton, Won, WorkflowStateContext } from "../types/chat";
 
 interface UseChatWorkflowOptions {
   workflowId?: string;
@@ -20,6 +20,7 @@ interface UseChatWorkflowReturn {
   executeAdjustPrompt(userContent: string, modelId?: string): Promise<string>;
   onSendPrompt(): Promise<void>;
   onChatResponse(response: ChatMessage): Promise<void>;
+  onActionButtonClick(button: FlowActionButton): Promise<void>;
   currentFlow: Flow | undefined;
   currentState: FlowState | undefined;
   triggerOnEnterForState(stateKey: string, data: Record<string, unknown>): Promise<void>;
@@ -171,10 +172,32 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     }
   }, [flows, workflowId, chatId, workflowStateKey, updateChatMeta, onStateChange]);
 
+  const onActionButtonClick = useCallback(async (button: FlowActionButton) => {
+    const flow = flows.find((f) => f.id === workflowId);
+    const state = flow?.states?.[workflowStateKey ?? ""];
+    if (!state?.onActionButton || !chatId || !workflowId || !workflowStateKey) return;
+
+    const ctx: WorkflowStateContext = {
+      chatId,
+      workflowId,
+      stateKey: workflowStateKey,
+      workflowData: dataRef.current,
+    };
+    const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current);
+    const hookFn = new Function("won", "idx", `return (async () => {${state.onActionButton}})();`) as unknown as (won: Won, idx: number) => Promise<void>;
+
+    try {
+      await hookFn(won, button.idx);
+    } catch (err) {
+      console.error(`onActionButton hook failed in state "${workflowStateKey}":`, err);
+    }
+  }, [flows, workflowId, chatId, workflowStateKey, updateChatMeta, onStateChange]);
+
   return {
     executeAdjustPrompt,
     onSendPrompt,
     onChatResponse,
+    onActionButtonClick,
     currentFlow,
     currentState,
     triggerOnEnterForState: runOnEnterForState,

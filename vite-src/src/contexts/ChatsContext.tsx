@@ -18,7 +18,7 @@ import { useAgentsContext } from "./AgentsContext";
 import { useFlowsContext } from "./FlowsContext";
 import { isNeutralinoConnected } from "../utils/neuUtils";
 import { getAvailableTools } from "../tools";
-import { ChatMessage, ChatMeta, ToolDefinition } from "../types/chat";
+import { ChatMessage, ChatMeta, FlowActionButton, ToolDefinition } from "../types/chat";
 
 interface ChatsContextValue {
   chats: ChatMeta[];
@@ -40,6 +40,7 @@ interface ChatsContextValue {
   setWorkflowId: (chatId: string, workflowId: string | undefined) => Promise<void>;
   setSelectedChatWorkflowId: (workflowId: string | undefined, workflowStateKey?: string) => Promise<void>;
   executeAdjustPrompt: (content: string) => Promise<string>;
+  onActionButtonClick: (button: FlowActionButton) => Promise<void>;
   selectedChatId: string | null;
   setSelectedChatId: (id: string | null) => void;
 }
@@ -163,6 +164,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     executeAdjustPrompt: workflowExecuteAdjustPrompt,
     onSendPrompt: workflowExecuteOnSendPrompt,
     onChatResponse: workflowExecuteOnChatResponse,
+    onActionButtonClick: workflowOnActionButtonClick,
     advance,
   } = useChatWorkflow({
     workflowId: selectedChatForWorkflow?.workflowId,
@@ -255,10 +257,11 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       setWorkflowId: wrappedSetWorkflowId,
       setSelectedChatWorkflowId,
       executeAdjustPrompt: workflowExecuteAdjustPrompt,
+      onActionButtonClick: workflowOnActionButtonClick,
       selectedChatId,
       setSelectedChatId,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, setChatDraft, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, advance]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, setChatDraft, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, advance]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;
