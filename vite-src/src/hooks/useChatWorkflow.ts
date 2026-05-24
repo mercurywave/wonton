@@ -84,7 +84,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       workflowData: data,
     };
     const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current);
-    const hookFn = new Function("won", state.onEnter) as unknown as (won: Won) => Promise<void>;
+    const hookFn = new Function("won", `return (async () => {${state.onEnter}})();`) as unknown as (won: Won) => Promise<void>;
 
     try {
       await hookFn(won);
@@ -115,7 +115,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       };
       const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current);
       
-      const hookfn = new Function("won", "userContent", currentState.hookAdjustPrompt) as unknown as (won: Won, userContent: string) => Promise<string>;
+      const hookfn = new Function("won", "userContent", `return (async () => {${currentState.hookAdjustPrompt}})();`) as unknown as (won: Won, userContent: string) => Promise<string>;
       try{
         const result = await hookfn(won, userContent);
         if (typeof result === "string") {
@@ -141,7 +141,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       workflowData: dataRef.current,
     };
     const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current);
-    const hookFn = new Function("won", state.onSendPrompt) as unknown as (won: Won) => Promise<void>;
+    const hookFn = new Function("won", `return (async () => {${state.onSendPrompt}})();`) as unknown as (won: Won) => Promise<void>;
 
     try {
       await hookFn(won);
@@ -162,7 +162,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       workflowData: dataRef.current,
     };
     const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current);
-    const hookFn = new Function("won", "response", state.onChatResponse) as unknown as (won: Won, response: ChatMessage) => Promise<void>;
+    const hookFn = new Function("won", "response", `return (async () => {${state.onChatResponse}})();`) as unknown as (won: Won, response: ChatMessage) => Promise<void>;
 
     try {
       await hookFn(won, response);
