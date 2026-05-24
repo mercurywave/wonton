@@ -6,14 +6,16 @@ import {
   useRef,
   ReactNode,
   useMemo,
+  useEffect,
 } from "react";
-import { useEffect } from "react";
 import { useProjectChats } from "../hooks/useProjectChats";
 import { useChatApi } from "../hooks/useChatApi";
+import { useChatWorkflow } from "../hooks/useChatWorkflow";
 import { useSettings } from "./SettingsContext";
 import { useProjects } from "./ProjectsContext";
 import { useNav } from "./NavContext";
 import { useAgentsContext } from "./AgentsContext";
+import { useFlowsContext } from "./FlowsContext";
 import { isNeutralinoConnected } from "../utils/neuUtils";
 import { getAvailableTools } from "../tools";
 import { ChatMessage, ChatMeta, ToolDefinition } from "../types/chat";
@@ -26,7 +28,7 @@ interface ChatsContextValue {
   historyMessages: Record<string, ChatMessage[]>;
   loadHistoryMessages: () => Promise<void>;
   chatExecutionIds: Map<string, string>;
-  createChat: (workflowId?: string) => Promise<ChatMeta>;
+  createChat: (workflowId?: string, workflowStateKey?: string) => Promise<ChatMeta>;
   deleteChat: (chatId: string) => Promise<void>;
   renameChat: (chatId: string, name: string) => Promise<void>;
   loadChatMessages: (chatId: string) => Promise<ChatMessage[]>;
@@ -37,6 +39,7 @@ interface ChatsContextValue {
   updateChatMeta: (projectId: string, chatId: string, updates: Partial<ChatMeta>) => Promise<void>;
   setWorkflowId: (chatId: string, workflowId: string | undefined) => Promise<void>;
   setSelectedChatWorkflowId: (workflowId: string | undefined, workflowStateKey?: string) => Promise<void>;
+  executeAdjustPrompt: (content: string) => Promise<string>;
   selectedChatId: string | null;
   setSelectedChatId: (id: string | null) => void;
 }
@@ -49,6 +52,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
   const { allAgents } = useAgentsContext();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const { flows } = useFlowsContext();
 
   const {
     chats,
@@ -135,6 +139,44 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     refreshAndNotify,
   );
 
+  // Workflow execution for the selected chat
+  const selectedChatForWorkflow = useMemo(() => {
+    if (!selectedChatId) return undefined;
+    return chats.find((c) => c.id === selectedChatId);
+  }, [chats, selectedChatId]);
+
+  const workflowUpdateMeta = useCallback(
+    async (updates: {
+      workflowStateKey?: string;
+      workflowData?: Record<string, unknown>;
+      updatedAt?: number;
+    }) => {
+      if (!selectedChatId) return;
+      await projectChatsUpdateChatMeta(selectedChatId, updates);
+    },
+    [selectedChatId, projectChatsUpdateChatMeta]
+  );
+
+  const {
+    executeAdjustPrompt: workflowExecuteAdjustPrompt,
+    advance,
+  } = useChatWorkflow({
+    workflowId: selectedChatForWorkflow?.workflowId,
+    workflowStateKey: selectedChatForWorkflow?.workflowStateKey,
+    workflowData: selectedChatForWorkflow?.workflowData ?? {},
+    flows,
+    chatId: selectedChatId || undefined,
+    updateChatMeta: workflowUpdateMeta,
+  });
+
+  const wrappedSendMessage = useCallback(
+    async (content: string, modelId: string) => {
+      const adjustedContent = await workflowExecuteAdjustPrompt(content, modelId);
+      await sendMessage(adjustedContent, modelId);
+    },
+    [workflowExecuteAdjustPrompt, sendMessage]
+  );
+
   const [historyMessages, setHistoryMessages] = useState<Record<string, ChatMessage[]>>({});
   const [isLoadingHistoryMessages, setIsLoadingHistoryMessages] = useState(false);
   const historyLoadedRef = useRef(false);
@@ -156,8 +198,8 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     setIsLoadingHistoryMessages(false);
   }, [chats, historyMessages, loadChatMessages]);
 
-  const wrappedCreateChat = useCallback(async (): Promise<ChatMeta> => {
-    return await createChat();
+  const wrappedCreateChat = useCallback(async (workflowId?: string, workflowStateKey?: string): Promise<ChatMeta> => {
+    return await createChat(workflowId, workflowStateKey);
   }, [createChat]);
 
   const wrappedDeleteChat = useCallback(async (chatId: string) => {
@@ -181,6 +223,13 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     await projectChatsUpdateChatMeta(selectedChatId, updates);
   }, [selectedChatId, projectChatsUpdateChatMeta]);
 
+  // Fire onStart for the initial state when a workflow is linked
+  useEffect(() => {
+    if (selectedChatForWorkflow?.workflowId && selectedChatForWorkflow?.workflowStateKey) {
+      advance(selectedChatForWorkflow.workflowStateKey);
+    }
+  }, [selectedChatForWorkflow?.workflowId, selectedChatForWorkflow?.workflowStateKey, advance]);
+
   const value = useMemo(
     () => ({
       chats,
@@ -196,15 +245,16 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       loadChatMessages,
       setChatDraft,
       refreshChats,
-      sendMessage,
+      sendMessage: wrappedSendMessage,
       stopGeneration,
       updateChatMeta: (_projectId: string, chatId: string, updates: Partial<ChatMeta>) => projectChatsUpdateChatMeta(chatId, updates),
       setWorkflowId: wrappedSetWorkflowId,
       setSelectedChatWorkflowId,
+      executeAdjustPrompt: workflowExecuteAdjustPrompt,
       selectedChatId,
       setSelectedChatId,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, setChatDraft, refreshChats, sendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, setChatDraft, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, advance]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

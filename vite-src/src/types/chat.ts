@@ -112,6 +112,20 @@ export interface FlowState {
   actionButtons?: FlowActionButton[];
 }
 
+export interface WorkflowStateContext {
+  chatId: string;
+  workflowId: string;
+  stateKey: string;
+  workflowData: Record<string, unknown>;
+  modelId?: string;
+}
+
+export interface Won {
+  advance(nextStateKey: string): Promise<void>;
+  getState(): WorkflowStateContext;
+  setWorkflowData(partial: Partial<Record<string, unknown>>): Promise<void>;
+}
+
 export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows";
 
 export interface ServerModel {
