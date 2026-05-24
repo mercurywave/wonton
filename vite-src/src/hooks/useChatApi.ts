@@ -496,6 +496,8 @@ export function useChatApi(
   folderPath?: string,
   logId?: string,
   onChatUpdated?: () => void,
+  onSendPrompt?: () => Promise<void>,
+  onChatResponse?: (response: ChatMessage) => Promise<void>,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -591,7 +593,9 @@ export function useChatApi(
 
         const resolvedTools = tools || [];
 
-        await runToolCallLoop({
+        await onSendPrompt?.();
+
+        const toolCallResult = await runToolCallLoop({
           settings,
           systemPrompt,
           model,
@@ -626,6 +630,11 @@ export function useChatApi(
           onChatUpdated,
         });
 
+        // Run onChatResponse hook on the final assistant message
+        if (toolCallResult) {
+          await onChatResponse?.(toolCallResult.finalMessage);
+        }
+
         // Tool result messages are added inline in onUpdateMessage
 
       } catch (error) {
@@ -644,7 +653,7 @@ export function useChatApi(
         setChatExecutionId(chatId!, null);
       }
     },
-    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, setChatExecutionId]
+    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, setChatExecutionId, onSendPrompt, onChatResponse]
   );
 
   const clearChat = useCallback(() => {

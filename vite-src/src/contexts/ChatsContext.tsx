@@ -137,6 +137,8 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     activeProject?.folderPath,
     activeLogId,
     refreshAndNotify,
+    () => workflowExecuteOnSendPrompt(),
+    (response: ChatMessage) => workflowExecuteOnChatResponse(response),
   );
 
   // Workflow execution for the selected chat
@@ -159,6 +161,8 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   const {
     executeAdjustPrompt: workflowExecuteAdjustPrompt,
+    onSendPrompt: workflowExecuteOnSendPrompt,
+    onChatResponse: workflowExecuteOnChatResponse,
     advance,
   } = useChatWorkflow({
     workflowId: selectedChatForWorkflow?.workflowId,
@@ -254,7 +258,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       selectedChatId,
       setSelectedChatId,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, setChatDraft, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, advance]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, setChatDraft, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, advance]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

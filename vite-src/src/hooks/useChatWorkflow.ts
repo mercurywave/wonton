@@ -1,5 +1,5 @@
 import { useRef, useCallback, useMemo, useEffect } from "react";
-import { Flow, FlowState, Won, WorkflowStateContext } from "../types/chat";
+import { ChatMessage, Flow, FlowState, Won, WorkflowStateContext } from "../types/chat";
 
 interface UseChatWorkflowOptions {
   workflowId?: string;
@@ -18,6 +18,8 @@ interface UseChatWorkflowOptions {
 
 interface UseChatWorkflowReturn {
   executeAdjustPrompt(userContent: string, modelId?: string): Promise<string>;
+  onSendPrompt(): Promise<void>;
+  onChatResponse(response: ChatMessage): Promise<void>;
   currentFlow: Flow | undefined;
   currentState: FlowState | undefined;
   triggerOnEnterForState(stateKey: string, data: Record<string, unknown>): Promise<void>;
@@ -117,7 +119,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       try{
         const result = await hookfn(won, userContent);
         if (typeof result === "string") {
-          return result;
+          return result.trim();
         }
       } catch (err) {
         console.error(`hookAdjustPrompt failed in state "${workflowStateKey}":`, err);
@@ -127,8 +129,52 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     [currentState, chatId, workflowId, workflowStateKey, updateChatMeta, onStateChange]
   );
 
+  const onSendPrompt = useCallback(async () => {
+    const flow = flows.find((f) => f.id === workflowId);
+    const state = flow?.states?.[workflowStateKey ?? ""];
+    if (!state?.onSendPrompt || !chatId || !workflowId || !workflowStateKey) return;
+
+    const ctx: WorkflowStateContext = {
+      chatId,
+      workflowId,
+      stateKey: workflowStateKey,
+      workflowData: dataRef.current,
+    };
+    const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current);
+    const hookFn = new Function("won", state.onSendPrompt) as unknown as (won: Won) => Promise<void>;
+
+    try {
+      await hookFn(won);
+    } catch (err) {
+      console.error(`onSendPrompt hook failed in state "${workflowStateKey}":`, err);
+    }
+  }, [flows, workflowId, chatId, workflowStateKey, updateChatMeta, onStateChange]);
+
+  const onChatResponse = useCallback(async (response: ChatMessage) => {
+    const flow = flows.find((f) => f.id === workflowId);
+    const state = flow?.states?.[workflowStateKey ?? ""];
+    if (!state?.onChatResponse || !chatId || !workflowId || !workflowStateKey) return;
+
+    const ctx: WorkflowStateContext = {
+      chatId,
+      workflowId,
+      stateKey: workflowStateKey,
+      workflowData: dataRef.current,
+    };
+    const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current);
+    const hookFn = new Function("won", "response", state.onChatResponse) as unknown as (won: Won, response: ChatMessage) => Promise<void>;
+
+    try {
+      await hookFn(won, response);
+    } catch (err) {
+      console.error(`onChatResponse hook failed in state "${workflowStateKey}":`, err);
+    }
+  }, [flows, workflowId, chatId, workflowStateKey, updateChatMeta, onStateChange]);
+
   return {
     executeAdjustPrompt,
+    onSendPrompt,
+    onChatResponse,
     currentFlow,
     currentState,
     triggerOnEnterForState: runOnEnterForState,
