@@ -20,7 +20,7 @@ interface UseChatWorkflowReturn {
   executeAdjustPrompt(userContent: string, modelId?: string): Promise<string>;
   currentFlow: Flow | undefined;
   currentState: FlowState | undefined;
-  triggerOnStartForState(stateKey: string, data: Record<string, unknown>): Promise<void>;
+  triggerOnEnterForState(stateKey: string, data: Record<string, unknown>): Promise<void>;
   advance(nextStateKey: string): Promise<void>;
 }
 
@@ -28,7 +28,7 @@ function buildWon(
   ctx: WorkflowStateContext,
   updateChatMeta: UseChatWorkflowOptions["updateChatMeta"],
   onStateChange?: UseChatWorkflowOptions["onStateChange"],
-  onStartForState?: (stateKey: string, data: Record<string, unknown>) => Promise<void>
+  onEnterForState?: (stateKey: string, data: Record<string, unknown>) => Promise<void>
 ): Won {
   const stateRef = { ...ctx };
 
@@ -41,7 +41,7 @@ function buildWon(
         updatedAt: Date.now(),
       });
       onStateChange?.(nextStateKey, stateRef.workflowData);
-      onStartForState?.(nextStateKey, stateRef.workflowData);
+      onEnterForState?.(nextStateKey, stateRef.workflowData);
     },
     getState() {
       return { ...stateRef };
@@ -70,10 +70,10 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     [currentFlow, workflowStateKey]
   );
 
-  const runOnStartForState = useCallback(async (stateKey: string, data: Record<string, unknown>) => {
+  const runOnEnterForState = useCallback(async (stateKey: string, data: Record<string, unknown>) => {
     const flow = flows.find((f) => f.id === workflowId);
     const state = flow?.states?.[stateKey];
-    if (!state?.onStart || !chatId || !workflowId) return;
+    if (!state?.onEnter || !chatId || !workflowId) return;
 
     const ctx: WorkflowStateContext = {
       chatId,
@@ -81,22 +81,22 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       stateKey,
       workflowData: data,
     };
-    const won = buildWon(ctx, updateChatMeta, onStateChange, onStartForStateRef.current);
-    const hookFn = new Function("won", state.onStart) as unknown as (won: Won) => Promise<void>;
+    const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current);
+    const hookFn = new Function("won", state.onEnter) as unknown as (won: Won) => Promise<void>;
 
     try {
       await hookFn(won);
     } catch (err) {
-      console.error(`onStart hook failed in state "${stateKey}":`, err);
+      console.error(`onEnter hook failed in state "${stateKey}":`, err);
     }
   }, [flows, workflowId, chatId, updateChatMeta, onStateChange]);
 
   const advance = useCallback(async (nextStateKey: string) => {
-    await runOnStartForState(nextStateKey, dataRef.current);
-  }, [runOnStartForState]);
+    await runOnEnterForState(nextStateKey, dataRef.current);
+  }, [runOnEnterForState]);
 
-  const onStartForStateRef = useRef(runOnStartForState);
-  onStartForStateRef.current = runOnStartForState;
+  const onEnterForStateRef = useRef(runOnEnterForState);
+  onEnterForStateRef.current = runOnEnterForState;
 
   const executeAdjustPrompt = useCallback(
     async (userContent: string, promptModelId?: string): Promise<string> => {
@@ -111,7 +111,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
         workflowData: dataRef.current,
         modelId: promptModelId ?? modelId,
       };
-      const won = buildWon(ctx, updateChatMeta, onStateChange, onStartForStateRef.current);
+      const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current);
       
       const hookfn = new Function("won", "userContent", currentState.hookAdjustPrompt) as unknown as (won: Won, userContent: string) => Promise<string>;
       try{
@@ -131,7 +131,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     executeAdjustPrompt,
     currentFlow,
     currentState,
-    triggerOnStartForState: runOnStartForState,
+    triggerOnEnterForState: runOnEnterForState,
     advance,
   };
 }

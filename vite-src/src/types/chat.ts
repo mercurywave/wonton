@@ -105,9 +105,10 @@ export interface FlowActionButton {
 
 export interface FlowState {
   message: string;
-  onStart?: string;
+  onEnter?: string;
   hookAdjustPrompt?: string;
-  onPrompt?: string;
+  onSendPrompt?: string;
+  onChatResponse?: string;
   onActionButton?: string;
   actionButtons?: FlowActionButton[];
 }

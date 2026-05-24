@@ -223,7 +223,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     await projectChatsUpdateChatMeta(selectedChatId, updates);
   }, [selectedChatId, projectChatsUpdateChatMeta]);
 
-  // Fire onStart for the initial state when a workflow is linked
+  // Fire onEnter for the initial state when a workflow is linked
   useEffect(() => {
     if (selectedChatForWorkflow?.workflowId && selectedChatForWorkflow?.workflowStateKey) {
       advance(selectedChatForWorkflow.workflowStateKey);
