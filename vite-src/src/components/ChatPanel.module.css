@@ -156,56 +156,6 @@
   margin: 0;
 }
 
-.workflowBanner {
-  max-width: 800px;
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 8px 12px;
-  background: rgba(74, 108, 247, 0.08);
-  border: 1px solid #4a6cf7;
-  border-radius: 8px;
-  margin-bottom: 8px;
-}
-
-.workflowBannerContent {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  overflow: hidden;
-  flex: 1;
-}
-
-.workflowBannerName {
-  font-size: 13px;
-  font-weight: 500;
-  color: #c0d0f0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.workflowBannerRemove {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  color: #888;
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-}
-
-.workflowBannerRemove:hover {
-  color: #e0e0e0;
-  background: rgba(255, 255, 255, 0.1);
-}
-
 .workflowStateMessageBar {
   flex-shrink: 0;
   display: flex;
@@ -218,13 +168,42 @@
   border-bottom: none;
   max-width: 720px;
   width: 100%;
-  padding: 10px 20px;
+  padding: 10px 10px;
   margin: 0 40px;
   font-size: 13px;
   color: #111;
   line-height: 1.5;
   white-space: normal;
   overflow-wrap: break-word;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.workflowStateMessageInner > :first-child {
+  flex: 1;
+}
+
+.workflowStateMessageRemove {
+  background: none;
+  border: none;
+  color: #111;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.workflowStateMessageRemove:hover {
+  color: #333;
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .workflowStateMessageInner :global(ul),

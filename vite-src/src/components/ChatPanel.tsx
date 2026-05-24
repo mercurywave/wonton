@@ -139,25 +139,6 @@ function WorkflowSelector({ workflows, onSelect, selectedWorkflowId }: { workflo
   );
 }
 
-function WorkflowBanner({ workflow, onRemove }: { workflow: Flow; onRemove: () => void }) {
-  return (
-    <div className={styles.workflowBanner}>
-      <div className={styles.workflowBannerContent}>
-        <GitBranch size={14} />
-        <span className={styles.workflowBannerName}>{workflow.name}</span>
-      </div>
-      <button
-        className={styles.workflowBannerRemove}
-        onClick={onRemove}
-        type="button"
-        title="Remove workflow"
-      >
-        <X size={14} />
-      </button>
-    </div>
-  );
-}
-
 function MessageBubble({ message, modelAliases, toolResultMessages }: { message: ChatMessageType; modelAliases: Record<string, string>; toolResultMessages?: ChatMessageType[] }) {
   const isUser = message.role === "user";
   const hasStats = message.role !== "user" && message.stats;
@@ -354,10 +335,7 @@ export default function ChatPanel({
             />
           </div>
         )}
-        {resolvedWorkflow && (
-          <WorkflowBanner workflow={resolvedWorkflow} onRemove={() => setSelectedChatWorkflowId(undefined, undefined)} />
-        )}
- 
+        
         <details className={styles.systemPromptCollapse}>
           <summary className={styles.systemPromptSummary}>system prompt</summary>
           <pre className={styles.systemPromptContent}>{resolvedSystemPrompt}</pre>
@@ -423,6 +401,16 @@ export default function ChatPanel({
         <div className={styles.workflowStateMessageBar}>
           <div className={styles.workflowStateMessageInner}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{resolvedStateMessage}</ReactMarkdown>
+            {resolvedWorkflow && (
+              <button
+                className={styles.workflowStateMessageRemove}
+                onClick={() => setSelectedChatWorkflowId(undefined, undefined)}
+                type="button"
+                title="Remove workflow"
+              >
+                <X size={14} />
+              </button>
+            )}
           </div>
         </div>
       )}
