@@ -2,6 +2,8 @@ import { filesystem } from "@neutralinojs/lib";
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
 import { sanitizeAndResolvePath } from "./pathTools";
+import { resolveTempFilePath } from "../utils/neuUtils";
+import { getReservedTempFiles } from "../hooks/useChatPersistence";
 
 export const EDIT_FILE_TOOL_NAME = "edit";
 
@@ -58,7 +60,7 @@ export class EditFileHandler implements ToolHandler {
 
   async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { path, edits } = args as { path: string; edits: { oldText: string; newText: string }[] };
-    const { folderPath } = context;
+    const { folderPath, projectId, chatId } = context;
 
     if (!folderPath) {
       return {
@@ -94,17 +96,30 @@ export class EditFileHandler implements ToolHandler {
       }
     }
 
-    // Sanitize and resolve path
-    const sanitized = await sanitizeAndResolvePath(folderPath, path);
-    if (!sanitized.success) {
-      return {
-        callId: "",
-        content: `Error: ${sanitized.error}`,
-        isError: true,
-      };
-    }
+    // Check if this path matches a reserved temp file
+    const reservedTempFiles = (chatId && projectId)
+      ? await getReservedTempFiles(projectId, chatId)
+      : undefined;
+    const tempResult = await resolveTempFilePath(path, projectId, reservedTempFiles);
 
-    const fullPath = sanitized.resolvedPath!;
+    let fullPath: string;
+    let responsePath: string;
+    if (tempResult.redirected) {
+      fullPath = tempResult.tmpPath;
+      responsePath = tempResult.virtualPath;
+    } else {
+      // Sanitize and resolve path
+      const sanitized = await sanitizeAndResolvePath(folderPath, path);
+      if (!sanitized.success) {
+        return {
+          callId: "",
+          content: `Error: ${sanitized.error}`,
+          isError: true,
+        };
+      }
+      fullPath = sanitized.resolvedPath!;
+      responsePath = sanitized.relativePath!;
+    }
 
     try {
       // Read the file content
@@ -112,7 +127,7 @@ export class EditFileHandler implements ToolHandler {
       if (!content) {
         return {
           callId: "",
-          content: `Error: Could not read file: ${path}`,
+          content: `Error: Could not read file: ${responsePath}`,
           isError: true,
         };
       }
@@ -131,14 +146,14 @@ export class EditFileHandler implements ToolHandler {
         if (matchCount === 0) {
           return {
             callId: "",
-            content: `Error: edits[${i}].oldText not found in file: ${path}`,
+            content: `Error: edits[${i}].oldText not found in file: ${responsePath}`,
             isError: true,
           };
         }
         if (matchCount > 1) {
           return {
             callId: "",
-            content: `Error: edits[${i}].oldText appears ${matchCount} times in file: ${path}. It must match a unique occurrence. Add more context to make it unique.`,
+            content: `Error: edits[${i}].oldText appears ${matchCount} times in file: ${responsePath}. It must match a unique occurrence. Add more context to make it unique.`,
             isError: true,
           };
         }
@@ -175,7 +190,7 @@ export class EditFileHandler implements ToolHandler {
           if (aStart < bEnd && bStart < aEnd) {
             return {
               callId: "",
-              content: `Error: edits[${positions[i].originalIndex}] and edits[${positions[j].originalIndex}] overlap in file: ${path}. Merge them into a single edit or use non-overlapping text.`,
+              content: `Error: edits[${positions[i].originalIndex}] and edits[${positions[j].originalIndex}] overlap in file: ${responsePath}. Merge them into a single edit or use non-overlapping text.`,
               isError: true,
             };
           }
@@ -194,7 +209,7 @@ export class EditFileHandler implements ToolHandler {
       const stat = await filesystem.getStats(fullPath);
 
       const result = JSON.stringify({
-        path: sanitized.relativePath,
+        path: responsePath,
         operation: "edit",
         success: true,
         size: stat?.size || 0,

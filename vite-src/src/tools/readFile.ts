@@ -3,6 +3,8 @@ import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
 import { truncateContent } from "./truncationTools";
 import { sanitizeAndResolvePath } from "./pathTools";
+import { resolveTempFilePath } from "../utils/neuUtils";
+import { getReservedTempFiles } from "../hooks/useChatPersistence";
 
 export const READ_FILE_TOOL_NAME = "read";
 
@@ -56,7 +58,7 @@ export class ReadFileHandler implements ToolHandler {
       offset?: number; 
       limit?: number; 
     };
-    const { folderPath } = context;
+    const { folderPath, projectId, chatId } = context;
 
     if (!folderPath) {
       return {
@@ -78,24 +80,37 @@ export class ReadFileHandler implements ToolHandler {
     const offset = offsetArg && offsetArg > 0 ? offsetArg : 1;
     const limit = limitArg && limitArg > 0 ? limitArg : undefined;
 
-    // Sanitize and resolve path
-    const sanitized = await sanitizeAndResolvePath(folderPath, path);
-    if (!sanitized.success) {
-      return {
-        callId: "",
-        content: `Error: ${sanitized.error}`,
-        isError: true,
-      };
-    }
+    // Check if this path matches a reserved temp file
+    const reservedTempFiles = (chatId && projectId)
+      ? await getReservedTempFiles(projectId, chatId)
+      : undefined;
+    const tempResult = await resolveTempFilePath(path, projectId, reservedTempFiles);
 
-    const fullPath = sanitized.resolvedPath!;
+    let fullPath: string;
+    let responsePath: string;
+    if (tempResult.redirected) {
+      fullPath = tempResult.tmpPath;
+      responsePath = tempResult.virtualPath;
+    } else {
+      // Sanitize and resolve path
+      const sanitized = await sanitizeAndResolvePath(folderPath, path);
+      if (!sanitized.success) {
+        return {
+          callId: "",
+          content: `Error: ${sanitized.error}`,
+          isError: true,
+        };
+      }
+      fullPath = sanitized.resolvedPath!;
+      responsePath = sanitized.relativePath!;
+    }
 
     try {
       const stat = await filesystem.getStats(fullPath);
       if (!stat) {
         return {
           callId: "",
-          content: `Error: File not found: ${path}`,
+          content: `Error: File not found: ${responsePath}`,
           isError: true,
         };
       }
@@ -103,7 +118,7 @@ export class ReadFileHandler implements ToolHandler {
       if (stat.isDirectory) {
         return {
           callId: "",
-          content: `Error: Path is a directory, not a file: ${path}`,
+          content: `Error: Path is a directory, not a file: ${responsePath}`,
           isError: true,
         };
       }
@@ -113,7 +128,7 @@ export class ReadFileHandler implements ToolHandler {
       if (!content) {
         return {
           callId: "",
-          content: `Error: Could not read file: ${path}`,
+          content: `Error: Could not read file: ${responsePath}`,
           isError: true,
         };
       }
@@ -129,7 +144,7 @@ export class ReadFileHandler implements ToolHandler {
       // Check if offset is beyond file
       if (startLine > totalLines) {
         const result: Record<string, unknown> = {
-          path: sanitized.relativePath,
+          path: responsePath,
           size: stat.size || 0,
           content: `// Offset ${offset} is beyond the end of the file (${totalLines} lines)`,
           totalLines,
@@ -148,7 +163,7 @@ export class ReadFileHandler implements ToolHandler {
       const truncated = truncateContent(selectedContent, MAX_LINES, MAX_BYTES);
 
       const result: Record<string, unknown> = {
-        path: sanitized.relativePath,
+        path: responsePath,
         size: stat.size || 0,
         content: truncated.content,
         totalLines,

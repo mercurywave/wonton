@@ -194,10 +194,23 @@ export async function deleteChat(projectId: string, chatId: string): Promise<voi
   const projectDir = await getProjectDataDir(projectId);
   const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
   const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
+  const tmpDir = `${projectDir}/${TMP_DIR_NAME}`;
 
   try {
     const content = await filesystem.readFile(`${chatsDir}/${chatId}.json`);
     const meta = JSON.parse(content) as ChatMeta;
+
+    // Clean up reserved temp files before deleting the chat
+    if (meta.reservedTempFiles?.length) {
+      for (const reservation of meta.reservedTempFiles) {
+        try {
+          await filesystem.remove(`${tmpDir}/${reservation.uniqueName}`);
+        } catch {
+          // Temp file may have already been deleted, silently ignore
+        }
+      }
+    }
+
     await filesystem.remove(`${chatsDir}/${chatId}.json`);
     if (meta.logId) {
       await filesystem.remove(`${msgsDir}/${meta.logId}.jsonl`);
@@ -316,6 +329,27 @@ export async function appendMessage(
   } catch (err) {
     console.error("appendMessage: failed to update chat meta", err);
   }
+}
+
+export async function getChatMeta(projectId: string, chatId: string): Promise<ChatMeta | null> {
+  if (!isNeutralinoConnected()) return null;
+
+  const projectDir = await getProjectDataDir(projectId);
+  const metaPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.json`;
+
+  try {
+    const content = await filesystem.readFile(metaPath);
+    const meta = JSON.parse(content) as ChatMeta;
+    meta.id = chatId;
+    return meta;
+  } catch {
+    return null;
+  }
+}
+
+export async function getReservedTempFiles(projectId: string, chatId: string): Promise<import("../types/chat").TempFileReservation[] | undefined> {
+  const meta = await getChatMeta(projectId, chatId);
+  return meta?.reservedTempFiles;
 }
 
 export async function updateChatMeta(

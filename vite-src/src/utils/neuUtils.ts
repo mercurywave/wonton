@@ -1,4 +1,5 @@
 import { computer, filesystem, os } from "@neutralinojs/lib";
+import { TempFileReservation } from "../types/chat";
 
 export const DATA_DIR_NAME = "wonton";
 export const PROJ_FILE_NAME = "proj.json";
@@ -129,6 +130,49 @@ export async function generateUniqueFileName(
   } while (allFiles.has(fileName));
 
   return fileName;
+}
+
+export interface TempFilePathResult {
+  redirected: true;
+  tmpPath: string;
+  virtualPath: string;
+}
+
+export interface NoRedirectResult {
+  redirected: false;
+}
+
+export type ResolveTempPathResult = TempFilePathResult | NoRedirectResult;
+
+export async function resolveTempFilePath(
+  path: string,
+  projectId: string | undefined,
+  reservedTempFiles: TempFileReservation[] | undefined,
+): Promise<ResolveTempPathResult> {
+  if (!projectId || !reservedTempFiles || reservedTempFiles.length === 0) {
+    return { redirected: false };
+  }
+
+  const normalizedPath = path.replace(/\\/g, "/");
+  const fileName = normalizedPath.split("/").pop() || normalizedPath;
+
+  const reservation = reservedTempFiles.find((r) => r.uniqueName === fileName);
+  if (!reservation) {
+    return { redirected: false };
+  }
+
+  const dataDir = await getProjectDataDir(projectId);
+  if (!dataDir) {
+    return { redirected: false };
+  }
+
+  const tmpPath = `${dataDir}/${TMP_DIR_NAME}/${reservation.uniqueName}`;
+
+  return {
+    redirected: true,
+    tmpPath,
+    virtualPath: fileName,
+  };
 }
 
 export async function getRootDataDir(): Promise<string> {
