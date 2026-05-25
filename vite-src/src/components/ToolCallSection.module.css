@@ -65,6 +65,7 @@
   line-height: 1.6;
   max-height: 400px;
   overflow-y: auto;
+  max-width: 720px;
 }
 
 .toolCallArgs {
@@ -78,6 +79,7 @@
   color: #ccc;
   overflow-x: auto;
   line-height: 1.5;
+  max-width: 680px;
 }
 
 .toolCallResponse {
@@ -93,6 +95,7 @@
   line-height: 1.5;
   white-space: pre-wrap;
   word-wrap: break-word;
+  max-width: 680px;
 }
 
 .toolCallSectionLabel {
