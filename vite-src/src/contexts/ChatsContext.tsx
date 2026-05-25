@@ -149,11 +149,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   }, [chats, selectedChatId]);
 
   const workflowUpdateMeta = useCallback(
-    async (updates: {
-      workflowStateKey?: string;
-      workflowData?: Record<string, unknown>;
-      updatedAt?: number;
-    }) => {
+    async (updates: Partial<ChatMeta>) => {
       if (!selectedChatId) return;
       await projectChatsUpdateChatMeta(selectedChatId, updates);
     },
@@ -172,6 +168,8 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     workflowData: selectedChatForWorkflow?.workflowData ?? {},
     flows,
     chatId: selectedChatId || undefined,
+    projectId: activeProjectId || undefined,
+    folderPath: activeProject?.folderPath,
     updateChatMeta: workflowUpdateMeta,
   });
 

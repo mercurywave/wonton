@@ -66,6 +66,11 @@ export interface SubagentMeta {
   logId: string;
 }
 
+export interface TempFileReservation {
+  baseName: string;
+  uniqueName: string;
+}
+
 export interface ChatMeta {
   id: string;
   projectId: string;
@@ -80,6 +85,7 @@ export interface ChatMeta {
   logId: string;
   draft?: string;
   subagents?: SubagentMeta[];
+  reservedTempFiles?: TempFileReservation[];
 }
 
 export interface ProjectMeta {
@@ -125,6 +131,7 @@ export interface Won {
   advance(nextStateKey: string): Promise<void>;
   getState(): WorkflowStateContext;
   setWorkflowData(partial: Partial<Record<string, unknown>>): Promise<void>;
+  reserveTempFile(baseName?: string): Promise<string>;
 }
 
 export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows";
