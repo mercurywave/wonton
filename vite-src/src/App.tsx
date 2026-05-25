@@ -15,6 +15,7 @@ import ProjectSettingsPage from "./components/ProjectSettingsPage";
 import ChatHistoryPage from "./components/ChatHistoryPage";
 import WorkflowsPage from "./components/WorkflowsPage";
 import "./App.css";
+import FileViewerPanel from "./components/FileViewerPanel";
 
 function App() {
   const { settings } = useSettings();
@@ -42,6 +43,9 @@ function App() {
 
   // Local state for project settings sub-page
   const [projectSettingsId, setProjectSettingsId] = useState<string | null>(null);
+
+  // Temp file viewer state
+  const [selectedTempFile, setSelectedTempFile] = useState<{ uniqueName: string; baseName: string } | null>(null);
 
   // Track pending nav actions that require both NavContext and ChatsContext
   const pendingNavRef = useRef<{ type: string; chatId?: string; name?: string } | null>(null);
@@ -185,6 +189,7 @@ function App() {
       />
       <div className={`main ${isMobile ? "" : sidebarOpen ? "expanded" : ""}`}>
         {nav.page === "chat" && (
+          <div className="chatPanelWrapper">
           <ChatPanel
             messages={messages}
             isLoading={isLoading}
@@ -210,6 +215,25 @@ function App() {
               }
             }}
             chatName={selectedChat?.name}
+            onFileSelect={(uniqueName) => {
+              const chat = chats.find((c) => c.id === selectedChatId);
+              const file = chat?.reservedTempFiles?.find((f) => f.uniqueName === uniqueName);
+              if (file) {
+                setSelectedTempFile({ uniqueName, baseName: file.baseName });
+              }
+            }}
+            tempFileOptions={selectedChat?.reservedTempFiles}
+            activeTempFileUniqueName={selectedTempFile?.uniqueName}
+          />
+          </div>
+        )}
+        {nav.page === "chat" && selectedTempFile && (
+          <FileViewerPanel
+            uniqueName={selectedTempFile.uniqueName}
+            baseName={selectedTempFile.baseName}
+            reservedTempFiles={selectedChat?.reservedTempFiles || []}
+            projectId={activeProjectId || ""}
+            onClose={() => setSelectedTempFile(null)}
           />
         )}
         {nav.page === "settings" && (

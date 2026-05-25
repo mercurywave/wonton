@@ -12,6 +12,7 @@ import AgentPicker from "./AgentPicker";
 import ContextRing from "./ContextRing";
 import ToolPicker from "./ToolPicker";
 import LogSelector from "./LogSelector";
+import FileSelector from "./FileSelector";
 import { getDisplayName } from "../utils/modelUtils";
 import { getAvailableTools } from "../tools";
 import ToolCallSection from "./ToolCallSection";
@@ -27,6 +28,9 @@ interface ChatPanelProps {
   activeAgentId: string;
   onAgentChange: (agentId: string) => void;
   chatName?: string;
+  onFileSelect?: (uniqueName: string) => void;
+  tempFileOptions?: Array<{ baseName: string; uniqueName: string }>;
+  activeTempFileUniqueName?: string | null;
 }
 
 function formatTokensPerSecond(completionTokens: number, timeMs: number): string {
@@ -191,6 +195,8 @@ export default function ChatPanel({
   activeAgentId,
   onAgentChange,
   chatName,
+  onFileSelect,
+  activeTempFileUniqueName: activeFileUniqueName
 }: ChatPanelProps) {
   const { visibleModels, settings } = useSettings();
   const { mainAgents, allAgents } = useAgentsContext();
@@ -237,6 +243,8 @@ export default function ChatPanel({
     }
     return options;
   }, [currentChat, allAgents]);
+
+ 
 
   const effectiveLogId = logId || currentChat?.logId;
 
@@ -334,6 +342,13 @@ export default function ChatPanel({
               activeLogId={effectiveLogId || currentChat?.logId || ""}
               onLogChange={navigateToLog}
             />
+            {onFileSelect && (
+              <FileSelector
+                files={currentChat?.reservedTempFiles || []}
+                activeFileUniqueName={activeFileUniqueName || null}
+                onFileSelect={onFileSelect}
+              />
+            )}
           </div>
         )}
         
