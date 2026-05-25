@@ -14,6 +14,7 @@ import ProjectsPage from "./components/ProjectsPage";
 import ProjectSettingsPage from "./components/ProjectSettingsPage";
 import ChatHistoryPage from "./components/ChatHistoryPage";
 import WorkflowsPage from "./components/WorkflowsPage";
+import SplitPanel from "./components/SplitPanel";
 import "./App.css";
 import FileViewerPanel from "./components/FileViewerPanel";
 
@@ -177,6 +178,42 @@ function App() {
 
   const showProjectFeatures = isNeutralinoConnected() && projects.length > 0;
 
+  const chatPanelProps = {
+    messages,
+    isLoading,
+    isProcessing: selectedChatId ? chatExecutionIds.has(selectedChatId) : false,
+    onSend: sendMessage,
+    onStop: stopGeneration,
+    activeModel,
+    onModelChange: async (modelId: string) => {
+      if (!selectedChatId || !activeProjectId) return;
+      if (modelId !== settings.defaultModel) {
+        await updateChatMeta(activeProjectId, selectedChatId, { activeModel: modelId });
+      } else {
+        await updateChatMeta(activeProjectId, selectedChatId, { activeModel: undefined });
+      }
+    },
+    activeAgentId,
+    onAgentChange: async (agentId: string) => {
+      if (!selectedChatId || !activeProjectId) return;
+      if (agentId !== "builtin:default") {
+        await updateChatMeta(activeProjectId, selectedChatId, { activeAgentId: agentId });
+      } else {
+        await updateChatMeta(activeProjectId, selectedChatId, { activeAgentId: undefined });
+      }
+    },
+    chatName: selectedChat?.name,
+    onFileSelect: (uniqueName: string) => {
+      const chat = chats.find((c) => c.id === selectedChatId);
+      const file = chat?.reservedTempFiles?.find((f) => f.uniqueName === uniqueName);
+      if (file) {
+        setSelectedTempFile({ uniqueName, baseName: file.baseName });
+      }
+    },
+    tempFileOptions: selectedChat?.reservedTempFiles,
+    activeTempFileUniqueName: selectedTempFile?.uniqueName,
+  };
+
   return (
     <div className="app">
       <Sidebar
@@ -188,53 +225,31 @@ function App() {
         onDeleteChat={handleDeleteChat}
       />
       <div className={`main ${isMobile ? "" : sidebarOpen ? "expanded" : ""}`}>
-        {nav.page === "chat" && (
-          <div className="chatPanelWrapper">
-          <ChatPanel
-            messages={messages}
-            isLoading={isLoading}
-            isProcessing={selectedChatId ? chatExecutionIds.has(selectedChatId) : false}
-            onSend={sendMessage}
-            onStop={stopGeneration}
-            activeModel={activeModel}
-            onModelChange={async (modelId) => {
-              if (!selectedChatId || !activeProjectId) return;
-              if (modelId !== settings.defaultModel) {
-                await updateChatMeta(activeProjectId, selectedChatId, { activeModel: modelId });
-              } else {
-                await updateChatMeta(activeProjectId, selectedChatId, { activeModel: undefined });
-              }
-            }}
-            activeAgentId={activeAgentId}
-            onAgentChange={async (agentId) => {
-              if (!selectedChatId || !activeProjectId) return;
-              if (agentId !== "builtin:default") {
-                await updateChatMeta(activeProjectId, selectedChatId, { activeAgentId: agentId });
-              } else {
-                await updateChatMeta(activeProjectId, selectedChatId, { activeAgentId: undefined });
-              }
-            }}
-            chatName={selectedChat?.name}
-            onFileSelect={(uniqueName) => {
-              const chat = chats.find((c) => c.id === selectedChatId);
-              const file = chat?.reservedTempFiles?.find((f) => f.uniqueName === uniqueName);
-              if (file) {
-                setSelectedTempFile({ uniqueName, baseName: file.baseName });
-              }
-            }}
-            tempFileOptions={selectedChat?.reservedTempFiles}
-            activeTempFileUniqueName={selectedTempFile?.uniqueName}
-          />
-          </div>
-        )}
         {nav.page === "chat" && selectedTempFile && (
-          <FileViewerPanel
-            uniqueName={selectedTempFile.uniqueName}
-            baseName={selectedTempFile.baseName}
-            reservedTempFiles={selectedChat?.reservedTempFiles || []}
-            projectId={activeProjectId || ""}
-            onClose={() => setSelectedTempFile(null)}
+          <SplitPanel
+            leftChild={
+              <div className="chatPanelWrapper">
+              <ChatPanel {...chatPanelProps} />
+              </div>
+            }
+            rightChild={
+              <FileViewerPanel
+                uniqueName={selectedTempFile.uniqueName}
+                baseName={selectedTempFile.baseName}
+                reservedTempFiles={selectedChat?.reservedTempFiles || []}
+                projectId={activeProjectId || ""}
+                onClose={() => setSelectedTempFile(null)}
+              />
+            }
+            initialRatio={0.5}
+            leftMinWidth={300}
+            rightMinWidth={250}
           />
+        )}
+        {nav.page === "chat" && !selectedTempFile && (
+          <div className="chatPanelWrapper">
+          <ChatPanel {...chatPanelProps} />
+          </div>
         )}
         {nav.page === "settings" && (
           <Settings />
