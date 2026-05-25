@@ -1,8 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { filesystem } from "@neutralinojs/lib";
+import { filesystem, events } from "@neutralinojs/lib";
 import styles from "../components/FileViewerPanel.module.css";
 import { resolveTempFilePath, getProjectDataDir } from "../utils/neuUtils";
 import { TempFileReservation } from "../types/chat";
@@ -85,6 +85,54 @@ export default function TempFileViewerPanel({
     }
     loadFile();
   }, [uniqueName, projectId, reservedTempFiles, loadFile, onClose]);
+
+  const watcherIdRef = useRef<number>(0);
+  const loadFileRef = useRef(loadFile);
+  loadFileRef.current = loadFile;
+  
+  useEffect(() => {
+    if (!projectId || !reservedTempFiles.some((f) => f.uniqueName === uniqueName)) {
+      return;
+    }
+
+    const startWatcher = async () => {
+      try {
+        const dataDir = await getProjectDataDir(projectId);
+        if (!dataDir) return;
+
+        const tempResult = await resolveTempFilePath(
+          uniqueName,
+          projectId,
+          reservedTempFiles
+        );
+        if (!tempResult.redirected) return;
+
+        const dirPath = tempResult.tmpPath.substring(0, tempResult.tmpPath.lastIndexOf("/"));
+        const normalizedDir = await filesystem.getNormalizedPath(dirPath);
+        const watcherId = await filesystem.createWatcher(normalizedDir);
+        watcherIdRef.current = watcherId;
+
+        const handler = (ev: any) => {
+          const detail = ev?.detail as any;
+          if (detail && detail.id === watcherId && detail.filename === uniqueName) {
+            loadFileRef.current();
+          }
+        };
+
+        events.on("watchFile", handler);
+
+        return () => {
+          events.off("watchFile", handler);
+          filesystem.removeWatcher(watcherId);
+        };
+      } catch (err) {
+        console.error("Failed to create file watcher:", err);
+        return;
+      }
+    };
+
+    startWatcher();
+  }, [uniqueName, projectId, reservedTempFiles]);
 
   const markdown = isMarkdownFile(baseName);
 
