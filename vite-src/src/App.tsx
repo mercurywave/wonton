@@ -7,6 +7,7 @@ import { useProjects } from "./contexts";
 import { useChats } from "./contexts";
 import { useUI } from "./contexts";
 import { useNav } from "./contexts";
+import { useEventBus } from "./contexts";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
 import Settings from "./components/Settings";
@@ -31,6 +32,7 @@ function App() {
   } = useProjects();
   const { messages, isLoading, chatExecutionIds, sendMessage, stopGeneration, updateChatMeta, setSelectedChatId, createChat, deleteChat, renameChat, chats, selectedChatId } = useChats();
   const { sidebarOpen, isMobile } = useUI();
+  const { on: onEvent } = useEventBus();
   const {
     state: nav,
     activeProjectId,
@@ -175,6 +177,20 @@ function App() {
     setProjectSettingsId(id);
     navigateToPage("projectSettings" as Page);
   }, [navigateToPage]);
+
+  const handleOpenFile = useCallback((uniqueName: string) => {
+    const file = selectedChat?.reservedTempFiles?.find((f) => f.uniqueName === uniqueName);
+    if (file) {
+      setSelectedTempFile({ uniqueName, baseName: file.baseName });
+    }
+  }, [selectedChat]);
+
+  useEffect(() => {
+    return onEvent("requestOpenFile", (payload: unknown) => {
+      const { uniqueName } = payload as { uniqueName: string };
+      handleOpenFile(uniqueName);
+    });
+  }, [onEvent, handleOpenFile]);
 
   const showProjectFeatures = isNeutralinoConnected() && projects.length > 0;
 

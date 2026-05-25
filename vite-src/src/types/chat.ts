@@ -132,6 +132,7 @@ export interface Won {
   getState(): WorkflowStateContext;
   setWorkflowData(partial: Partial<Record<string, unknown>>): Promise<void>;
   reserveTempFile(baseName?: string): Promise<string>;
+  openFile(uniqueName: string): void;
 }
 
 export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows";
