@@ -4,6 +4,8 @@ import {
   PROJ_FILE_NAME,
   CHATS_DIR_NAME,
   MSGS_DIR_NAME,
+  DOCS_DIR_NAME,
+  TMP_DIR_NAME,
   isNeutralinoConnected,
   getProjectDataDir,
   generateGuid,
@@ -42,6 +44,24 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   } catch (err: any) {
     if (err.code !== "NE_FS_DIRCRER") {
       console.error("ensureChatFolder: failed to create msgs dir", err);
+    }
+  }
+
+  const docsDir = `${projectDir}/${DOCS_DIR_NAME}`;
+  try {
+    await filesystem.createDirectory(docsDir);
+  } catch (err: any) {
+    if (err.code !== "NE_FS_DIRCRER") {
+      console.error("ensureChatFolder: failed to create docs dir", err);
+    }
+  }
+
+  const tmpDir = `${projectDir}/${TMP_DIR_NAME}`;
+  try {
+    await filesystem.createDirectory(tmpDir);
+  } catch (err: any) {
+    if (err.code !== "NE_FS_DIRCRER") {
+      console.error("ensureChatFolder: failed to create tmp dir", err);
     }
   }
 
