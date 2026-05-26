@@ -9,7 +9,6 @@ import { TempFileReservation } from "../types/chat";
 
 interface TempFileViewerPanelProps {
   uniqueName: string;
-  baseName: string;
   reservedTempFiles: TempFileReservation[];
   projectId: string;
   onClose: () => void;
@@ -22,11 +21,11 @@ function isMarkdownFile(name: string): boolean {
 
 export default function TempFileViewerPanel({
   uniqueName,
-  baseName,
   reservedTempFiles,
   projectId,
   onClose,
 }: TempFileViewerPanelProps) {
+  const baseName = reservedTempFiles.find((f) => f.uniqueName === uniqueName)?.baseName ?? uniqueName;
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileExists, setFileExists] = useState<boolean | null>(null);

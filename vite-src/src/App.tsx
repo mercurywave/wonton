@@ -48,7 +48,7 @@ function App() {
   const [projectSettingsId, setProjectSettingsId] = useState<string | null>(null);
 
   // Temp file viewer state
-  const [selectedTempFile, setSelectedTempFile] = useState<{ uniqueName: string; baseName: string } | null>(null);
+  const [selectedTempFile, setSelectedTempFile] = useState<string | null>(null);
 
   // Track pending nav actions that require both NavContext and ChatsContext
   const pendingNavRef = useRef<{ type: string; chatId?: string; name?: string } | null>(null);
@@ -178,19 +178,12 @@ function App() {
     navigateToPage("projectSettings" as Page);
   }, [navigateToPage]);
 
-  const handleOpenFile = useCallback((uniqueName: string) => {
-    const file = selectedChat?.reservedTempFiles?.find((f) => f.uniqueName === uniqueName);
-    if (file) {
-      setSelectedTempFile({ uniqueName, baseName: file.baseName });
-    }
-  }, [selectedChat]);
-
   useEffect(() => {
     return onEvent("requestOpenFile", (payload: unknown) => {
       const { uniqueName } = payload as { uniqueName: string };
-      handleOpenFile(uniqueName);
+      setSelectedTempFile(uniqueName);
     });
-  }, [onEvent, handleOpenFile]);
+  }, [onEvent, setSelectedTempFile]);
 
   const showProjectFeatures = isNeutralinoConnected() && projects.length > 0;
 
@@ -220,14 +213,10 @@ function App() {
     },
     chatName: selectedChat?.name,
     onFileSelect: (uniqueName: string) => {
-      const chat = chats.find((c) => c.id === selectedChatId);
-      const file = chat?.reservedTempFiles?.find((f) => f.uniqueName === uniqueName);
-      if (file) {
-        setSelectedTempFile({ uniqueName, baseName: file.baseName });
-      }
+      setSelectedTempFile(uniqueName);
     },
     tempFileOptions: selectedChat?.reservedTempFiles,
-    activeTempFileUniqueName: selectedTempFile?.uniqueName,
+    activeTempFileUniqueName: selectedTempFile,
   };
 
   return (
@@ -250,8 +239,7 @@ function App() {
             }
             rightChild={
               <FileViewerPanel
-                uniqueName={selectedTempFile.uniqueName}
-                baseName={selectedTempFile.baseName}
+                uniqueName={selectedTempFile}
                 reservedTempFiles={selectedChat?.reservedTempFiles || []}
                 projectId={activeProjectId || ""}
                 onClose={() => setSelectedTempFile(null)}

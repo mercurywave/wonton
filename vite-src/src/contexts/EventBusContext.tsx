@@ -23,11 +23,9 @@ export function EventBusProvider({ children }: { children: ReactNode }) {
 
   const emit = useCallback((event: string, payload?: unknown) => {
     const handlers = handlersRef.current[event];
-    setTimeout(() => {
-      if (handlers) {
-        for (const handler of handlers) handler(payload);
-      }
-    });
+    if (handlers) {
+      for (const handler of handlers) handler(payload);
+    }
   }, []);
 
   const on = useCallback(
