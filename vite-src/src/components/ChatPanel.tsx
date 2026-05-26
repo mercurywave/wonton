@@ -21,7 +21,7 @@ interface ChatPanelProps {
   messages: ChatMessageType[];
   isLoading: boolean;
   isProcessing: boolean;
-  onSend: (content: string, modelId: string) => void;
+  onSend: (content: string, modelId: string) => Promise<void>;
   onStop: () => void;
   activeModel: string;
   onModelChange: (modelId: string) => void;
@@ -328,11 +328,11 @@ export default function ChatPanel({
   }, [draft]);
 
   const handleSubmit = useCallback(
-    (e: React.FormEvent) => {
+    async (e: React.SyntheticEvent) => {
       e.preventDefault();
       const trimmed = draft.trim();
       if (!trimmed || isLoading) return;
-      onSend(trimmed, activeModel);
+      await onSend(trimmed, activeModel);
       setDraft("");
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
