@@ -93,6 +93,16 @@ function buildWon(
         updatedAt: Date.now(),
       });
     },
+    get(key) {
+      return stateRef.workflowData[key];
+    },
+    async set(key, value) {
+      stateRef.workflowData = { ...stateRef.workflowData, [key]: value };
+      await updateChatMeta({
+        workflowData: stateRef.workflowData,
+        updatedAt: Date.now(),
+      });
+    },
     reserveTempFile,
     openFile: (uniqueName: string) => {
       emit?.("requestOpenFile", { uniqueName });
