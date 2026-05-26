@@ -9,7 +9,6 @@
 
 .main {
   flex: 1;
-  display: flex;
   flex-direction: row;
   margin-left: 52px;
   transition: margin-left 0.2s ease;
