@@ -6,13 +6,15 @@ import styles from "../components/ChatPanel.module.css";
 import { ChatMessage as ChatMessageType, LLMStats, Flow } from "../types/chat";
 import { useContextWindow } from "../hooks/useContextWindow";
 import { useChatDraft } from "../hooks/useChatDraft";
-import { useSettings, useAgentsContext, useChats, useProjects, useNav, useFlowsContext } from "../contexts";
+import { useSelectionBubble } from "../hooks/useSelectionBubble";
+import { useSettings, useAgentsContext, useChats, useProjects, useNav, useFlowsContext, useEventBus } from "../contexts";
 import ModelPicker from "./ModelPicker";
 import AgentPicker from "./AgentPicker";
 import ContextRing from "./ContextRing";
 import ToolPicker from "./ToolPicker";
 import LogSelector from "./LogSelector";
 import FileSelector from "./FileSelector";
+import SelectionBubble from "./SelectionBubble";
 import { getDisplayName } from "../utils/modelUtils";
 import { getAvailableTools } from "../tools";
 import ToolCallSection from "./ToolCallSection";
@@ -242,6 +244,7 @@ export default function ChatPanel({
   const { activeProjectId, logId, navigateToLog } = useNav();
   const { chats, selectedChatId, onActionButtonClick } = useChats();
   const { flows, enabledWorkflows } = useFlowsContext();
+  const { on: onEvent } = useEventBus();
   const activeProject = projects.find((p) => p.id === activeProjectId);
 
   // Resolve the effective system prompt for display
@@ -315,10 +318,8 @@ export default function ChatPanel({
   const { draft, setDraft, handleBlur } = useChatDraft(activeProjectId || undefined, selectedChatId || undefined, setChatDraft);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const { bubbleData, dismiss: dismissBubble } = useSelectionBubble(messagesContainerRef);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -326,6 +327,46 @@ export default function ChatPanel({
       textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + "px";
     }
   }, [draft]);
+
+  const handleBubbleComment = useCallback((selectedText: string) => {
+    if (!selectedText) {
+      dismissBubble();
+      return;
+    }
+    const normalized = selectedText.replace(/\r?\n/g, " ");
+    let processed = normalized;
+    if (processed.length > 200) {
+      const half = Math.floor((200 - 3) / 2);
+      processed = processed.slice(0, half) + "..." + processed.slice(processed.length - half);
+    }
+    const reText = `RE "${processed}": `;
+    setDraft(draft + reText);
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+      const cursorPos = draft.length + reText.length;
+      if (textareaRef.current) {
+        textareaRef.current.selectionStart = textareaRef.current.selectionEnd = cursorPos;
+      }
+    });
+    dismissBubble();
+  }, [draft, setDraft, dismissBubble]);
+
+  // Listen for RE comments from FileViewerPanel via event bus
+  useEffect(() => {
+    const handleReComment = (payload: unknown) => {
+      const reText = payload as string;
+      setDraft(draft + reText);
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+        const cursorPos = draft.length + reText.length;
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = cursorPos;
+        }
+      });
+    };
+
+    return onEvent("re-comment", handleReComment);
+  }, [draft, onEvent, setDraft]);
 
   const handleSubmit = useCallback(
     async (e: React.SyntheticEvent) => {
@@ -393,7 +434,7 @@ export default function ChatPanel({
           <summary className={styles.systemPromptSummary}>system prompt</summary>
           <pre className={styles.systemPromptContent}>{resolvedSystemPrompt}</pre>
         </details>
-        <div className={styles.messages}>
+        <div className={styles.messages} ref={messagesContainerRef}>
           {messages.length === 0 && (
             <WorkflowSelector
               workflows={enabledWorkflows}
@@ -447,6 +488,13 @@ export default function ChatPanel({
              return elements;
            })()}
           <div ref={messagesEndRef} />
+          {bubbleData && (
+            <SelectionBubble
+              position={bubbleData}
+              selectedText={bubbleData.text}
+              onComment={handleBubbleComment}
+            />
+          )}
         </div>
       </div>
 

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSelectionBubble } from "../hooks/useSelectionBubble";
 import { X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -6,6 +7,8 @@ import { filesystem, events } from "@neutralinojs/lib";
 import styles from "../components/FileViewerPanel.module.css";
 import { resolveTempFilePath, getProjectDataDir } from "../utils/neuUtils";
 import { TempFileReservation } from "../types/chat";
+import { useEventBus } from "../contexts";
+import SelectionBubble from "./SelectionBubble";
 
 interface TempFileViewerPanelProps {
   uniqueName: string;
@@ -29,6 +32,9 @@ export default function TempFileViewerPanel({
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileExists, setFileExists] = useState<boolean | null>(null);
+  const contentContainerRef = useRef<HTMLDivElement>(null);
+  const { bubbleData, dismiss: dismissBubble } = useSelectionBubble(contentContainerRef);
+  const { emit } = useEventBus();
 
   const loadFile = useCallback(async () => {
     try {
@@ -126,6 +132,24 @@ export default function TempFileViewerPanel({
     startWatcher();
   }, [uniqueName, projectId]);
 
+ 
+
+  const handleBubbleComment = useCallback((selectedText: string) => {
+    if (!selectedText) {
+      dismissBubble();
+      return;
+    }
+    const normalized = selectedText.replace(/\r?\n/g, " ");
+    let processed = normalized;
+    if (processed.length > 200) {
+      const half = Math.floor((200 - 3) / 2);
+      processed = processed.slice(0, half) + "..." + processed.slice(processed.length - half);
+    }
+    const reText = `RE "${processed}": `;
+    emit("re-comment", reText);
+    dismissBubble();
+  }, [emit, dismissBubble]);
+
   const markdown = isMarkdownFile(baseName);
 
   return (
@@ -136,7 +160,7 @@ export default function TempFileViewerPanel({
           <X size={16} />
         </button>
       </div>
-      <div className={styles.content}>
+      <div className={styles.content} ref={contentContainerRef}>
         {fileExists === false && (
           <div className={styles.placeholder}>
             This temp file hasn&apos;t been created yet. It will appear once the agent writes to it.
@@ -153,6 +177,13 @@ export default function TempFileViewerPanel({
           ) : (
             <pre className={styles.textContent}>{content}</pre>
           )
+        )}
+        {bubbleData && (
+          <SelectionBubble
+            position={bubbleData}
+            selectedText={bubbleData.text}
+            onComment={handleBubbleComment}
+          />
         )}
       </div>
     </div>

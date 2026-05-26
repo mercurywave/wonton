@@ -1,0 +1,30 @@
+.bubble {
+  position: absolute;
+  z-index: 1000;
+  transform: translateX(-50%) translateY(-1.5em);
+  pointer-events: auto;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.commentBtn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #1a1a2e;
+  border: 1px solid #4a6cf7;
+  border-radius: 8px;
+  padding: 5px 10px;
+  color: #e0e0e0;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: all 0.15s ease;
+}
+
+.commentBtn:hover {
+  background: #24244a;
+  border-color: #6a8cf7;
+}
