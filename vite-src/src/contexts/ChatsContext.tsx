@@ -175,8 +175,8 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   const wrappedSendMessage = useCallback(
     async (content: string, modelId: string) => {
-      const adjustedContent = await workflowExecuteAdjustPrompt(content, modelId);
-      await sendMessage(adjustedContent, modelId);
+      const adjusted = await workflowExecuteAdjustPrompt(content, modelId);
+      await sendMessage(adjusted, modelId, (adjusted !== content) ? content : undefined);
     },
     [workflowExecuteAdjustPrompt, sendMessage]
   );

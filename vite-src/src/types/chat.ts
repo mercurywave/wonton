@@ -36,6 +36,7 @@ export interface ChatMessage {
   stats?: LLMStats;
   toolCalls?: ToolCall[];
   toolCallId?: string;
+  originalContent?: string;
 }
 
 export interface ToolDefinition {

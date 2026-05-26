@@ -558,13 +558,14 @@ export function useChatApi(
   );
 
   const sendMessage = useCallback(
-    async (content: string, modelId: string) => {
+    async (content: string, modelId: string, originalContent?: string) => {
       const effectiveModel = modelId;
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
         content,
         timestamp: Date.now(),
+        originalContent: originalContent || undefined,
       };
 
       setMessages((prev) => [...prev, userMessage]);

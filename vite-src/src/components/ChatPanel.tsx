@@ -1,5 +1,5 @@
-import { useRef, useEffect, useCallback, useMemo } from "react";
-import { Send, StopCircle, GitBranch, X } from "lucide-react";
+import { useRef, useEffect, useCallback, useMemo, useState } from "react";
+import { Send, StopCircle, GitBranch, X, ArrowRightLeft } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
@@ -147,6 +147,9 @@ function MessageBubble({ message, modelAliases, toolResultMessages }: { message:
   const isUser = message.role === "user";
   const hasStats = message.role !== "user" && message.stats;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
+  const hasAdjusted = isUser && message.originalContent && message.originalContent !== message.content;
+
+  const [showAdjusted, setShowAdjusted] = useState(false);
 
   const toolCallResults = useMemo(() => {
     if (!toolResultMessages) return {};
@@ -159,7 +162,41 @@ function MessageBubble({ message, modelAliases, toolResultMessages }: { message:
     return results;
   }, [toolResultMessages]);
 
-  const showContent = message.content?.trim();
+  const displayContent = hasAdjusted ? (showAdjusted ? message.content : message.originalContent) : message.content;
+  const showContent = displayContent?.trim();
+
+  if (hasAdjusted) {
+    return (
+      <div className={`${styles.message} ${styles.messageWithAdjusted} ${isUser ? styles.user : styles.assistant}`}>
+        <div className={styles.bubbleWrapper}>
+          <div className={`${styles.bubble} ${!showContent ? styles.noContent : ""}`}>
+            <div className={styles.adjustedToggle}>
+              <button
+                className={styles.toggleBtn}
+                onClick={() => setShowAdjusted((p) => !p)}
+                title={showAdjusted ? "Show modified" : "Show original"}
+              >
+                <ArrowRightLeft size={12} />
+              </button>
+            </div>
+            {showContent && (
+              <div className={styles.content}>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
+              </div>
+            )}
+            {hasStats && <MessageStats stats={message.stats!} modelAliases={modelAliases} />}
+          </div>
+        </div>
+        {hasToolCalls && (
+          <div className={styles.toolCallContainer}>
+            {message.toolCalls!.map((tc) => (
+              <ToolCallSection key={tc.id} toolCall={tc} result={toolCallResults[tc.id]} />
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className={`${styles.message} ${isUser ? styles.user : styles.assistant}`}>
