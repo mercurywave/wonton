@@ -30,14 +30,7 @@ export default function TempFileViewerPanel({
   const [error, setError] = useState<string | null>(null);
   const [fileExists, setFileExists] = useState<boolean | null>(null);
 
-  const loadFile = useCallback(async (opts: { clearOnError?: boolean } = {}) => {
-    setError(null);
-    setFileExists(null);
-
-    if (opts.clearOnError) {
-      setContent(null);
-    }
-
+  const loadFile = useCallback(async () => {
     try {
       const dataDir = await getProjectDataDir(projectId);
       if (!dataDir) {
@@ -62,18 +55,17 @@ export default function TempFileViewerPanel({
         return;
       }
 
-      setFileExists(true);
       const fileContent = await filesystem.readFile(tempResult.tmpPath);
+      setFileExists(true);
       setContent(fileContent ?? null);
+      setError(null);
     } catch (err) {
-      if (opts.clearOnError) {
-        if (err instanceof Error) {
-          setError(err.message);
-        } else if (typeof err === "object" && err !== null) {
-          setError((err as any).message || (err as any).msg || JSON.stringify(err));
-        } else {
-          setError(String(err));
-        }
+      if (err instanceof Error) {
+        setError(err.message);
+      } else if (typeof err === "object" && err !== null) {
+        setError((err as any).message || (err as any).msg || JSON.stringify(err));
+      } else {
+        setError(String(err));
       }
     }
   }, [uniqueName, projectId, reservedTempFiles]);
@@ -83,7 +75,7 @@ export default function TempFileViewerPanel({
       onClose();
       return;
     }
-    loadFile({ clearOnError: true });
+    loadFile();
   }, [uniqueName, projectId, loadFile, onClose]);
 
   const watcherIdRef = useRef<number>(0);
