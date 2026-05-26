@@ -586,7 +586,7 @@ export function useChatApi(
         // Generate title before kicking off the agent (only for first message)
         if (messagesRef.current.length === 0 && projectId && chatId) {
           const titleModel = projectMeta?.defaultModel || settings.defaultModel || modelId;
-          generateTitle(content, titleModel).catch(() => {});
+          generateTitle(originalContent || content, titleModel).catch(() => {});
         }
 
         // Include userMessage since setMessages is async and messages state is stale
