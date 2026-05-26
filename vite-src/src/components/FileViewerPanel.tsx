@@ -30,13 +30,14 @@ export default function TempFileViewerPanel({
   const [content, setContent] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [fileExists, setFileExists] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
 
-  const loadFile = useCallback(async () => {
-    setContent(null);
+  const loadFile = useCallback(async (opts: { clearOnError?: boolean } = {}) => {
     setError(null);
     setFileExists(null);
-    setIsLoading(true);
+
+    if (opts.clearOnError) {
+      setContent(null);
+    }
 
     try {
       const dataDir = await getProjectDataDir(projectId);
@@ -66,15 +67,15 @@ export default function TempFileViewerPanel({
       const fileContent = await filesystem.readFile(tempResult.tmpPath);
       setContent(fileContent ?? null);
     } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else if (typeof err === "object" && err !== null) {
-        setError((err as any).message || (err as any).msg || JSON.stringify(err));
-      } else {
-        setError(String(err));
+      if (opts.clearOnError) {
+        if (err instanceof Error) {
+          setError(err.message);
+        } else if (typeof err === "object" && err !== null) {
+          setError((err as any).message || (err as any).msg || JSON.stringify(err));
+        } else {
+          setError(String(err));
+        }
       }
-    } finally {
-      setIsLoading(false);
     }
   }, [uniqueName, projectId, reservedTempFiles]);
 
@@ -83,8 +84,8 @@ export default function TempFileViewerPanel({
       onClose();
       return;
     }
-    loadFile();
-  }, [uniqueName, projectId, reservedTempFiles, loadFile, onClose]);
+    loadFile({ clearOnError: true });
+  }, [uniqueName, projectId, loadFile, onClose]);
 
   const watcherIdRef = useRef<number>(0);
   const loadFileRef = useRef(loadFile);
@@ -132,7 +133,7 @@ export default function TempFileViewerPanel({
     };
 
     startWatcher();
-  }, [uniqueName, projectId, reservedTempFiles]);
+  }, [uniqueName, projectId]);
 
   const markdown = isMarkdownFile(baseName);
 
@@ -145,9 +146,6 @@ export default function TempFileViewerPanel({
         </button>
       </div>
       <div className={styles.content}>
-        {isLoading && (
-          <div className={styles.placeholder}>Loading...</div>
-        )}
         {fileExists === false && (
           <div className={styles.placeholder}>
             This temp file hasn&apos;t been created yet. It will appear once the agent writes to it.
