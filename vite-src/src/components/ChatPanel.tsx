@@ -3,7 +3,7 @@ import { Send, StopCircle, GitBranch, X, ArrowRightLeft } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
-import { ChatMessage as ChatMessageType, LLMStats, Flow } from "../types/chat";
+import { ChatMessage as ChatMessageType, LLMStats, Flow, ToolDefinition } from "../types/chat";
 import { useContextWindow } from "../hooks/useContextWindow";
 import { useChatDraft } from "../hooks/useChatDraft";
 import { useSelectionBubble } from "../hooks/useSelectionBubble";
@@ -306,15 +306,41 @@ export default function ChatPanel({
   );
   const { maxTokens } = useContextWindow(activeModel, settings);
 
-  const { usageTokens, showRing } = useMemo(() => {
+  const usageTokens = useMemo(() => {
     const lastMsg = messages[messages.length - 1];
     if (!lastMsg || lastMsg.role !== "assistant" || !lastMsg.stats) {
-      return { usageTokens: 0, showRing: false };
+      return 0;
     }
     const stats = lastMsg.stats;
-    const usage = (stats.promptTokens || 0) + (stats.completionTokens || 0);
-    return { usageTokens: usage, showRing: true };
+    return (stats.promptTokens || 0) + (stats.completionTokens || 0);
   }, [messages]);
+
+  // Build text content for tokenization
+  const toolsForTokenize = useMemo((): ToolDefinition[] => {
+    if (availableTools.length === 0) return [];
+    return availableTools.map((t) => ({
+      type: t.type,
+      function: {
+        name: t.function.name,
+        description: t.function.description,
+        parameters: t.function.parameters,
+      },
+    }));
+  }, [availableTools]);
+
+  const toolsJson = useMemo(
+    () => JSON.stringify(toolsForTokenize, null, 2),
+    [toolsForTokenize]
+  );
+
+  const messagesText = useMemo(
+    () =>
+      messages
+        .map((m) => `[${m.role}]: ${m.content ?? ""}`)
+        .join("\n"),
+    [messages]
+  );
+
   const { draft, setDraft, handleBlur } = useChatDraft(activeProjectId || undefined, selectedChatId || undefined, setChatDraft);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -579,12 +605,15 @@ export default function ChatPanel({
           </div>
           <div className={styles.footerRight}>
             <ToolPicker tools={availableTools} />
-            {showRing && (
-              <ContextRing
-                usageTokens={usageTokens}
-                maxTokens={maxTokens}
-              />
-          )}
+            <ContextRing
+              usageTokens={usageTokens}
+              maxTokens={maxTokens}
+              serverUrl={settings.serverUrl}
+              model={activeModel}
+              systemPrompt={resolvedSystemPrompt}
+              toolsJson={toolsJson}
+              messagesText={messagesText}
+            />
         </div>
         </div>
       </div>
