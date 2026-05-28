@@ -47,7 +47,7 @@ function getColor(pct: number): string {
   return interpolateColor(t, [240, 192, 64], [224, 64, 64]);
 }
 
-function getSegmentColor(index: number, total: number): string {
+function getSegmentColor(index: number): string {
   const colors = [
     [74, 108, 247],
     [120, 80, 220],
@@ -138,9 +138,9 @@ export default function ContextRing({
       const total = values.reduce((a, b) => a + b, 0);
 
       const segments: SegmentTokens[] = [
-        { label: "System Prompt", tokens: values[0], color: getSegmentColor(0, 3) },
-        { label: "Tools", tokens: values[1], color: getSegmentColor(1, 3) },
-        { label: "Messages", tokens: values[2], color: getSegmentColor(2, 3) },
+        { label: "System Prompt", tokens: values[0], color: getSegmentColor(0) },
+        { label: "Tools", tokens: values[1], color: getSegmentColor(1) },
+        { label: "Messages", tokens: values[2], color: getSegmentColor(2) },
       ];
 
       setTokenResult({ segments, total });
@@ -215,7 +215,7 @@ export default function ContextRing({
               <>
                 {/* Stacked bar */}
                 <div className={styles.barContainer}>
-                  {tokenResult.segments.map((seg, i) => {
+                  {tokenResult.segments.map((seg) => {
                     const width =
                       maxTokens > 0
                         ? (seg.tokens / maxTokens) * 100
