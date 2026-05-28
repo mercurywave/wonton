@@ -726,3 +726,38 @@
   max-height: 200px;
   overflow-y: auto;
 }
+
+.toolsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.toolCard {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 6px;
+  padding: 8px 12px;
+  transition: background 0.1s ease;
+}
+
+.toolCard:hover {
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.toolCardName {
+  font-size: 12px;
+  font-weight: 500;
+  color: #e0e0e0;
+  margin-bottom: 2px;
+}
+
+.toolCardDesc {
+  font-size: 11px;
+  color: #888;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}

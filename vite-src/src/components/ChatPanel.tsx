@@ -11,7 +11,6 @@ import { useSettings, useAgentsContext, useChats, useProjects, useNav, useFlowsC
 import ModelPicker from "./ModelPicker";
 import AgentPicker from "./AgentPicker";
 import ContextRing from "./ContextRing";
-import ToolPicker from "./ToolPicker";
 import LogSelector from "./LogSelector";
 import FileSelector from "./FileSelector";
 import SelectionBubble from "./SelectionBubble";
@@ -460,6 +459,19 @@ export default function ChatPanel({
           <summary className={styles.systemPromptSummary}>system prompt</summary>
           <pre className={styles.systemPromptContent}>{resolvedSystemPrompt}</pre>
         </details>
+        {availableTools.length > 0 && (
+          <details className={styles.systemPromptCollapse}>
+            <summary className={styles.systemPromptSummary}>tools</summary>
+            <div className={styles.toolsGrid}>
+              {availableTools.map((tool) => (
+                <div key={tool.function.name} className={styles.toolCard}>
+                  <div className={styles.toolCardName}>{tool.function.name}</div>
+                  <div className={styles.toolCardDesc} title={tool.function.description}>{tool.function.description}</div>
+                </div>
+              ))}
+            </div>
+          </details>
+        )}
         <div className={styles.messages} ref={messagesContainerRef}>
           {messages.length === 0 && (
             <WorkflowSelector
@@ -604,7 +616,6 @@ export default function ChatPanel({
             />
           </div>
           <div className={styles.footerRight}>
-            <ToolPicker tools={availableTools} />
             <ContextRing
               usageTokens={usageTokens}
               maxTokens={maxTokens}
