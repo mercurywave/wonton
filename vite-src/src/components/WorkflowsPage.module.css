@@ -176,6 +176,15 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.flowIcon,
+.commandIcon {
+  flex-shrink: 0;
+  opacity: 0.6;
 }
 
 .flowDescription {

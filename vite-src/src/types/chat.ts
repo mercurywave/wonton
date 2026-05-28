@@ -100,9 +100,11 @@ export interface Flow {
   id: string;
   name: string;
   description: string;
-  initialState: string;
-  schemaVersion: number;
-  states: Record<string, FlowState>;
+  initialState?: string;
+  schemaVersion?: number;
+  states?: Record<string, FlowState>;
+  command?: string;
+  isCommand?: boolean;
 }
 
 export interface FlowActionButton {

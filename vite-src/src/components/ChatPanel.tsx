@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
-import { Send, StopCircle, GitBranch, X, ArrowRightLeft } from "lucide-react";
+import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
@@ -123,22 +123,25 @@ function WorkflowSelector({ workflows, onSelect, selectedWorkflowId }: { workflo
     <div className={styles.workflowSelector}>
       <p className={styles.workflowSelectorTitle}>Select a workflow to get started</p>
       <div className={styles.workflowGrid}>
-        {workflows.map((flow) => (
-          <button
-            key={flow.id}
-            className={`${styles.workflowCard} ${selectedWorkflowId === flow.id ? styles.workflowCardSelected : ""}`}
-            onClick={() => onSelect(flow.id)}
-            type="button"
-          >
-            <div className={styles.workflowCardHeader}>
-              <GitBranch size={16} />
-              <span className={styles.workflowCardName}>{flow.name}</span>
-            </div>
-            {flow.description && (
-              <p className={styles.workflowCardDescription}>{flow.description}</p>
-            )}
-          </button>
-        ))}
+        {workflows.map((flow) => {
+          const isCommand = (flow as any).isCommand;
+          return (
+            <button
+              key={flow.id}
+              className={`${styles.workflowCard} ${selectedWorkflowId === flow.id ? styles.workflowCardSelected : ""}`}
+              onClick={() => onSelect(flow.id)}
+              type="button"
+            >
+              <div className={styles.workflowCardHeader}>
+                {isCommand ? <Play size={16} /> : <GitBranch size={16} />}
+                <span className={styles.workflowCardName}>{flow.name}</span>
+              </div>
+              {flow.description && (
+                <p className={styles.workflowCardDescription}>{flow.description}</p>
+              )}
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -475,7 +478,7 @@ export default function ChatPanel({
         <div className={styles.messages} ref={messagesContainerRef}>
           {messages.length === 0 && (
             <WorkflowSelector
-              workflows={enabledWorkflows}
+              workflows={enabledWorkflows.filter((f) => !(f as any).isCommand)}
               onSelect={(id) => {
                 const flow = enabledWorkflows.find((f) => f.id === id);
                 setSelectedChatWorkflowId(id, flow?.initialState);

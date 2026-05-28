@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { GitBranch, RotateCw, FolderOpen, Loader2 } from "lucide-react";
+import { GitBranch, RotateCw, FolderOpen, Loader2, Play } from "lucide-react";
 import styles from "../components/WorkflowsPage.module.css";
 import { useFlowsContext } from "../contexts/FlowsContext";
 import { isNeutralinoConnected, isWindows } from "../utils/neuUtils";
@@ -80,13 +80,17 @@ export default function WorkflowsPage() {
           <div className={styles.flowsList}>
             {flows.map((flow) => {
               const isDisabled = disabledFlows.includes(flow.id);
+              const isCommand = (flow as any).isCommand;
               return (
                 <div
                   key={flow.id}
                   className={`${styles.flowCard} ${isDisabled ? styles.flowCardDisabled : ""}`}
                 >
                   <div className={styles.flowCardHeader}>
-                    <span className={styles.flowName}>{flow.name}</span>
+                    <span className={styles.flowName}>
+                      {isCommand ? <Play size={14} className={styles.commandIcon} /> : <GitBranch size={14} className={styles.flowIcon} />}
+                      {" "}{flow.name}
+                    </span>
                     <button
                       className={`${styles.toggleBtn} ${isDisabled ? styles.toggleBtnDisabled : styles.toggleBtnEnabled}`}
                       onClick={() => toggleFlow(flow.id)}

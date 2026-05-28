@@ -58,6 +58,9 @@ export async function loadFlowsFromDisk(): Promise<{ flows: Flow[]; flowsPath: s
       const data = yamlParse(content)! as Record<string, unknown>;
       if(!data.id) throw new Error("id is required");
       if(!data.name) throw new Error("name is required");
+      if(typeof data.command === "string") {
+        data.isCommand = true;
+      }
       flows.push(data as any);
     } catch (e) {
       console.warn(`loadFlowsFromDisk: failed to parse ${name}:`, e);

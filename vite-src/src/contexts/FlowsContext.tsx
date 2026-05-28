@@ -14,6 +14,7 @@ interface FlowsContextValue {
   flows: Flow[];
   disabledFlows: string[];
   enabledWorkflows: Flow[];
+  commandFlows: Flow[];
   isLoading: boolean;
   refreshFlows: () => Promise<void>;
   flowsPath: string;
@@ -74,17 +75,23 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     [flows, disabledFlows]
   );
 
+  const commandFlows = useMemo(
+    () => flows.filter((f) => (f as any).isCommand),
+    [flows]
+  );
+
   const value = useMemo(
     () => ({
       flows,
       disabledFlows,
       enabledWorkflows,
+      commandFlows,
       isLoading,
       refreshFlows,
       flowsPath,
       toggleFlow,
     }),
-    [flows, disabledFlows, enabledWorkflows, isLoading, flowsPath]
+    [flows, disabledFlows, enabledWorkflows, commandFlows, isLoading, flowsPath]
   );
 
   return <FlowsContext.Provider value={value}>{children}</FlowsContext.Provider>;
