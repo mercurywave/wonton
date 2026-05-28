@@ -244,9 +244,15 @@ export default function ChatPanel({
   const { setChatDraft, setSelectedChatWorkflowId } = useChats();
   const { projects } = useProjects();
   const { activeProjectId, logId, navigateToLog } = useNav();
-  const { chats, selectedChatId, onActionButtonClick } = useChats();
-  const { flows, enabledWorkflows } = useFlowsContext();
+  const { chats, selectedChatId, onActionButtonClick, executeCommand: runCommand } = useChats();
+  const { flows, enabledWorkflows, commandFlows, disabledFlows } = useFlowsContext();
   const { on: onEvent } = useEventBus();
+  const [showCommandsPopup, setShowCommandsPopup] = useState(false);
+  const popupRef = useRef<HTMLDivElement>(null);
+  const enabledCommands = useMemo(
+    () => commandFlows.filter((f) => !disabledFlows.includes(f.id)),
+    [commandFlows, disabledFlows]
+  );
   const activeProject = projects.find((p) => p.id === activeProjectId);
 
   // Resolve the effective system prompt for display
@@ -395,6 +401,18 @@ export default function ChatPanel({
 
     return onEvent("re-comment", handleReComment);
   }, [draft, onEvent, setDraft]);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
+        setShowCommandsPopup(false);
+      }
+    }
+    if (showCommandsPopup) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showCommandsPopup]);
 
   const handleSubmit = useCallback(
     async (e: React.SyntheticEvent) => {
@@ -619,6 +637,38 @@ export default function ChatPanel({
             />
           </div>
           <div className={styles.footerRight}>
+            <button
+              type="button"
+              className={styles.commandButton}
+              onClick={() => setShowCommandsPopup(!showCommandsPopup)}
+              title="Run command"
+              disabled={enabledCommands.length === 0}
+            >
+              <Play size={16} />
+            </button>
+            {showCommandsPopup && (
+              <div ref={popupRef} className={styles.commandPopupWrapper}>
+                <div className={styles.commandPopup}>
+                  <div className={styles.commandPopupHeader}>Commands</div>
+                  {enabledCommands.map((cmd) => (
+                    <button
+                      key={cmd.id}
+                      className={styles.commandPopupItem}
+                      onClick={() => {
+                        runCommand(cmd.id);
+                        setShowCommandsPopup(false);
+                      }}
+                      type="button"
+                    >
+                      {cmd.name}
+                    </button>
+                  ))}
+                  {enabledCommands.length === 0 && (
+                    <div className={styles.commandPopupEmpty}>No commands available</div>
+                  )}
+                </div>
+              </div>
+            )}
             <ContextRing
               usageTokens={usageTokens}
               maxTokens={maxTokens}

@@ -10,7 +10,8 @@ import {
 } from "react";
 import { useProjectChats } from "../hooks/useProjectChats";
 import { useChatApi } from "../hooks/useChatApi";
-import { useChatWorkflow } from "../hooks/useChatWorkflow";
+import { useChatWorkflow, executeCommand as runExecuteCommand } from "../hooks/useChatWorkflow";
+import { useEventBus } from "./EventBusContext";
 import { useSettings } from "./SettingsContext";
 import { useProjects } from "./ProjectsContext";
 import { useNav } from "./NavContext";
@@ -41,6 +42,7 @@ interface ChatsContextValue {
   setSelectedChatWorkflowId: (workflowId: string | undefined, workflowStateKey?: string) => Promise<void>;
   executeAdjustPrompt: (content: string) => Promise<string>;
   onActionButtonClick: (button: FlowActionButton) => Promise<void>;
+  executeCommand: (flowId: string) => Promise<void>;
   selectedChatId: string | null;
   setSelectedChatId: (id: string | null) => void;
 }
@@ -54,6 +56,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const { allAgents } = useAgentsContext();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const { flows } = useFlowsContext();
+  const { emit: emitEvent } = useEventBus();
 
   const {
     chats,
@@ -227,6 +230,16 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     await projectChatsUpdateChatMeta(selectedChatId, updates);
   }, [selectedChatId, projectChatsUpdateChatMeta]);
 
+  const wrappedExecuteCommand = useCallback(
+    async (flowId: string) => {
+      const flow = flows.find((f) => f.id === flowId);
+      if (!flow?.command) return;
+      if (!selectedChatId || !activeProjectId) return;
+      await runExecuteCommand(flow.command, flowId, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent);
+    },
+    [flows, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent]
+  );
+
   // Fire onEnter for the initial state when a workflow is linked
   useEffect(() => {
     if (selectedChatForWorkflow?.workflowId && selectedChatForWorkflow?.workflowStateKey) {
@@ -256,10 +269,11 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       setSelectedChatWorkflowId,
       executeAdjustPrompt: workflowExecuteAdjustPrompt,
       onActionButtonClick: workflowOnActionButtonClick,
+      executeCommand: wrappedExecuteCommand,
       selectedChatId,
       setSelectedChatId,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, setChatDraft, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, advance]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, setChatDraft, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

@@ -27,10 +27,10 @@ interface UseChatWorkflowReturn {
   advance(nextStateKey: string): Promise<void>;
 }
 
-function buildWon(
+export function buildWon(
   ctx: WorkflowStateContext,
-  updateChatMeta: UseChatWorkflowOptions["updateChatMeta"],
-  onStateChange?: UseChatWorkflowOptions["onStateChange"],
+  updateChatMeta: (updates: Partial<ChatMeta>) => Promise<void>,
+  onStateChange?: (stateKey: string, data: Record<string, unknown>) => void,
   onEnterForState?: (stateKey: string, data: Record<string, unknown>) => Promise<void>,
   projectId?: string,
   folderPath?: string,
@@ -108,6 +108,30 @@ function buildWon(
       emit?.("requestOpenFile", { uniqueName });
     },
   };
+}
+
+export async function executeCommand(
+  command: string,
+  flowId: string,
+  chatId: string | undefined,
+  updateChatMeta: (updates: Partial<ChatMeta>) => Promise<void>,
+  projectId?: string,
+  folderPath?: string,
+  emit?: (event: string, payload?: unknown) => void,
+): Promise<void> {
+  const stateRef: WorkflowStateContext = {
+    chatId: chatId || "",
+    workflowId: flowId,
+    stateKey: "command",
+    workflowData: {},
+  };
+  const won = buildWon(stateRef, updateChatMeta, undefined, undefined, projectId, folderPath, emit);
+  const hookFn = new Function("won", `return (async () => {${command}})();`) as unknown as (won: Won) => Promise<void>;
+  try {
+    await hookFn(won);
+  } catch (err) {
+    console.error(`command "${flowId}" failed:`, err);
+  }
 }
 
 export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflowReturn {
