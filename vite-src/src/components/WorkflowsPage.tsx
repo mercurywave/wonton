@@ -10,7 +10,7 @@ function normalizePath(p: string): string {
 }
 
 export default function WorkflowsPage() {
-  const { flows, disabledFlows, isLoading, refreshFlows, flowsPath, toggleFlow } = useFlowsContext();
+  const { flows, disabledFlows, isLoading, refreshFlows, flowsPath, toggleFlow, conflictIds, conflictFiles } = useFlowsContext();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const windowsOnly = isWindows();
 
@@ -69,48 +69,69 @@ export default function WorkflowsPage() {
 
         {isLoading ? (
           <div className={styles.loading}>Loading workflows...</div>
-        ) : flows.length === 0 ? (
-          <div className={styles.empty}>
-            <p>No workflows found.</p>
-            <p className={styles.emptyHint}>
-              Add <code>.yaml</code> files to the <code>flows/</code> directory.
-            </p>
-          </div>
         ) : (
-          <div className={styles.flowsList}>
-            {flows.map((flow) => {
-              const isDisabled = disabledFlows.includes(flow.id);
-              const isCommand = (flow as any).isCommand;
-              return (
-                <div
-                  key={flow.id}
-                  className={`${styles.flowCard} ${isDisabled ? styles.flowCardDisabled : ""}`}
-                >
-                  <div className={styles.flowCardHeader}>
-                    <span className={styles.flowName}>
-                      {isCommand ? <Play size={14} className={styles.commandIcon} /> : <GitBranch size={14} className={styles.flowIcon} />}
-                      {" "}{flow.name}
-                    </span>
-                    <button
-                      className={`${styles.toggleBtn} ${isDisabled ? styles.toggleBtnDisabled : styles.toggleBtnEnabled}`}
-                      onClick={() => toggleFlow(flow.id)}
-                      type="button"
-                      title={isDisabled ? "Enable workflow" : "Disable workflow"}
+          <>
+            {conflictIds.length > 0 && (
+              <div className={styles.conflictBanner}>
+                <div className={styles.conflictTitle}>Conflicting workflow IDs detected</div>
+                <p className={styles.conflictText}>
+                  The following workflow IDs appear in multiple files. The duplicate entries have been skipped:
+                </p>
+                <ul className={styles.conflictList}>
+                  {conflictIds.map((id) => (
+                    <li key={id}>
+                      {id} <span className={styles.conflictFile}>("{conflictFiles[id]}")</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {flows.length === 0 ? (
+              <div className={styles.empty}>
+                <p>No workflows found.</p>
+                <p className={styles.emptyHint}>
+                  Add <code>.yaml</code> files to the <code>flows/</code> directory.
+                </p>
+              </div>
+            ) : (
+              <div className={styles.flowsList}>
+                {flows.map((flow) => {
+                  const isDisabled = disabledFlows.includes(flow.id);
+                  const isCommand = (flow as any).isCommand;
+                  const hasConflict = conflictIds.length > 0;
+                  return (
+                    <div
+                      key={flow.id}
+                      className={`${styles.flowCard} ${isDisabled ? styles.flowCardDisabled : ""}`}
                     >
-                      {toggleLabel(flow.id)}
-                    </button>
-                  </div>
-                  {flow.description && (
-                    <div className={styles.flowDescription}>
-                      {flow.description.length > 120
-                        ? flow.description.slice(0, 120) + "..."
-                        : flow.description}
+                      <div className={styles.flowCardHeader}>
+                        <span className={styles.flowName}>
+                          {isCommand ? <Play size={14} className={styles.commandIcon} /> : <GitBranch size={14} className={styles.flowIcon} />}
+                          {" "}{flow.name}
+                        </span>
+                        <button
+                          className={`${styles.toggleBtn} ${isDisabled ? styles.toggleBtnDisabled : styles.toggleBtnEnabled}`}
+                          onClick={() => toggleFlow(flow.id)}
+                          type="button"
+                          title={hasConflict ? "Fix conflicting workflow IDs to enable/disable" : isDisabled ? "Enable workflow" : "Disable workflow"}
+                          disabled={hasConflict}
+                        >
+                          {toggleLabel(flow.id)}
+                        </button>
+                      </div>
+                      {flow.description && (
+                        <div className={styles.flowDescription}>
+                          {flow.description.length > 120
+                            ? flow.description.slice(0, 120) + "..."
+                            : flow.description}
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+                  );
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

@@ -19,6 +19,8 @@ interface FlowsContextValue {
   refreshFlows: () => Promise<void>;
   flowsPath: string;
   toggleFlow: (flowId: string) => Promise<void>;
+  conflictIds: string[];
+  conflictFiles: Record<string, string>;
 }
 
 const FlowsContext = createContext<FlowsContextValue | null>(null);
@@ -29,6 +31,8 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const [disabledFlows, setDisabledFlows] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [flowsPath, setFlowsPath] = useState("");
+  const [conflictIds, setConflictIds] = useState<string[]>([]);
+  const [conflictFiles, setConflictFiles] = useState<Record<string, string>>({});
 
   const loadFlows = async () => {
     if (!nav.projectId) return;
@@ -46,8 +50,12 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       const result = await loadFlowsFromDisk();
       setFlows(result.flows);
       setFlowsPath(result.flowsPath);
+      setConflictIds(result.conflictIds);
+      setConflictFiles(result.conflictFiles);
     } catch {
       setFlows([]);
+      setConflictIds([]);
+      setConflictFiles({});
     }
     setIsLoading(false);
   };
@@ -90,8 +98,10 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       refreshFlows,
       flowsPath,
       toggleFlow,
+      conflictIds,
+      conflictFiles,
     }),
-    [flows, disabledFlows, enabledWorkflows, commandFlows, isLoading, flowsPath]
+    [flows, disabledFlows, enabledWorkflows, commandFlows, isLoading, flowsPath, conflictIds, conflictFiles]
   );
 
   return <FlowsContext.Provider value={value}>{children}</FlowsContext.Provider>;

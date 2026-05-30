@@ -31,9 +31,9 @@ function saveCachedFlows(flows: Flow[]): void {
   }
 }
 
-export async function loadFlowsFromDisk(): Promise<{ flows: Flow[]; flowsPath: string }> {
+export async function loadFlowsFromDisk(): Promise<{ flows: Flow[]; flowsPath: string; conflictIds: string[]; conflictFiles: Record<string, string> }> {
   if (!isNeutralinoConnected()) {
-    return { flows: loadCachedFlows(), flowsPath: "" };
+    return { flows: loadCachedFlows(), flowsPath: "", conflictIds: [], conflictFiles: {} };
   }
 
   const rootDir = await getRootDataDir();
@@ -43,10 +43,11 @@ export async function loadFlowsFromDisk(): Promise<{ flows: Flow[]; flowsPath: s
   try {
     entries = await filesystem.readDirectory(flowsDir);
   } catch {
-    return { flows: loadCachedFlows(), flowsPath: flowsDir };
+    return { flows: loadCachedFlows(), flowsPath: flowsDir, conflictIds: [], conflictFiles: {} };
   }
 
   const flows: Flow[] = [];
+  const flowSources = new Map<string, string>(); // id -> filename
   for (const entry of entries) {
     const name = entry.entry;
     if (!name.endsWith(FLOW_EXT)) continue;
@@ -62,6 +63,7 @@ export async function loadFlowsFromDisk(): Promise<{ flows: Flow[]; flowsPath: s
         data.isCommand = true;
       }
       flows.push(data as any);
+      flowSources.set(data.id as string, name);
     } catch (e) {
       console.warn(`loadFlowsFromDisk: failed to parse ${name}:`, e);
     }
@@ -69,16 +71,22 @@ export async function loadFlowsFromDisk(): Promise<{ flows: Flow[]; flowsPath: s
 
   // Deduplicate by id, logging an error for conflicts and keeping the last loaded.
   const seen = new Map<string, Flow>();
+  const conflictIds = new Set<string>();
+  const conflictFiles: Record<string, string> = {};
   for (const flow of flows) {
-    if (seen.has(flow.id)) {
-      console.error(`loadFlowsFromDisk: conflicting workflow id "${flow.id}" detected across multiple files — skipping duplicate.`);
+    const id = flow.id;
+    if (seen.has(id)) {
+      conflictIds.add(id);
+      const currentFile = flowSources.get(id) ?? "unknown";
+      conflictFiles[id] = currentFile;
+      console.error(`loadFlowsFromDisk: conflicting workflow id "${id}" in "${currentFile}" — skipping duplicate.`);
     }
-    seen.set(flow.id, flow);
+    seen.set(id, flow);
   }
   const deduped = Array.from(seen.values());
 
   saveCachedFlows(deduped);
-  return { flows: deduped, flowsPath: flowsDir };
+  return { flows: deduped, flowsPath: flowsDir, conflictIds: Array.from(conflictIds), conflictFiles };
 }
 
 export function useFlows(): [Flow[], () => Promise<void>, string] {
