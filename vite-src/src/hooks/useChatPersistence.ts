@@ -537,6 +537,53 @@ export async function saveSubagentMeta(
   }
 }
 
+export async function createNewVersionLog(
+  projectId: string,
+  chatId: string
+): Promise<string> {
+  if (!isNeutralinoConnected()) {
+    const newLogId = generateGuid();
+    return newLogId;
+  }
+
+  const projectDir = await getProjectDataDir(projectId);
+  const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
+  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
+
+  const metaPath = `${chatsDir}/${chatId}.json`;
+
+  try {
+    const content = await filesystem.readFile(metaPath);
+    const meta = JSON.parse(content) as ChatMeta;
+    const now = Date.now();
+
+    // Archive current version
+    const versionHistory = meta.versionHistory || [];
+    versionHistory.push({
+      logId: meta.logId,
+      createdAt: meta.versionCreatedAt || meta.createdAt,
+      updatedAt: meta.updatedAt,
+    });
+    meta.versionHistory = versionHistory;
+
+    // Generate new log
+    const newLogId = generateGuid();
+    await filesystem.writeFile(`${msgsDir}/${newLogId}.jsonl`, "");
+
+    // Update meta
+    meta.logId = newLogId;
+    meta.versionCreatedAt = undefined;
+    meta.updatedAt = now;
+
+    await filesystem.writeFile(metaPath, JSON.stringify(meta, null, 2));
+
+    return newLogId;
+  } catch (err) {
+    console.error("createNewVersionLog: failed to create new version", err);
+    throw err;
+  }
+}
+
 export async function loadDisabledFlows(projectId: string): Promise<string[]> {
   if (!isNeutralinoConnected()) return [];
 

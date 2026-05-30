@@ -273,7 +273,7 @@ export default function ChatPanel({
   const resolvedStateMessage = resolvedWorkflow?.states?.[currentChat?.workflowStateKey ?? ""]?.message;
   const resolvedActionButtons = resolvedWorkflow?.states?.[currentChat?.workflowStateKey ?? ""]?.actionButtons;
 
-  // Build log options: main log + subagents
+  // Build log options: main log + subagents + version history
   const logOptions = useMemo(() => {
     if (!currentChat) return [];
     const options: Array<{ id: string; label: string }> = [
@@ -287,6 +287,15 @@ export default function ChatPanel({
       options.push({
         id: subagent.logId,
         label: `${agentName} ${i + 1}`,
+      });
+    }
+    const versionHistory = currentChat.versionHistory || [];
+    for (let i = 0; i < versionHistory.length; i++) {
+      const version = versionHistory[i];
+      const creationTime = new Date(version.createdAt).toLocaleTimeString();
+      options.push({
+        id: version.logId,
+        label: `Version ${i + 1} (${creationTime})`,
       });
     }
     return options;

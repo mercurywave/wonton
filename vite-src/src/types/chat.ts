@@ -67,6 +67,12 @@ export interface SubagentMeta {
   logId: string;
 }
 
+export interface VersionHistoryEntry {
+  logId: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 export interface TempFileReservation {
   baseName: string;
   uniqueName: string;
@@ -87,6 +93,8 @@ export interface ChatMeta {
   draft?: string;
   subagents?: SubagentMeta[];
   reservedTempFiles?: TempFileReservation[];
+  versionCreatedAt?: number;
+  versionHistory?: VersionHistoryEntry[];
 }
 
 export interface ProjectMeta {
@@ -145,6 +153,7 @@ export interface Won {
   openFile(uniqueName: string): void;
   getChatHistory(): ChatHistoryEntry[];
   pushMessage(entry: ChatHistoryEntry): Promise<void>;
+  createNewVersion(): Promise<void>;
 }
 
 export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows";
