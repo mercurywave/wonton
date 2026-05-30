@@ -130,6 +130,11 @@ export interface WorkflowStateContext {
   modelId?: string;
 }
 
+export interface ChatHistoryEntry {
+  role: "user" | "assistant" | "system" | "tool";
+  content: string;
+}
+
 export interface Won {
   advance(nextStateKey: string): Promise<void>;
   getState(): WorkflowStateContext;
@@ -138,6 +143,7 @@ export interface Won {
   set(key: string, value: unknown): Promise<void>;
   reserveTempFile(baseName?: string): Promise<string>;
   openFile(uniqueName: string): void;
+  getChatHistory(): ChatHistoryEntry[];
 }
 
 export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows";

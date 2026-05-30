@@ -174,6 +174,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     projectId: activeProjectId || undefined,
     folderPath: activeProject?.folderPath,
     updateChatMeta: workflowUpdateMeta,
+    messages,
   });
 
   const wrappedSendMessage = useCallback(
@@ -235,9 +236,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       const flow = flows.find((f) => f.id === flowId);
       if (!flow?.command) return;
       if (!selectedChatId || !activeProjectId) return;
-      await runExecuteCommand(flow.command, flowId, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent);
+      await runExecuteCommand(flow.command, flowId, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent, messages);
     },
-    [flows, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent]
+    [flows, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent, messages]
   );
 
   // Fire onEnter for the initial state when a workflow is linked
