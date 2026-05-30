@@ -144,6 +144,7 @@ export interface Won {
   reserveTempFile(baseName?: string): Promise<string>;
   openFile(uniqueName: string): void;
   getChatHistory(): ChatHistoryEntry[];
+  pushMessage(entry: ChatHistoryEntry): Promise<void>;
 }
 
 export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows";

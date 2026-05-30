@@ -15,6 +15,8 @@ interface UseChatWorkflowOptions {
   updateChatMeta: (updates: Partial<ChatMeta>) => Promise<void>;
   onStateChange?: (stateKey: string, data: Record<string, unknown>) => void;
   messages?: ChatMessage[];
+  logId?: string;
+  onPushMessage?: (entry: ChatHistoryEntry) => Promise<void>;
 }
 
 interface UseChatWorkflowReturn {
@@ -37,8 +39,10 @@ export function buildWon(
   folderPath?: string,
   emit?: (event: string, payload?: unknown) => void,
   messages?: ChatMessage[],
+  onPushMessage?: (entry: ChatHistoryEntry) => Promise<void>,
 ): Won {
   const stateRef = { ...ctx };
+  const messagesRef = { current: messages };
 
   async function reserveTempFile(baseName?: string): Promise<string> {
     const name = baseName ?? "temp.txt";
@@ -110,7 +114,16 @@ export function buildWon(
       emit?.("requestOpenFile", { uniqueName });
     },
     getChatHistory(): ChatHistoryEntry[] {
-      return (messages ?? []).map(m => ({ role: m.role, content: m.content }));
+      return (messagesRef.current ?? []).map(m => ({ role: m.role, content: m.content }));
+    },
+    async pushMessage(entry: ChatHistoryEntry) {
+      if (!entry.role || !["user", "assistant", "system", "tool"].includes(entry.role)) {
+        throw new Error(`pushMessage: invalid role "${entry.role}"`);
+      }
+      if (typeof entry.content !== "string" || entry.content.length === 0) {
+        throw new Error("pushMessage: content must be a non-empty string");
+      }
+      await onPushMessage?.(entry);
     },
   };
 }
@@ -124,6 +137,7 @@ export async function executeCommand(
   folderPath?: string,
   emit?: (event: string, payload?: unknown) => void,
   messages?: ChatMessage[],
+  onPushMessage?: (entry: ChatHistoryEntry) => Promise<void>,
 ): Promise<void> {
   const stateRef: WorkflowStateContext = {
     chatId: chatId || "",
@@ -131,7 +145,7 @@ export async function executeCommand(
     stateKey: "command",
     workflowData: {},
   };
-  const won = buildWon(stateRef, updateChatMeta, undefined, undefined, projectId, folderPath, emit, messages);
+  const won = buildWon(stateRef, updateChatMeta, undefined, undefined, projectId, folderPath, emit, messages, onPushMessage);
   const hookFn = new Function("won", `return (async () => {${command}})();`) as unknown as (won: Won) => Promise<void>;
   try {
     await hookFn(won);
@@ -141,7 +155,7 @@ export async function executeCommand(
 }
 
 export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflowReturn {
-  const { workflowId, workflowStateKey, workflowData, flows, chatId, modelId, projectId, folderPath, updateChatMeta, onStateChange, messages } = options;
+  const { workflowId, workflowStateKey, workflowData, flows, chatId, modelId, projectId, folderPath, updateChatMeta, onStateChange, messages, onPushMessage } = options;
   const { emit } = useEventBus();
 
   const dataRef = useRef(workflowData);
@@ -166,7 +180,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       stateKey,
       workflowData: data,
     };
-    const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current, projectId, folderPath, emit, messages);
+    const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current, projectId, folderPath, emit, messages, onPushMessage);
     const hookFn = new Function("won", `return (async () => {${state.onEnter}})();`) as unknown as (won: Won) => Promise<void>;
 
     try {
@@ -174,7 +188,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     } catch (err) {
       console.error(`onEnter hook failed in state "${stateKey}":`, err);
     }
-  }, [flows, workflowId, chatId, updateChatMeta, onStateChange, projectId, folderPath, emit, messages]);
+  }, [flows, workflowId, chatId, updateChatMeta, onStateChange, projectId, folderPath, emit, messages, onPushMessage]);
 
   const advance = useCallback(async (nextStateKey: string) => {
     await runOnEnterForState(nextStateKey, dataRef.current);
@@ -196,7 +210,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
         workflowData: dataRef.current,
         modelId: promptModelId ?? modelId,
       };
-      const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current, projectId, folderPath, emit, messages);
+      const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current, projectId, folderPath, emit, messages, onPushMessage);
 
       const hookfn = new Function("won", "userContent", `return (async () => {${currentState.hookAdjustPrompt}})();`) as unknown as (won: Won, userContent: string) => Promise<string>;
       try{
@@ -223,7 +237,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       stateKey: workflowStateKey,
       workflowData: dataRef.current,
     };
-    const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current, projectId, folderPath, emit, messages);
+    const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current, projectId, folderPath, emit, messages, onPushMessage);
     const hookFn = new Function("won", `return (async () => {${state.onSendPrompt}})();`) as unknown as (won: Won) => Promise<void>;
 
     try {
@@ -231,7 +245,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     } catch (err) {
       console.error(`onSendPrompt hook failed in state "${workflowStateKey}":`, err);
     }
-  }, [flows, workflowId, chatId, workflowStateKey, updateChatMeta, onStateChange, projectId, folderPath, emit, messages]);
+  }, [flows, workflowId, chatId, workflowStateKey, updateChatMeta, onStateChange, projectId, folderPath, emit, messages, onPushMessage]);
 
   const onChatResponse = useCallback(async (response: ChatMessage) => {
     const flow = flows.find((f) => f.id === workflowId);
@@ -244,7 +258,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       stateKey: workflowStateKey,
       workflowData: dataRef.current,
     };
-    const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current, projectId, folderPath, emit, messages);
+    const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current, projectId, folderPath, emit, messages, onPushMessage);
     const hookFn = new Function("won", "response", `return (async () => {${state.onChatResponse}})();`) as unknown as (won: Won, response: ChatMessage) => Promise<void>;
 
     try {
@@ -252,7 +266,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     } catch (err) {
       console.error(`onChatResponse hook failed in state "${workflowStateKey}":`, err);
     }
-  }, [flows, workflowId, chatId, workflowStateKey, updateChatMeta, onStateChange, projectId, folderPath, emit, messages]);
+  }, [flows, workflowId, chatId, workflowStateKey, updateChatMeta, onStateChange, projectId, folderPath, emit, messages, onPushMessage]);
 
   const onActionButtonClick = useCallback(async (button: FlowActionButton) => {
     const flow = flows.find((f) => f.id === workflowId);
@@ -265,7 +279,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       stateKey: workflowStateKey,
       workflowData: dataRef.current,
     };
-    const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current, projectId, folderPath, emit, messages);
+    const won = buildWon(ctx, updateChatMeta, onStateChange, onEnterForStateRef.current, projectId, folderPath, emit, messages, onPushMessage);
     const hookFn = new Function("won", "idx", `return (async () => {${state.onActionButton}})();`) as unknown as (won: Won, idx: number) => Promise<void>;
 
     try {
@@ -273,7 +287,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     } catch (err) {
       console.error(`onActionButton hook failed in state "${workflowStateKey}":`, err);
     }
-  }, [flows, workflowId, chatId, workflowStateKey, updateChatMeta, onStateChange, projectId, folderPath, emit, messages]);
+  }, [flows, workflowId, chatId, workflowStateKey, updateChatMeta, onStateChange, projectId, folderPath, emit, messages, onPushMessage]);
 
   return {
     executeAdjustPrompt,

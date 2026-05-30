@@ -18,8 +18,9 @@ import { useNav } from "./NavContext";
 import { useAgentsContext } from "./AgentsContext";
 import { useFlowsContext } from "./FlowsContext";
 import { isNeutralinoConnected } from "../utils/neuUtils";
+import { appendMessage } from "../hooks/useChatPersistence";
 import { getAvailableTools } from "../tools";
-import { ChatMessage, ChatMeta, FlowActionButton, ToolDefinition } from "../types/chat";
+import { ChatMessage, ChatMeta, ChatHistoryEntry, FlowActionButton, ToolDefinition } from "../types/chat";
 
 interface ChatsContextValue {
   chats: ChatMeta[];
@@ -126,7 +127,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     await refreshChats();
   }, [refreshChats]);
 
-  const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
+  const { messages, isLoading, sendMessage, stopGeneration, setMessages } = useChatApi(
     settings,
     chatExecutionIds,
     setChatExecutionId,
@@ -159,6 +160,22 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     [selectedChatId, projectChatsUpdateChatMeta]
   );
 
+  const onPushMessage = useCallback(
+    async (entry: ChatHistoryEntry) => {
+      const chatMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: entry.role,
+        content: entry.content,
+        timestamp: Date.now(),
+      };
+      setMessages((prev) => [...prev, chatMessage]);
+      if (activeLogId && activeProjectId && selectedChatId) {
+        await appendMessage(activeProjectId, activeLogId, chatMessage, selectedChatId);
+      }
+    },
+    [activeLogId, activeProjectId, selectedChatId, setMessages]
+  );
+
   const {
     executeAdjustPrompt: workflowExecuteAdjustPrompt,
     onSendPrompt: workflowExecuteOnSendPrompt,
@@ -175,6 +192,8 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     folderPath: activeProject?.folderPath,
     updateChatMeta: workflowUpdateMeta,
     messages,
+    logId: activeLogId,
+    onPushMessage,
   });
 
   const wrappedSendMessage = useCallback(
@@ -236,9 +255,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       const flow = flows.find((f) => f.id === flowId);
       if (!flow?.command) return;
       if (!selectedChatId || !activeProjectId) return;
-      await runExecuteCommand(flow.command, flowId, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent, messages);
+      await runExecuteCommand(flow.command, flowId, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent, messages, onPushMessage);
     },
-    [flows, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent, messages]
+    [flows, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent, messages, onPushMessage]
   );
 
   // Fire onEnter for the initial state when a workflow is linked
