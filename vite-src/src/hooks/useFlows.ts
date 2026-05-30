@@ -67,8 +67,18 @@ export async function loadFlowsFromDisk(): Promise<{ flows: Flow[]; flowsPath: s
     }
   }
 
-  saveCachedFlows(flows);
-  return { flows, flowsPath: flowsDir };
+  // Deduplicate by id, logging an error for conflicts and keeping the last loaded.
+  const seen = new Map<string, Flow>();
+  for (const flow of flows) {
+    if (seen.has(flow.id)) {
+      console.error(`loadFlowsFromDisk: conflicting workflow id "${flow.id}" detected across multiple files — skipping duplicate.`);
+    }
+    seen.set(flow.id, flow);
+  }
+  const deduped = Array.from(seen.values());
+
+  saveCachedFlows(deduped);
+  return { flows: deduped, flowsPath: flowsDir };
 }
 
 export function useFlows(): [Flow[], () => Promise<void>, string] {
