@@ -91,9 +91,6 @@ export function buildWon(
       onStateChange?.(nextStateKey, stateRef.workflowData);
       onEnterForState?.(nextStateKey, stateRef.workflowData);
     },
-    getState() {
-      return { ...stateRef };
-    },
     async setWorkflowData(partial) {
       stateRef.workflowData = { ...stateRef.workflowData, ...partial };
       await updateChatMeta({
