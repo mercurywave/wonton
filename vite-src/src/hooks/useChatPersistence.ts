@@ -106,21 +106,6 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   }
 }
 
-export async function resolveLogId(projectId: string, chatId: string): Promise<string> {
-  if (!isNeutralinoConnected()) return chatId;
-
-  const projectDir = await getProjectDataDir(projectId);
-  const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
-
-  try {
-    const metaContent = await filesystem.readFile(`${chatsDir}/${chatId}.json`);
-    const meta = JSON.parse(metaContent) as ChatMeta;
-    return meta.logId || chatId;
-  } catch {
-    return chatId;
-  }
-}
-
 export async function appendMessage(
   projectId: string,
   logId: string,

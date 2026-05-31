@@ -1,7 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ChatMessage, LLMStats, ProjectMeta, ToolCall, ToolDefinition } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
-import { resolveLogId } from "./useChatPersistence";
+
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
 import { executeToolCall } from "../tools";
@@ -516,7 +516,8 @@ export function useChatApi(
       if (logId) {
         loadAndSet(logId);
       } else {
-        resolveLogId(projectId, chatId).then((resolvedLogId) => {
+        chatStore.load(projectId).then(() => {
+          const resolvedLogId = chatStore.getLogId(projectId, chatId);
           loadAndSet(resolvedLogId);
         });
       }

@@ -165,6 +165,7 @@ interface ChatsState {
 
 interface ChatsStore {
   getChatMetas(projectId: string): ChatMeta[];
+  getLogId(projectId: string, chatId: string): string;
   load(projectId: string): Promise<void>;
   createChat(
     projectId: string,
@@ -199,6 +200,11 @@ function dispatch(projectId: string) {
 const chatStore: ChatsStore = {
   getChatMetas(projectId: string) {
     return state.get(projectId)?.metas ?? [];
+  },
+
+  getLogId(projectId: string, chatId: string) {
+    const meta = state.get(projectId)?.metas.find((m) => m.id === chatId);
+    return meta?.logId || chatId;
   },
 
   async load(projectId: string) {
