@@ -1,4 +1,4 @@
-import { ChatMeta } from "../types/chat";
+import { ChatMeta, TempFileReservation } from "../types/chat";
 import {
   CHATS_DIR_NAME,
   MSGS_DIR_NAME,
@@ -182,6 +182,7 @@ interface ChatsStore {
   ): Promise<void>;
   refresh(projectId: string): Promise<ChatMeta[]>;
   subscribe(projectId: string, listener: Listener): () => void;
+  getReservedTempFiles(projectId: string, chatId: string): Promise<TempFileReservation[] | undefined>;
 }
 
 const state = new Map<string, ChatsState>();
@@ -291,6 +292,13 @@ const chatStore: ChatsStore = {
     return () => {
       listeners.get(projectId)?.delete(listener);
     };
+  },
+
+  async getReservedTempFiles(projectId, chatId) {
+    await chatStore.load(projectId);
+    const metas = state.get(projectId)?.metas ?? [];
+    const meta = metas.find((m) => m.id === chatId);
+    return meta?.reservedTempFiles;
   },
 };
 

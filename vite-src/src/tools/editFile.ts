@@ -3,7 +3,7 @@ import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
 import { sanitizeAndResolvePath } from "./pathTools";
 import { resolveTempFilePath } from "../utils/neuUtils";
-import { getReservedTempFiles } from "../hooks/useChatPersistence";
+import { chatStore } from "../store/chats";
 
 export const EDIT_FILE_TOOL_NAME = "edit";
 
@@ -98,7 +98,7 @@ export class EditFileHandler implements ToolHandler {
 
     // Check if this path matches a reserved temp file
     const reservedTempFiles = (chatId && projectId)
-      ? await getReservedTempFiles(projectId, chatId)
+      ? await chatStore.getReservedTempFiles(projectId, chatId)
       : undefined;
     const tempResult = await resolveTempFilePath(path, projectId, reservedTempFiles);
 

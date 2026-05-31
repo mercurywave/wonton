@@ -209,27 +209,6 @@ export async function appendMessage(
   }
 }
 
-export async function getChatMeta(projectId: string, chatId: string): Promise<ChatMeta | null> {
-  if (!isNeutralinoConnected()) return null;
-
-  const projectDir = await getProjectDataDir(projectId);
-  const metaPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.json`;
-
-  try {
-    const content = await filesystem.readFile(metaPath);
-    const meta = JSON.parse(content) as ChatMeta;
-    meta.id = chatId;
-    return meta;
-  } catch {
-    return null;
-  }
-}
-
-export async function getReservedTempFiles(projectId: string, chatId: string): Promise<import("../types/chat").TempFileReservation[] | undefined> {
-  const meta = await getChatMeta(projectId, chatId);
-  return meta?.reservedTempFiles;
-}
-
 export async function clearChat(projectId: string, chatId: string): Promise<void> {
   if (!isNeutralinoConnected()) return;
 

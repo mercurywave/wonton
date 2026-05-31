@@ -4,7 +4,7 @@ import { ToolResult } from "../types/chat";
 import { truncateContent } from "./truncationTools";
 import { sanitizeAndResolvePath } from "./pathTools";
 import { resolveTempFilePath } from "../utils/neuUtils";
-import { getReservedTempFiles } from "../hooks/useChatPersistence";
+import { chatStore } from "../store/chats";
 
 export const READ_FILE_TOOL_NAME = "read";
 
@@ -82,7 +82,7 @@ export class ReadFileHandler implements ToolHandler {
 
     // Check if this path matches a reserved temp file
     const reservedTempFiles = (chatId && projectId)
-      ? await getReservedTempFiles(projectId, chatId)
+      ? await chatStore.getReservedTempFiles(projectId, chatId)
       : undefined;
     const tempResult = await resolveTempFilePath(path, projectId, reservedTempFiles);
 
