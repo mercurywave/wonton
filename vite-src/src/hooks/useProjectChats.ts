@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatMeta, ChatMessage, ProjectMeta } from "../types/chat";
-import { clearChat as clearChatNative } from "./useChatPersistence";
 import { projectMetaStore } from "../store/projectMeta";
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
@@ -86,14 +85,6 @@ export function useProjectChats(projectId: string | undefined) {
     return chatLogsStore.getLog(projectId, logId) || [];
   }, [projectId]);
 
-  const clearChatMessages = useCallback(async (chatId: string) => {
-    if (!projectId) return;
-    await chatStore.load(projectId);
-    const logId = chatStore.getLogId(projectId, chatId);
-    await clearChatNative(projectId, chatId);
-    chatLogsStore.clearLog(projectId, logId);
-  }, [projectId]);
-
   const updateChatMeta = useCallback(async (chatId: string, updates: Partial<ChatMeta>) => {
     if (!projectId) return;
     await chatStore.updateChatMeta(projectId, chatId, updates);
@@ -108,7 +99,6 @@ export function useProjectChats(projectId: string | undefined) {
     deleteChat,
     renameChat,
     loadChatMessages,
-    clearChatMessages,
     refreshChats: refreshChatsCb,
     loadMeta,
     updateChatMeta,

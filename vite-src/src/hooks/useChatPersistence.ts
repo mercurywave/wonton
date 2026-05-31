@@ -133,34 +133,6 @@ export async function appendMessage(
   }
 }
 
-export async function clearChat(projectId: string, chatId: string): Promise<void> {
-  if (!isNeutralinoConnected()) return;
-
-  const projectDir = await getProjectDataDir(projectId);
-  const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
-  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
-
-  try {
-    const metaContent = await filesystem.readFile(`${chatsDir}/${chatId}.json`);
-    const meta = JSON.parse(metaContent) as ChatMeta;
-    const logId = meta.logId || chatId;
-    const jsonlPath = `${msgsDir}/${logId}.jsonl`;
-    await filesystem.writeFile(jsonlPath, "");
-  } catch (err) {
-    console.error("clearChat: failed to truncate jsonl", err);
-  }
-
-  try {
-    const metaPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.json`;
-    const content = await filesystem.readFile(metaPath);
-    const meta = JSON.parse(content) as ChatMeta;
-    meta.updatedAt = Date.now();
-    await filesystem.writeFile(metaPath, JSON.stringify(meta, null, 2));
-  } catch (err) {
-    console.error("clearChat: failed to update chat meta", err);
-  }
-}
-
 export async function createSubagentLog(
   projectId: string,
   _chatId: string,

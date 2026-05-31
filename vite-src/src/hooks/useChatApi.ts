@@ -668,10 +668,6 @@ export function useChatApi(
     [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, onSendPrompt, onChatResponse]
   );
 
-  const clearChat = useCallback(() => {
-    setMessages([]);
-  }, []);
-
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
     setIsLoading(false);
@@ -684,7 +680,6 @@ export function useChatApi(
     messages,
     isLoading,
     sendMessage,
-    clearChat,
     stopGeneration,
     setMessages,
   };
