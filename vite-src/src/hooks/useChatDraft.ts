@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { listChatMeta } from "./useChatPersistence";
+import { chatStore } from "../store/chats";
 import { isNeutralinoConnected } from "../utils/neuUtils";
 
 const DRAFT_SAVE_INTERVAL_MS = 5000;
@@ -23,7 +23,8 @@ export function useChatDraft(projectId?: string, chatId?: string, setChatDraft?:
         return;
       }
 
-      const metas = await listChatMeta(projectId);
+      await chatStore.load(projectId);
+      const metas = chatStore.getChatMetas(projectId);
       const chatMeta = metas.find((m) => m.id === chatId);
       setDraft(chatMeta?.draft || "");
       setWriteProjectId(chatMeta?.projectId || projectId);

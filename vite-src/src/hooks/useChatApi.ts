@@ -1,7 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ChatMessage, LLMStats, ProjectMeta, ToolCall, ToolDefinition } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
-import { appendMessage, loadMessages, loadMessagesByLogId, updateChatMeta } from "./useChatPersistence";
+import { appendMessage, loadMessages, loadMessagesByLogId } from "./useChatPersistence";
+import { chatStore } from "../store/chats";
 import { executeToolCall } from "../tools";
 import { getAvailableTools } from "../tools";
 
@@ -548,7 +549,7 @@ export function useChatApi(
         const title = data.choices?.[0]?.message?.content?.trim();
         if (!title) return;
 
-        await updateChatMeta(projectId, chatId, { name: title });
+        await chatStore.updateChatMeta(projectId, chatId, { name: title });
         onTitleGenerated?.(chatId, title);
       } catch {
         // silently ignore title generation failures

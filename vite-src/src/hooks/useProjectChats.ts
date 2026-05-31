@@ -1,14 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatMeta, ChatMessage, ProjectMeta } from "../types/chat";
 import {
-  listChatMeta,
-  createChat as createChatNative,
-  deleteChat as deleteChatNative,
-  updateChatMeta as updateChatMetaNative,
   loadMessages as loadMessagesNative,
   clearChat as clearChatNative,
 } from "./useChatPersistence";
 import { projectMetaStore } from "../store/projectMeta";
+import { chatStore } from "../store/chats";
 
 const chatCache = new Map<string, ChatMessage[]>();
 
@@ -39,10 +36,17 @@ export function useProjectChats(projectId: string | undefined) {
     }
     const currentLoad = ++loadChatsCountRef.current;
     setIsLoading(true);
-    const metas = await listChatMeta(projectId);
+    await chatStore.load(projectId);
     if (currentLoad !== loadChatsCountRef.current) return;
-    setChats(metas);
+    setChats(chatStore.getChatMetas(projectId));
     setIsLoading(false);
+  }, [projectId]);
+
+  const refreshChatsCb = useCallback(async () => {
+    if (!projectId) return [];
+    const metas = await chatStore.refresh(projectId);
+    setChats(metas);
+    return metas;
   }, [projectId]);
 
   useEffect(() => {
@@ -50,31 +54,34 @@ export function useProjectChats(projectId: string | undefined) {
       loadMeta();
       loadChats();
       const unsubscribe = projectMetaStore.subscribe(projectId, refreshMeta);
-      return unsubscribe;
+      const unsubscribeChats = chatStore.subscribe(projectId, () => {
+        setChats(chatStore.getChatMetas(projectId));
+      });
+      return () => {
+        unsubscribe();
+        unsubscribeChats();
+      };
     }
   }, [projectId, loadMeta, loadChats, refreshMeta]);
 
   const createChat = useCallback(async (workflowId?: string, workflowStateKey?: string): Promise<ChatMeta> => {
     if (!projectId) throw new Error("No project ID");
-    const chat = await createChatNative(projectId, undefined, workflowId, workflowStateKey);
-    setChats((prev) => [chat, ...prev]);
+    const chat = await chatStore.createChat(projectId, undefined, workflowId, workflowStateKey);
+    setChats(chatStore.getChatMetas(projectId));
     return chat;
   }, [projectId]);
 
   const deleteChat = useCallback(async (chatId: string) => {
     if (!projectId) return;
-    await deleteChatNative(projectId, chatId);
-    setChats((prev) => prev.filter((c) => c.id !== chatId));
+    await chatStore.deleteChat(projectId, chatId);
+    setChats(chatStore.getChatMetas(projectId));
     chatCache.delete(chatId);
   }, [projectId]);
 
   const renameChat = useCallback(async (chatId: string, name: string) => {
     if (!projectId) return;
-    const now = Date.now();
-    await updateChatMetaNative(projectId, chatId, { name, updatedAt: now });
-    setChats((prev) =>
-      prev.map((c) => (c.id === chatId ? { ...c, name, updatedAt: now } : c))
-    );
+    await chatStore.renameChat(projectId, chatId, name);
+    setChats(chatStore.getChatMetas(projectId));
   }, [projectId]);
 
   const loadChatMessages = useCallback(async (chatId: string): Promise<ChatMessage[]> => {
@@ -95,17 +102,8 @@ export function useProjectChats(projectId: string | undefined) {
 
   const setChatDraft = useCallback(async (chatId: string, draft: string) => {
     if (!projectId) return;
-    await updateChatMetaNative(projectId, chatId, { draft, updatedAt: Date.now() });
-    setChats((prev) =>
-      prev.map((c) => (c.id === chatId ? { ...c, draft, updatedAt: Date.now() } : c))
-    );
-  }, [projectId]);
-
-  const refreshChats = useCallback(async () => {
-    if (!projectId) return [];
-    const metas = await listChatMeta(projectId);
-    setChats(metas);
-    return metas;
+    await chatStore.setChatDraft(projectId, chatId, draft);
+    setChats(chatStore.getChatMetas(projectId));
   }, [projectId]);
 
   const setChatExecutionId = useCallback((chatId: string, executionId: string | null) => {
@@ -122,11 +120,8 @@ export function useProjectChats(projectId: string | undefined) {
 
   const updateChatMeta = useCallback(async (chatId: string, updates: Partial<ChatMeta>) => {
     if (!projectId) return;
-    const now = Date.now();
-    await updateChatMetaNative(projectId, chatId, updates);
-    setChats((prev) =>
-      prev.map((c) => (c.id === chatId ? { ...c, ...updates, updatedAt: now } : c))
-    );
+    await chatStore.updateChatMeta(projectId, chatId, updates);
+    setChats(chatStore.getChatMetas(projectId));
   }, [projectId]);
 
   return {
@@ -140,7 +135,7 @@ export function useProjectChats(projectId: string | undefined) {
     loadChatMessages,
     clearChatMessages,
     setChatDraft,
-    refreshChats,
+    refreshChats: refreshChatsCb,
     loadMeta,
     setChatExecutionId,
     updateChatMeta,
