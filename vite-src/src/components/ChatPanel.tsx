@@ -5,9 +5,10 @@ import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
 import { ChatMessage as ChatMessageType, LLMStats, Flow, ToolDefinition } from "../types/chat";
 import { useContextWindow } from "../hooks/useContextWindow";
-import { useChatDraft } from "../hooks/useChatDraft";
 import { useSelectionBubble } from "../hooks/useSelectionBubble";
 import { useSettings, useAgentsContext, useChats, useProjects, useNav, useFlowsContext, useEventBus } from "../contexts";
+import { chatStore } from "../store/chats";
+import { isNeutralinoConnected } from "../utils/neuUtils";
 import ModelPicker from "./ModelPicker";
 import AgentPicker from "./AgentPicker";
 import ContextRing from "./ContextRing";
@@ -241,10 +242,59 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const { visibleModels, settings } = useSettings();
   const { mainAgents, allAgents } = useAgentsContext();
-  const { setChatDraft, setSelectedChatWorkflowId } = useChats();
+  const { setSelectedChatWorkflowId } = useChats();
   const { projects } = useProjects();
   const { activeProjectId, logId, navigateToLog } = useNav();
   const { chats, selectedChatId, onActionButtonClick, executeCommand: runCommand } = useChats();
+
+  // Chat draft state (migrated from useChatDraft hook)
+  const [draft, setDraft] = useState("");
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [writeProjectId, setWriteProjectId] = useState<string | undefined>();
+  const [writeChatId, setWriteChatId] = useState<string | undefined>();
+
+  // Load draft when chat changes
+  useEffect(() => {
+    if (!activeProjectId || !selectedChatId) {
+      setDraft("");
+      return;
+    }
+
+    const loadDraft = async () => {
+      if (!isNeutralinoConnected()) {
+        setDraft("");
+        return;
+      }
+
+      await chatStore.load(activeProjectId);
+      const metas = chatStore.getChatMetas(activeProjectId);
+      const chatMeta = metas.find((m) => m.id === selectedChatId);
+      setDraft(chatMeta?.draft || "");
+      setWriteProjectId(chatMeta?.projectId || activeProjectId);
+      setWriteChatId(selectedChatId);
+    };
+
+    loadDraft();
+  }, [activeProjectId, selectedChatId]);
+
+  // Debounced save to file on interval
+  useEffect(() => {
+    if (!writeProjectId || !writeChatId) return;
+
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = setTimeout(() => {
+      chatStore.setChatDraft(writeProjectId, writeChatId, draft);
+    }, 5000);
+
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [draft, writeProjectId, writeChatId]);
   const { flows, enabledWorkflows, commandFlows, disabledFlows } = useFlowsContext();
   const { on: onEvent } = useEventBus();
   const [showCommandsPopup, setShowCommandsPopup] = useState(false);
@@ -358,7 +408,6 @@ export default function ChatPanel({
     [messages]
   );
 
-  const { draft, setDraft, handleBlur } = useChatDraft(activeProjectId || undefined, selectedChatId || undefined, setChatDraft);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
@@ -428,8 +477,8 @@ export default function ChatPanel({
       e.preventDefault();
       const trimmed = draft.trim();
       if (!trimmed || isLoading) return;
-      await onSend(trimmed, activeModel);
       setDraft("");
+      await onSend(trimmed, activeModel);
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
@@ -604,7 +653,11 @@ export default function ChatPanel({
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={handleKeyDown}
-            onBlur={handleBlur}
+            onBlur={() => {
+              if (writeProjectId && writeChatId) {
+                chatStore.setChatDraft(writeProjectId, writeChatId, draft);
+              }
+            }}
             placeholder="Type a message..."
             rows={1}
           />

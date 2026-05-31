@@ -100,12 +100,6 @@ export function useProjectChats(projectId: string | undefined) {
     chatCache.delete(chatId);
   }, [projectId]);
 
-  const setChatDraft = useCallback(async (chatId: string, draft: string) => {
-    if (!projectId) return;
-    await chatStore.setChatDraft(projectId, chatId, draft);
-    setChats(chatStore.getChatMetas(projectId));
-  }, [projectId]);
-
   const setChatExecutionId = useCallback((chatId: string, executionId: string | null) => {
     setChatExecutionIds((prev) => {
       const next = new Map(prev);
@@ -134,7 +128,6 @@ export function useProjectChats(projectId: string | undefined) {
     renameChat,
     loadChatMessages,
     clearChatMessages,
-    setChatDraft,
     refreshChats: refreshChatsCb,
     loadMeta,
     setChatExecutionId,

@@ -34,7 +34,6 @@ interface ChatsContextValue {
   deleteChat: (chatId: string) => Promise<void>;
   renameChat: (chatId: string, name: string) => Promise<void>;
   loadChatMessages: (chatId: string) => Promise<ChatMessage[]>;
-  setChatDraft: (chatId: string, draft: string) => Promise<void>;
   refreshChats: () => Promise<ChatMeta[]>;
   sendMessage: (content: string, modelId: string) => Promise<void>;
   stopGeneration: () => void;
@@ -66,7 +65,6 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     deleteChat,
     renameChat,
     loadChatMessages,
-    setChatDraft,
     refreshChats,
     setChatExecutionId,
     chatExecutionIds,
@@ -289,7 +287,6 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       deleteChat: wrappedDeleteChat,
       renameChat: wrappedRenameChat,
       loadChatMessages,
-      setChatDraft,
       refreshChats,
       sendMessage: wrappedSendMessage,
       stopGeneration,
@@ -302,7 +299,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       selectedChatId,
       setSelectedChatId,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, setChatDraft, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;
