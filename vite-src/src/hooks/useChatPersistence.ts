@@ -338,41 +338,4 @@ export async function createNewVersionLog(
   }
 }
 
-export async function loadDisabledFlows(projectId: string): Promise<string[]> {
-  if (!isNeutralinoConnected()) return [];
 
-  const projectDir = await getProjectDataDir(projectId);
-  const projPath = `${projectDir}/${PROJ_FILE_NAME}`;
-
-  try {
-    const content = await filesystem.readFile(projPath);
-    const meta = JSON.parse(content) as ProjectMeta;
-    return meta.disabledFlows || [];
-  } catch {
-    return [];
-  }
-}
-
-export async function updateDisabledFlows(
-  projectId: string,
-  disabledFlows: string[]
-): Promise<void> {
-  if (!isNeutralinoConnected()) return;
-
-  const projectDir = await getProjectDataDir(projectId);
-  const projPath = `${projectDir}/${PROJ_FILE_NAME}`;
-
-  try {
-    let content: string;
-    try {
-      content = await filesystem.readFile(projPath);
-    } catch {
-      content = "{}";
-    }
-    const existingMeta: ProjectMeta = JSON.parse(content);
-    const next = { ...existingMeta, disabledFlows };
-    await filesystem.writeFile(projPath, JSON.stringify(next, null, 2));
-  } catch (err) {
-    console.error("updateDisabledFlows: failed to write proj.json", err);
-  }
-}

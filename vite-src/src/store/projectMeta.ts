@@ -19,6 +19,8 @@ interface ProjectMetaStore {
   update(projectId: string, updates: Partial<ProjectMeta>): Promise<void>;
   subscribe(projectId: string, listener: Listener): () => void;
   refresh(projectId: string): Promise<void>;
+  getDisabledFlows(projectId: string): string[];
+  setDisabledFlows(projectId: string, disabledFlows: string[]): Promise<void>;
 }
 
 const state = new Map<string, ProjectMetaState>();
@@ -109,6 +111,15 @@ const projectMetaStore: ProjectMetaStore = {
     const meta = await _loadProjectMeta(projectId);
     state.set(projectId, { meta, isLoaded: true });
     dispatch(projectId);
+  },
+
+  getDisabledFlows(projectId: string) {
+    const meta = state.get(projectId)?.meta;
+    return meta?.disabledFlows ?? [];
+  },
+
+  async setDisabledFlows(projectId: string, disabledFlows: string[]) {
+    await this.update(projectId, { disabledFlows });
   },
 };
 

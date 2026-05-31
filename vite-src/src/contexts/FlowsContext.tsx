@@ -8,9 +8,9 @@ import {
   ReactNode,
 } from "react";
 import { Flow } from "../types/chat";
-import { loadDisabledFlows, updateDisabledFlows } from "../hooks/useChatPersistence";
 import { useNav } from "./NavContext";
 import { flowStore } from "../store/flows";
+import { projectMetaStore } from "../store/projectMeta";
 
 interface FlowsContextValue {
   flows: Flow[];
@@ -37,12 +37,14 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const [conflictFiles, setConflictFiles] = useState<Record<string, string>>(() => flowStore.getConflictFiles());
 
   const loadFlows = useCallback(async () => {
-    if (!nav.projectId) return;
+    const projectId = nav.projectId;
+    if (!projectId) return;
 
     setIsLoading(true);
     try {
-      const disabled = await loadDisabledFlows(nav.projectId);
-      setDisabledFlows(disabled);
+      await projectMetaStore.load(projectId);
+      const meta = projectMetaStore.getProjectMeta(projectId);
+      setDisabledFlows(meta?.disabledFlows ?? []);
     } catch {
       setDisabledFlows([]);
     }
@@ -79,6 +81,16 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     };
   }, [loadFlows]);
 
+  useEffect(() => {
+    const projectId = nav.projectId;
+    if (!projectId) return;
+    const unsub = projectMetaStore.subscribe(projectId, () => {
+      const meta = projectMetaStore.getProjectMeta(projectId);
+      setDisabledFlows(meta?.disabledFlows ?? []);
+    });
+    return unsub;
+  }, [nav.projectId]);
+
   const refreshFlows = async () => {
     await loadFlows();
   };
@@ -88,8 +100,9 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       ? disabledFlows.filter((id) => id !== flowId)
       : [...disabledFlows, flowId];
     setDisabledFlows(next);
-    if (nav.projectId) {
-      await updateDisabledFlows(nav.projectId, next);
+    const projectId = nav.projectId;
+    if (projectId) {
+      await projectMetaStore.setDisabledFlows(projectId, next);
     }
   };
 
