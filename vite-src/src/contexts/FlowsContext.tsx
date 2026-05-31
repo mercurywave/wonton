@@ -4,11 +4,13 @@ import {
   useState,
   useEffect,
   useMemo,
+  useCallback,
   ReactNode,
 } from "react";
 import { Flow } from "../types/chat";
 import { loadDisabledFlows, updateDisabledFlows } from "../hooks/useChatPersistence";
 import { useNav } from "./NavContext";
+import { flowStore } from "../store/flows";
 
 interface FlowsContextValue {
   flows: Flow[];
@@ -27,14 +29,14 @@ const FlowsContext = createContext<FlowsContextValue | null>(null);
 
 export function FlowsProvider({ children }: { children: ReactNode }) {
   const { state: nav } = useNav();
-  const [flows, setFlows] = useState<Flow[]>([]);
+  const [flows, setFlows] = useState<Flow[]>(() => flowStore.getFlows());
   const [disabledFlows, setDisabledFlows] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [flowsPath, setFlowsPath] = useState("");
-  const [conflictIds, setConflictIds] = useState<string[]>([]);
-  const [conflictFiles, setConflictFiles] = useState<Record<string, string>>({});
+  const [flowsPath, setFlowsPath] = useState(() => flowStore.getFlowsPath());
+  const [conflictIds, setConflictIds] = useState<string[]>(() => flowStore.getConflictIds());
+  const [conflictFiles, setConflictFiles] = useState<Record<string, string>>(() => flowStore.getConflictFiles());
 
-  const loadFlows = async () => {
+  const loadFlows = useCallback(async () => {
     if (!nav.projectId) return;
 
     setIsLoading(true);
@@ -45,24 +47,37 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       setDisabledFlows([]);
     }
 
-    try {
-      const { loadFlowsFromDisk } = await import("../hooks/useFlows");
-      const result = await loadFlowsFromDisk();
-      setFlows(result.flows);
-      setFlowsPath(result.flowsPath);
-      setConflictIds(result.conflictIds);
-      setConflictFiles(result.conflictFiles);
-    } catch {
-      setFlows([]);
-      setConflictIds([]);
-      setConflictFiles({});
-    }
+    await flowStore.refresh();
+    setFlows(flowStore.getFlows());
+    setFlowsPath(flowStore.getFlowsPath());
+    setConflictIds(flowStore.getConflictIds());
+    setConflictFiles(flowStore.getConflictFiles());
     setIsLoading(false);
-  };
+  }, [nav.projectId]);
 
   useEffect(() => {
-    loadFlows();
-  }, [nav.projectId]);
+    let cancelled = false;
+
+    (async () => {
+      setIsLoading(true);
+      await flowStore.load();
+      if (!cancelled) {
+        await loadFlows();
+      }
+    })();
+
+    const unsubscribe = flowStore.subscribe(() => {
+      setFlows(flowStore.getFlows());
+      setFlowsPath(flowStore.getFlowsPath());
+      setConflictIds(flowStore.getConflictIds());
+      setConflictFiles(flowStore.getConflictFiles());
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [loadFlows]);
 
   const refreshFlows = async () => {
     await loadFlows();
