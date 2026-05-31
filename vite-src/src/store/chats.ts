@@ -126,7 +126,18 @@ async function deleteChat(projectId: string, chatId: string): Promise<void> {
     if (meta.subagents?.length) {
       for (const subagent of meta.subagents) {
         if (subagent.logId) {
-          await filesystem.remove(`${msgsDir}/${subagent.logId}.jsonl`);
+          try{
+            await filesystem.remove(`${msgsDir}/${subagent.logId}.jsonl`);
+          } catch { }
+        }
+      }
+    }
+    if (meta.versionHistory?.length) {
+      for (const entry of meta.versionHistory) {
+        if (entry.logId) {
+          try {
+            await filesystem.remove(`${msgsDir}/${entry.logId}.jsonl`);
+          } catch { }
         }
       }
     }
