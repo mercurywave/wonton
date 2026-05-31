@@ -504,21 +504,25 @@ export function useChatApi(
   const abortRef = useRef<AbortController | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
   messagesRef.current = messages;
+  const loadRequestIdRef = useRef(0);
 
   useEffect(() => {
     if (projectId && chatId) {
-      const loadAndSet = (targetLogId: string) => {
+      const loadAndSet = (targetLogId: string, requestId: number) => {
         chatLogsStore.load(projectId, targetLogId).then(() => {
+          if (requestId !== loadRequestIdRef.current) return;
           const msgs = chatLogsStore.getLog(projectId, targetLogId) || [];
           setMessages(msgs);
         });
       };
+      const requestId = ++loadRequestIdRef.current;
       if (logId) {
-        loadAndSet(logId);
+        loadAndSet(logId, requestId);
       } else {
         chatStore.load(projectId).then(() => {
+          if (requestId !== loadRequestIdRef.current) return;
           const resolvedLogId = chatStore.getLogId(projectId, chatId);
-          loadAndSet(resolvedLogId);
+          loadAndSet(resolvedLogId, requestId);
         });
       }
     } else {
