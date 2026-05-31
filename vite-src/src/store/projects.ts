@@ -8,11 +8,35 @@ import {
 } from "../utils/neuUtils";
 import {
   ensureChatFolder as ensureChatFolderNative,
-  deleteProjectFolder as deleteProjectFolderNative,
-  updateProjectMeta,
-  loadProjectMeta,
 } from "../hooks/useChatPersistence";
+import { CHATS_DIR_NAME, MSGS_DIR_NAME } from "../utils/neuUtils";
+import { projectMetaStore } from "./projectMeta";
 import { filesystem } from "@neutralinojs/lib";
+
+async function deleteProjectFolder(projectId: string): Promise<void> {
+  if (!isNeutralinoConnected()) return;
+
+  const projectDir = await getProjectDataDir(projectId);
+
+  try {
+    const projPath = `${projectDir}/${"proj.json"}`;
+    await filesystem.remove(projPath);
+    const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
+    const entries = await filesystem.readDirectory(chatsDir);
+    for (const entry of entries) {
+      await filesystem.remove(`${chatsDir}/${entry.entry}`);
+    }
+    await filesystem.remove(chatsDir);
+    const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
+    const msgEntries = await filesystem.readDirectory(msgsDir);
+    for (const entry of msgEntries) {
+      await filesystem.remove(`${msgsDir}/${entry.entry}`);
+    }
+    await filesystem.remove(msgsDir);
+  } catch (err) {
+    console.error("projectStore: failed to delete project folder", err);
+  }
+}
 
 function createDefaultProject(): Project {
   return {
@@ -113,8 +137,9 @@ const projectStore: ProjectStoreInternal = {
 
     // Ensure the default project's folder structure exists before loading
     try {
-      const projMeta = await loadProjectMeta(DEFAULT_PROJECT_ID);
-      if (!projMeta.createdAt) {
+      await projectMetaStore.load(DEFAULT_PROJECT_ID);
+      const projMeta = projectMetaStore.getProjectMeta(DEFAULT_PROJECT_ID);
+      if (!projMeta?.createdAt) {
         await ensureChatFolderNative(DEFAULT_PROJECT_ID);
       }
     } catch (err) {
@@ -175,9 +200,9 @@ const projectStore: ProjectStoreInternal = {
     if (idx === -1) return;
     state.projects[idx] = { ...state.projects[idx], ...updates, updatedAt: Date.now() };
     await this._save();
-    if (isNeutralinoConnected() && updates.name !== undefined) {
+    if (updates.name !== undefined) {
       try {
-        await updateProjectMeta(id, { systemPrompt: updates.name });
+        await projectMetaStore.update(id, { systemPrompt: updates.name });
       } catch (err) {
         console.error("projectStore: failed to update project meta", err);
       }
@@ -191,7 +216,7 @@ const projectStore: ProjectStoreInternal = {
     await this._save();
     if (isNeutralinoConnected()) {
       try {
-        await deleteProjectFolderNative(id);
+        await deleteProjectFolder(id);
       } catch (err) {
         console.error("projectStore: failed to delete project folder", err);
       }

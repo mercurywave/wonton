@@ -7,8 +7,8 @@ import {
   updateChatMeta as updateChatMetaNative,
   loadMessages as loadMessagesNative,
   clearChat as clearChatNative,
-  loadProjectMeta as loadProjectMetaNative,
 } from "./useChatPersistence";
+import { projectMetaStore } from "../store/projectMeta";
 
 const chatCache = new Map<string, ChatMessage[]>();
 
@@ -20,12 +20,16 @@ export function useProjectChats(projectId: string | undefined) {
   const loadMetaCountRef = useRef(0);
   const loadChatsCountRef = useRef(0);
 
+  const refreshMeta = useCallback(() => {
+    setProjectMeta(projectMetaStore.getProjectMeta(projectId!));
+  }, [projectId]);
+
   const loadMeta = useCallback(async () => {
     if (!projectId) return;
     const currentLoad = ++loadMetaCountRef.current;
-    const meta = await loadProjectMetaNative(projectId);
+    await projectMetaStore.load(projectId);
     if (currentLoad !== loadMetaCountRef.current) return;
-    setProjectMeta(meta);
+    setProjectMeta(projectMetaStore.getProjectMeta(projectId));
   }, [projectId]);
 
   const loadChats = useCallback(async () => {
@@ -45,8 +49,10 @@ export function useProjectChats(projectId: string | undefined) {
     if (projectId) {
       loadMeta();
       loadChats();
+      const unsubscribe = projectMetaStore.subscribe(projectId, refreshMeta);
+      return unsubscribe;
     }
-  }, [projectId, loadMeta, loadChats]);
+  }, [projectId, loadMeta, loadChats, refreshMeta]);
 
   const createChat = useCallback(async (workflowId?: string, workflowStateKey?: string): Promise<ChatMeta> => {
     if (!projectId) throw new Error("No project ID");
@@ -135,7 +141,6 @@ export function useProjectChats(projectId: string | undefined) {
     clearChatMessages,
     setChatDraft,
     refreshChats,
-    setProjectMeta,
     loadMeta,
     setChatExecutionId,
     updateChatMeta,

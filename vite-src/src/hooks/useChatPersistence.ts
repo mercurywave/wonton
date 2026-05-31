@@ -420,69 +420,6 @@ export async function clearChat(projectId: string, chatId: string): Promise<void
   }
 }
 
-export async function deleteProjectFolder(projectId: string): Promise<void> {
-  if (!isNeutralinoConnected()) return;
-
-  const projectDir = await getProjectDataDir(projectId);
-
-  try {
-    const projPath = `${projectDir}/${PROJ_FILE_NAME}`;
-    await filesystem.remove(projPath);
-    const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
-    const entries = await filesystem.readDirectory(chatsDir);
-    for (const entry of entries) {
-      await filesystem.remove(`${chatsDir}/${entry.entry}`);
-    }
-    await filesystem.remove(chatsDir);
-    const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
-    const msgEntries = await filesystem.readDirectory(msgsDir);
-    for (const entry of msgEntries) {
-      await filesystem.remove(`${msgsDir}/${entry.entry}`);
-    }
-    await filesystem.remove(msgsDir);
-  } catch (err) {
-    console.error("deleteProjectFolder: failed to remove project folder", err);
-  }
-}
-
-export async function updateProjectMeta(
-  projectId: string,
-  updates: Partial<ProjectMeta>
-): Promise<void> {
-  if (!isNeutralinoConnected()) return;
-
-  const projectDir = await getProjectDataDir(projectId);
-  const projPath = `${projectDir}/${PROJ_FILE_NAME}`;
-
-  try {
-    let content: string;
-    try {
-      content = await filesystem.readFile(projPath);
-    } catch {
-      content = "{}";
-    }
-    const existingMeta: ProjectMeta = JSON.parse(content);
-    const next = { ...existingMeta, ...updates };
-    await filesystem.writeFile(projPath, JSON.stringify(next, null, 2));
-  } catch (err) {
-    console.error("updateProjectMeta: failed to write proj.json", err);
-  }
-}
-
-export async function loadProjectMeta(projectId: string): Promise<ProjectMeta> {
-  if (!isNeutralinoConnected()) return { createdAt: Date.now(), };
-
-  const projectDir = await getProjectDataDir(projectId);
-  const projPath = `${projectDir}/${PROJ_FILE_NAME}`;
-
-  try {
-    const content = await filesystem.readFile(projPath);
-    return JSON.parse(content) as ProjectMeta;
-  } catch {
-    return { createdAt: Date.now(), };
-  }
-}
-
 export async function createSubagentLog(
   projectId: string,
   _chatId: string,
