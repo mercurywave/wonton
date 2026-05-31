@@ -1,4 +1,5 @@
-import { ChatMeta, TempFileReservation } from "../types/chat";
+import { ChatMeta, SubagentMeta, TempFileReservation } from "../types/chat";
+import { chatLogsStore } from "./chatLogs";
 import {
   CHATS_DIR_NAME,
   MSGS_DIR_NAME,
@@ -137,7 +138,7 @@ async function deleteChat(projectId: string, chatId: string): Promise<void> {
 async function updateChatMeta(
   projectId: string,
   chatId: string,
-  updates: Partial<Pick<ChatMeta, "name" | "updatedAt" | "activeModel" | "activeAgentId" | "workflowId" | "workflowStateKey" | "workflowData" | "draft" | "projectId">>
+  updates: Partial<ChatMeta>
 ): Promise<void> {
   if (!isNeutralinoConnected()) return;
 
@@ -184,6 +185,8 @@ interface ChatsStore {
   refresh(projectId: string): Promise<ChatMeta[]>;
   subscribe(projectId: string, listener: Listener): () => void;
   getReservedTempFiles(projectId: string, chatId: string): Promise<TempFileReservation[] | undefined>;
+  saveSubagentMeta(projectId: string, chatId: string, subagentMeta: SubagentMeta): Promise<void>;
+  createNewVersionLog(projectId: string, chatId: string): Promise<string>;
 }
 
 const state = new Map<string, ChatsState>();
@@ -242,31 +245,11 @@ const chatStore: ChatsStore = {
   },
 
   async renameChat(projectId, chatId, name) {
-    const now = Date.now();
-    await updateChatMeta(projectId, chatId, { name, updatedAt: now });
-
-    const current = state.get(projectId);
-    if (current) {
-      const metas = current.metas.map((c) =>
-        c.id === chatId ? { ...c, name, updatedAt: now } : c
-      );
-      state.set(projectId, { metas, isLoaded: true });
-      dispatch(projectId);
-    }
+    await this.updateChatMeta(projectId, chatId, { name });
   },
 
   async setChatDraft(projectId, chatId, draft) {
-    const now = Date.now();
-    await updateChatMeta(projectId, chatId, { draft, updatedAt: now });
-
-    const current = state.get(projectId);
-    if (current) {
-      const metas = current.metas.map((c) =>
-        c.id === chatId ? { ...c, draft, updatedAt: now } : c
-      );
-      state.set(projectId, { metas, isLoaded: true });
-      dispatch(projectId);
-    }
+    await this.updateChatMeta(projectId, chatId, { draft });
   },
 
   async updateChatMeta(projectId, chatId, updates) {
@@ -305,6 +288,40 @@ const chatStore: ChatsStore = {
     const metas = state.get(projectId)?.metas ?? [];
     const meta = metas.find((m) => m.id === chatId);
     return meta?.reservedTempFiles;
+  },
+
+  async saveSubagentMeta(projectId, chatId, subagentMeta) {
+    const current = state.get(projectId);
+    if (!current) return;
+
+    const chat = current.metas.find((m) => m.id === chatId);
+    if (!chat) return;
+
+    const subagents = [...(chat.subagents || []).filter(s => s.id !== subagentMeta.id), subagentMeta];
+
+    await this.updateChatMeta(projectId, chatId, { subagents });
+  },
+
+  async createNewVersionLog(projectId, chatId) {
+    const current = state.get(projectId);
+    if (!current) return generateGuid();
+
+    const chat = current.metas.find((m) => m.id === chatId);
+    if (!chat) return generateGuid();
+
+    const versionHistory = [
+      ...(chat.versionHistory || []),
+      { logId: chat.logId, createdAt: chat.versionCreatedAt || chat.createdAt, updatedAt: chat.updatedAt },
+    ];
+    const newLogId = await chatLogsStore.createLog(projectId);
+
+    await this.updateChatMeta(projectId, chatId, {
+      logId: newLogId,
+      versionHistory,
+      versionCreatedAt: undefined,
+    });
+
+    return newLogId;
   },
 };
 

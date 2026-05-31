@@ -1,4 +1,4 @@
-import { ChatMeta, ProjectMeta, SubagentMeta } from "../types/chat";
+import { ChatMeta, ProjectMeta } from "../types/chat";
 import { ChatMessage } from "../types/chat";
 import {
   PROJ_FILE_NAME,
@@ -7,8 +7,7 @@ import {
   DOCS_DIR_NAME,
   TMP_DIR_NAME,
   isNeutralinoConnected,
-  getProjectDataDir,
-  generateGuid,
+  getProjectDataDir
 } from "../utils/neuUtils";
 import { filesystem } from "@neutralinojs/lib";
 import { chatLogsStore } from "../store/chatLogs";
@@ -130,105 +129,6 @@ export async function appendMessage(
     await filesystem.writeFile(`${chatsDir}/${chatId}.json`, JSON.stringify(meta, null, 2));
   } catch (err) {
     console.error("appendMessage: failed to update chat meta", err);
-  }
-}
-
-export async function createSubagentLog(
-  projectId: string,
-  _chatId: string,
-  _agentId: string,
-  _query: string
-): Promise<{ subagentId: string; logId: string }> {
-  if (!isNeutralinoConnected()) {
-    const subagentId = generateGuid();
-    const logId = generateGuid();
-    return { subagentId, logId };
-  }
-
-  const projectDir = await getProjectDataDir(projectId);
-  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
-
-  const subagentId = generateGuid();
-  const logId = generateGuid();
-
-  try {
-    await filesystem.writeFile(`${msgsDir}/${logId}.jsonl`, "");
-  } catch (err) {
-    console.error("createSubagentLog: failed to create subagent jsonl", err);
-  }
-
-  return { subagentId, logId };
-}
-
-export async function saveSubagentMeta(
-  projectId: string,
-  chatId: string,
-  subagentMeta: SubagentMeta
-): Promise<void> {
-  if (!isNeutralinoConnected()) return;
-
-  const projectDir = await getProjectDataDir(projectId);
-  const metaPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.json`;
-
-  try {
-    const content = await filesystem.readFile(metaPath);
-    const meta = JSON.parse(content) as ChatMeta;
-    const subagents = meta.subagents || [];
-    const idx = subagents.findIndex(s => s.id === subagentMeta.id);
-    if (idx !== -1) {
-      subagents[idx] = subagentMeta;
-    }
-    else {
-      subagents.push(subagentMeta);
-    }
-    await filesystem.writeFile(metaPath, JSON.stringify({ ...meta, subagents }, null, 2));
-  } catch (err) {
-    console.error("saveSubagentMeta: failed to save subagent meta", err);
-  }
-}
-
-export async function createNewVersionLog(
-  projectId: string,
-  chatId: string
-): Promise<string> {
-  if (!isNeutralinoConnected()) {
-    const newLogId = generateGuid();
-    return newLogId;
-  }
-
-  const projectDir = await getProjectDataDir(projectId);
-  const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
-
-  const metaPath = `${chatsDir}/${chatId}.json`;
-
-  try {
-    const content = await filesystem.readFile(metaPath);
-    const meta = JSON.parse(content) as ChatMeta;
-    const now = Date.now();
-
-    // Archive current version
-    const versionHistory = meta.versionHistory || [];
-    versionHistory.push({
-      logId: meta.logId,
-      createdAt: meta.versionCreatedAt || meta.createdAt,
-      updatedAt: meta.updatedAt,
-    });
-    meta.versionHistory = versionHistory;
-
-    // Generate new log via store
-    const newLogId = await chatLogsStore.createLog(projectId);
-
-    // Update meta
-    meta.logId = newLogId;
-    meta.versionCreatedAt = undefined;
-    meta.updatedAt = now;
-
-    await filesystem.writeFile(metaPath, JSON.stringify(meta, null, 2));
-
-    return newLogId;
-  } catch (err) {
-    console.error("createNewVersionLog: failed to create new version", err);
-    throw err;
   }
 }
 

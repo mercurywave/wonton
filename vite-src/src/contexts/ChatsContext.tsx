@@ -18,7 +18,8 @@ import { useNav } from "./NavContext";
 import { useAgentsContext } from "./AgentsContext";
 import { useFlowsContext } from "./FlowsContext";
 import { isNeutralinoConnected } from "../utils/neuUtils";
-import { appendMessage, createNewVersionLog } from "../hooks/useChatPersistence";
+import { appendMessage } from "../hooks/useChatPersistence";
+import { chatStore } from "../store/chats";
 import { getAvailableTools } from "../tools";
 import { ChatMessage, ChatMeta, ChatHistoryEntry, FlowActionButton, ToolDefinition } from "../types/chat";
 import { chatLogsStore } from "../store/chatLogs";
@@ -173,7 +174,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   const onCreateNewVersion = useCallback(async (): Promise<string> => {
     if (!selectedChatId || !activeProjectId) return "";
-    const newLogId = await createNewVersionLog(activeProjectId, selectedChatId);
+    const newLogId = await chatStore.createNewVersionLog(activeProjectId, selectedChatId);
     // Refresh chat list to pick up updated meta
     await refreshChats();
     return newLogId;

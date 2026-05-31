@@ -1,7 +1,7 @@
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult, ChatMessage } from "../types/chat";
 import { runToolCallLoop } from "../hooks/useChatApi";
-import { saveSubagentMeta } from "../hooks/useChatPersistence";
+import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
 import { getAgentByName } from "../utils/agents";
 import { getAllAgents, loadAgentsFile } from "../hooks/useAgents";
@@ -104,7 +104,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
       logId: subagentLogId,
     };
 
-    await saveSubagentMeta(projectId, chatId, subagentMeta);
+    await chatStore.saveSubagentMeta(projectId, chatId, subagentMeta);
     onChatUpdated?.();
 
     // Build the user message for the subagent
@@ -140,7 +140,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
     // Update subagent meta to completed
     subagentMeta.status = "completed";
     subagentMeta.updatedAt = Date.now();
-    await saveSubagentMeta(projectId, chatId, subagentMeta);
+    await chatStore.saveSubagentMeta(projectId, chatId, subagentMeta);
     onChatUpdated?.();
 
     // Format the result
