@@ -158,7 +158,6 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     flows,
     chatId: selectedChatId || undefined,
     projectId: activeProjectId || undefined,
-    folderPath: activeProject?.folderPath,
   });
 
   const wrappedSendMessage = useCallback(
@@ -220,9 +219,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       const flow = flows.find((f) => f.id === flowId);
       if (!flow?.command) return;
       if (!selectedChatId || !activeProjectId) return;
-      await runExecuteCommand(flow.command, flowId, selectedChatId, activeProjectId, activeProject?.folderPath, emitEvent);
+      await runExecuteCommand(flow.command, flowId, selectedChatId, activeProjectId, emitEvent);
     },
-    [flows, selectedChatId, activeProjectId, activeProject?.folderPath, emitEvent]
+    [flows, selectedChatId, activeProjectId, emitEvent]
   );
 
   const getIsProcessing = useCallback((chatId: string) => {
