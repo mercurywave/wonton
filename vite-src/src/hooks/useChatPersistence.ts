@@ -11,6 +11,7 @@ import {
   generateGuid,
 } from "../utils/neuUtils";
 import { filesystem } from "@neutralinojs/lib";
+import { chatLogsStore } from "../store/chatLogs";
 
 export async function getProjectDataDirPath(projectId: string): Promise<string> {
   return getProjectDataDir(projectId);
@@ -105,77 +106,18 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   }
 }
 
-export async function loadMessages(projectId: string, chatId: string, chatExecutionIds?: Map<string, string>): Promise<ChatMessage[]> {
-  if (!isNeutralinoConnected()) return [];
+export async function resolveLogId(projectId: string, chatId: string): Promise<string> {
+  if (!isNeutralinoConnected()) return chatId;
 
   const projectDir = await getProjectDataDir(projectId);
   const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
-  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
 
   try {
     const metaContent = await filesystem.readFile(`${chatsDir}/${chatId}.json`);
     const meta = JSON.parse(metaContent) as ChatMeta;
-    const logId = meta.logId || chatId;
-    const jsonlPath = `${msgsDir}/${logId}.jsonl`;
-
-    const content = await filesystem.readFile(jsonlPath);
-    if (!content.trim()) return [];
-
-    const lines = content.trim().split("\n");
-    const messages: ChatMessage[] = [];
-    const seenIds = new Set<string>();
-    for (const line of lines) {
-      try {
-        const msg = JSON.parse(line) as ChatMessage;
-        if (seenIds.has(msg.id)) continue;
-        seenIds.add(msg.id);
-        messages.push(msg);
-      } catch {
-        // ignore malformed lines
-      }
-    }
-    if(chatExecutionIds?.has(chatId)) {
-      messages.push({
-        id: chatExecutionIds.get(chatId)!,
-        role: "assistant",
-        content: "",
-        timestamp: Date.now(),
-        toolCalls: [],
-      })
-    }
-    return messages;
+    return meta.logId || chatId;
   } catch {
-    return [];
-  }
-}
-
-export async function loadMessagesByLogId(projectId: string, logId: string): Promise<ChatMessage[]> {
-  if (!isNeutralinoConnected()) return [];
-
-  const projectDir = await getProjectDataDir(projectId);
-  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
-
-  try {
-    const jsonlPath = `${msgsDir}/${logId}.jsonl`;
-    const content = await filesystem.readFile(jsonlPath);
-    if (!content.trim()) return [];
-
-    const lines = content.trim().split("\n");
-    const messages: ChatMessage[] = [];
-    const seenIds = new Set<string>();
-    for (const line of lines) {
-      try {
-        const msg = JSON.parse(line) as ChatMessage;
-        if (seenIds.has(msg.id)) continue;
-        seenIds.add(msg.id);
-        messages.push(msg);
-      } catch {
-        // ignore malformed lines
-      }
-    }
-    return messages;
-  } catch {
-    return [];
+    return chatId;
   }
 }
 
@@ -185,19 +127,16 @@ export async function appendMessage(
   message: ChatMessage,
   chatId?: string,
 ): Promise<void> {
-  if (!isNeutralinoConnected()) return;
-
-  const projectDir = await getProjectDataDir(projectId);
-  const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
-  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
-
-  const jsonlPath = `${msgsDir}/${logId}.jsonl`;
-  const line = JSON.stringify(message) + "\n";
-  await filesystem.appendFile(jsonlPath, line);
+  await chatLogsStore.appendMessage(projectId, logId, message);
 
   if (!chatId) {
     return;
   }
+
+  if (!isNeutralinoConnected()) return;
+
+  const projectDir = await getProjectDataDir(projectId);
+  const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
 
   try {
     const metaContent = await filesystem.readFile(`${chatsDir}/${chatId}.json`);
@@ -302,7 +241,6 @@ export async function createNewVersionLog(
 
   const projectDir = await getProjectDataDir(projectId);
   const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
-  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
 
   const metaPath = `${chatsDir}/${chatId}.json`;
 
@@ -320,9 +258,8 @@ export async function createNewVersionLog(
     });
     meta.versionHistory = versionHistory;
 
-    // Generate new log
-    const newLogId = generateGuid();
-    await filesystem.writeFile(`${msgsDir}/${newLogId}.jsonl`, "");
+    // Generate new log via store
+    const newLogId = await chatLogsStore.createLog(projectId);
 
     // Update meta
     meta.logId = newLogId;

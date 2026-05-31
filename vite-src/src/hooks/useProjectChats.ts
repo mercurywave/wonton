@@ -1,13 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatMeta, ChatMessage, ProjectMeta } from "../types/chat";
 import {
-  loadMessages as loadMessagesNative,
   clearChat as clearChatNative,
+  resolveLogId,
 } from "./useChatPersistence";
 import { projectMetaStore } from "../store/projectMeta";
 import { chatStore } from "../store/chats";
-
-const chatCache = new Map<string, ChatMessage[]>();
+import { chatLogsStore } from "../store/chatLogs";
 
 export function useProjectChats(projectId: string | undefined) {
   const [chats, setChats] = useState<ChatMeta[]>([]);
@@ -75,7 +74,6 @@ export function useProjectChats(projectId: string | undefined) {
     if (!projectId) return;
     await chatStore.deleteChat(projectId, chatId);
     setChats(chatStore.getChatMetas(projectId));
-    chatCache.delete(chatId);
   }, [projectId]);
 
   const renameChat = useCallback(async (chatId: string, name: string) => {
@@ -86,18 +84,16 @@ export function useProjectChats(projectId: string | undefined) {
 
   const loadChatMessages = useCallback(async (chatId: string): Promise<ChatMessage[]> => {
     if (!projectId) return [];
-    if (chatCache.has(chatId)) {
-      return chatCache.get(chatId)!;
-    }
-    const msgs = await loadMessagesNative(projectId, chatId);
-    chatCache.set(chatId, msgs);
-    return msgs;
+    const logId = await resolveLogId(projectId, chatId);
+    await chatLogsStore.load(projectId, logId);
+    return chatLogsStore.getLog(projectId, logId) || [];
   }, [projectId]);
 
   const clearChatMessages = useCallback(async (chatId: string) => {
     if (!projectId) return;
+    const logId = await resolveLogId(projectId, chatId);
     await clearChatNative(projectId, chatId);
-    chatCache.delete(chatId);
+    chatLogsStore.clearLog(projectId, logId);
   }, [projectId]);
 
   const setChatExecutionId = useCallback((chatId: string, executionId: string | null) => {

@@ -1,8 +1,9 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ChatMessage, LLMStats, ProjectMeta, ToolCall, ToolDefinition } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
-import { appendMessage, loadMessages, loadMessagesByLogId } from "./useChatPersistence";
+import { resolveLogId } from "./useChatPersistence";
 import { chatStore } from "../store/chats";
+import { chatLogsStore } from "../store/chatLogs";
 import { executeToolCall } from "../tools";
 import { getAvailableTools } from "../tools";
 
@@ -294,7 +295,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
   // First message is the user message, persist it
   const userMessage = initialMessages[initialMessages.length - 1];
   if (round === 0 && projectId && logId && userMessage) {
-    await appendMessage(projectId, logId, userMessage, chatId);
+    await chatLogsStore.appendMessage(projectId, logId, userMessage);
     persistedMessageIds.add(userMessage.id);
   }
 
@@ -444,10 +445,10 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
 
       // Persist assistant message and its tool results in order
       if (projectId && logId) {
-        await appendMessage(projectId, logId, assistantMessage, chatId);
+        await chatLogsStore.appendMessage(projectId, logId, assistantMessage);
         persistedMessageIds.add(assistantMessage.id);
         for (const tr of toolResults) {
-          await appendMessage(projectId, logId, tr, chatId);
+          await chatLogsStore.appendMessage(projectId, logId, tr);
           persistedMessageIds.add(tr.id);
         }
       }
@@ -470,7 +471,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
   if (projectId && logId) {
     for (const msg of allAssistantMessages) {
       if (persistedMessageIds.has(msg.id)) continue;
-      await appendMessage(projectId, logId, msg, chatId);
+      await chatLogsStore.appendMessage(projectId, logId, msg);
     }
   }
 
@@ -508,10 +509,31 @@ export function useChatApi(
 
   useEffect(() => {
     if (projectId && chatId) {
+      const loadAndSet = (targetLogId: string) => {
+        chatLogsStore.load(projectId, targetLogId).then(() => {
+          const msgs = chatLogsStore.getLog(projectId, targetLogId) || [];
+          if (chatExecutionIds?.has(chatId)) {
+            const executionId = chatExecutionIds.get(chatId)!;
+            const hasExecutionMsg = msgs.some((m) => m.id === executionId);
+            if (!hasExecutionMsg) {
+              msgs.push({
+                id: executionId,
+                role: "assistant",
+                content: "",
+                timestamp: Date.now(),
+                toolCalls: [],
+              });
+            }
+          }
+          setMessages(msgs);
+        });
+      };
       if (logId) {
-        loadMessagesByLogId(projectId, logId).then(setMessages);
+        loadAndSet(logId);
       } else {
-        loadMessages(projectId, chatId, chatExecutionIds).then(setMessages);
+        resolveLogId(projectId, chatId).then((resolvedLogId) => {
+          loadAndSet(resolvedLogId);
+        });
       }
     } else {
       setMessages([]);

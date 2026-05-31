@@ -1,7 +1,8 @@
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult, ChatMessage } from "../types/chat";
 import { runToolCallLoop } from "../hooks/useChatApi";
-import { createSubagentLog, saveSubagentMeta } from "../hooks/useChatPersistence";
+import { saveSubagentMeta } from "../hooks/useChatPersistence";
+import { chatLogsStore } from "../store/chatLogs";
 import { getAgentByName } from "../utils/agents";
 import { getAllAgents, loadAgentsFile } from "../hooks/useAgents";
 import { SubagentMeta } from "../types/chat";
@@ -88,7 +89,8 @@ export class ExecuteSubagentHandler implements ToolHandler {
     
     // Create subagent log
     const agentId = agent.id;
-    const { subagentId, logId: subagentLogId } = await createSubagentLog(projectId, chatId, agentId, query);
+    const subagentId = crypto.randomUUID();
+    const subagentLogId = await chatLogsStore.createLog(projectId);
 
     // Create subagent meta
     const subagentMeta: SubagentMeta = {
