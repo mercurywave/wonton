@@ -18,10 +18,8 @@ import { useNav } from "./NavContext";
 import { useAgentsContext } from "./AgentsContext";
 import { useFlowsContext } from "./FlowsContext";
 import { isNeutralinoConnected } from "../utils/neuUtils";
-import { appendMessage } from "../hooks/useChatPersistence";
-import { chatStore } from "../store/chats";
 import { getAvailableTools } from "../tools";
-import { ChatMessage, ChatMeta, ChatHistoryEntry, FlowActionButton, ToolDefinition } from "../types/chat";
+import { ChatMessage, ChatMeta, FlowActionButton, ToolDefinition } from "../types/chat";
 import { chatLogsStore } from "../store/chatLogs";
 
 interface ChatsContextValue {
@@ -125,7 +123,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     await refreshChats();
   }, [refreshChats]);
 
-  const { messages, isLoading, sendMessage, stopGeneration, setMessages } = useChatApi(
+  const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     settings,
     selectedChatId || undefined,
     isNeutralinoConnected() ? (activeProjectId ?? undefined) : undefined,
@@ -148,38 +146,6 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     return chats.find((c) => c.id === selectedChatId);
   }, [chats, selectedChatId]);
 
-  const workflowUpdateMeta = useCallback(
-    async (updates: Partial<ChatMeta>) => {
-      if (!selectedChatId) return;
-      await projectChatsUpdateChatMeta(selectedChatId, updates);
-    },
-    [selectedChatId, projectChatsUpdateChatMeta]
-  );
-
-  const onPushMessage = useCallback(
-    async (entry: ChatHistoryEntry) => {
-      const chatMessage: ChatMessage = {
-        id: crypto.randomUUID(),
-        role: entry.role,
-        content: entry.content,
-        timestamp: Date.now(),
-      };
-      setMessages((prev) => [...prev, chatMessage]);
-      if (activeLogId && activeProjectId && selectedChatId) {
-        await appendMessage(activeProjectId, activeLogId, chatMessage, selectedChatId);
-      }
-    },
-    [activeLogId, activeProjectId, selectedChatId, setMessages]
-  );
-
-  const onCreateNewVersion = useCallback(async (): Promise<string> => {
-    if (!selectedChatId || !activeProjectId) return "";
-    const newLogId = await chatStore.createNewVersionLog(activeProjectId, selectedChatId);
-    // Refresh chat list to pick up updated meta
-    await refreshChats();
-    return newLogId;
-  }, [selectedChatId, activeProjectId, refreshChats]);
-
   const {
     executeAdjustPrompt: workflowExecuteAdjustPrompt,
     onSendPrompt: workflowExecuteOnSendPrompt,
@@ -189,16 +155,10 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   } = useChatWorkflow({
     workflowId: selectedChatForWorkflow?.workflowId,
     workflowStateKey: selectedChatForWorkflow?.workflowStateKey,
-    workflowData: selectedChatForWorkflow?.workflowData ?? {},
     flows,
     chatId: selectedChatId || undefined,
     projectId: activeProjectId || undefined,
     folderPath: activeProject?.folderPath,
-    updateChatMeta: workflowUpdateMeta,
-    messages,
-    logId: activeLogId,
-    onPushMessage,
-    onCreateNewVersion: onCreateNewVersion,
   });
 
   const wrappedSendMessage = useCallback(
@@ -260,9 +220,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       const flow = flows.find((f) => f.id === flowId);
       if (!flow?.command) return;
       if (!selectedChatId || !activeProjectId) return;
-      await runExecuteCommand(flow.command, flowId, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent, messages, onPushMessage, onCreateNewVersion);
+      await runExecuteCommand(flow.command, flowId, selectedChatId, activeProjectId, activeProject?.folderPath, emitEvent);
     },
-    [flows, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent, messages, onPushMessage, onCreateNewVersion]
+    [flows, selectedChatId, activeProjectId, activeProject?.folderPath, emitEvent]
   );
 
   const getIsProcessing = useCallback((chatId: string) => {

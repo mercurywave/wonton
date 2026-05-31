@@ -136,6 +136,7 @@ export interface WorkflowStateContext {
   stateKey: string;
   workflowData: Record<string, unknown>;
   modelId?: string;
+  folderPath?: string;
 }
 
 export interface ChatHistoryEntry {
