@@ -150,8 +150,8 @@ async function updateChatMeta(
   projectId: string,
   chatId: string,
   updates: Partial<ChatMeta>
-): Promise<void> {
-  if (!isNeutralinoConnected()) return;
+): Promise<ChatMeta | null> {
+  if (!isNeutralinoConnected()) return null;
 
   const projectDir = await getProjectDataDir(projectId);
   const metaPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.json`;
@@ -161,9 +161,11 @@ async function updateChatMeta(
     const meta = JSON.parse(content) as ChatMeta;
     const next = { ...meta, ...updates };
     await filesystem.writeFile(metaPath, JSON.stringify(next, null, 2));
+    return next;
   } catch (err) {
     console.error("updateChatMeta: failed to update chat meta", err);
   }
+  return null;
 }
 
 // --- store ---
@@ -265,12 +267,12 @@ const chatStore: ChatsStore = {
 
   async updateChatMeta(projectId, chatId, updates) {
     const now = Date.now();
-    await updateChatMeta(projectId, chatId, updates);
+    const replacement = await updateChatMeta(projectId, chatId, {...updates, updatedAt: now });
 
     const current = state.get(projectId);
-    if (current) {
+    if (current && replacement) {
       const metas = current.metas.map((c) =>
-        c.id === chatId ? { ...c, ...updates, updatedAt: now } : c
+        c.id === chatId ? replacement : c
       );
       state.set(projectId, { metas, isLoaded: true });
       dispatch(projectId);

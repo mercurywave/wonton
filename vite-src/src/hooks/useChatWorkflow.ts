@@ -69,8 +69,6 @@ export function buildWon(
     async advance(nextStateKey: string) {
       await chatStore.updateChatMeta(projectId, chatId, {
         workflowStateKey: nextStateKey,
-        workflowData: ctx.workflowData,
-        updatedAt: Date.now(),
       });
     },
     async setWorkflowData(partial) {
@@ -78,7 +76,6 @@ export function buildWon(
       const merged = { ...(meta?.workflowData ?? {}), ...partial };
       await chatStore.updateChatMeta(projectId, chatId, {
         workflowData: merged,
-        updatedAt: Date.now(),
       });
     },
     get(key) {
@@ -89,7 +86,6 @@ export function buildWon(
       const merged = { ...(meta?.workflowData ?? {}), [key]: value };
       await chatStore.updateChatMeta(projectId, chatId, {
         workflowData: merged,
-        updatedAt: Date.now(),
       });
     },
     reserveTempFile,
