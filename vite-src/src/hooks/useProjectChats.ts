@@ -12,7 +12,6 @@ export function useProjectChats(projectId: string | undefined) {
   const [chats, setChats] = useState<ChatMeta[]>([]);
   const [projectMeta, setProjectMeta] = useState<ProjectMeta | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [chatExecutionIds, setChatExecutionIds] = useState<Map<string, string>>(new Map());
   const loadMetaCountRef = useRef(0);
   const loadChatsCountRef = useRef(0);
 
@@ -96,18 +95,6 @@ export function useProjectChats(projectId: string | undefined) {
     chatLogsStore.clearLog(projectId, logId);
   }, [projectId]);
 
-  const setChatExecutionId = useCallback((chatId: string, executionId: string | null) => {
-    setChatExecutionIds((prev) => {
-      const next = new Map(prev);
-      if(executionId) {
-        next.set(chatId, executionId);
-      } else {
-        next.delete(chatId);
-      }
-      return next;
-    })
-  }, []);
-
   const updateChatMeta = useCallback(async (chatId: string, updates: Partial<ChatMeta>) => {
     if (!projectId) return;
     await chatStore.updateChatMeta(projectId, chatId, updates);
@@ -118,7 +105,6 @@ export function useProjectChats(projectId: string | undefined) {
     chats,
     projectMeta,
     isLoading,
-    chatExecutionIds,
     createChat,
     deleteChat,
     renameChat,
@@ -126,7 +112,6 @@ export function useProjectChats(projectId: string | undefined) {
     clearChatMessages,
     refreshChats: refreshChatsCb,
     loadMeta,
-    setChatExecutionId,
     updateChatMeta,
   };
 }

@@ -21,6 +21,7 @@ import { isNeutralinoConnected } from "../utils/neuUtils";
 import { appendMessage, createNewVersionLog } from "../hooks/useChatPersistence";
 import { getAvailableTools } from "../tools";
 import { ChatMessage, ChatMeta, ChatHistoryEntry, FlowActionButton, ToolDefinition } from "../types/chat";
+import { chatLogsStore } from "../store/chatLogs";
 
 interface ChatsContextValue {
   chats: ChatMeta[];
@@ -29,7 +30,7 @@ interface ChatsContextValue {
   isLoadingHistoryMessages: boolean;
   historyMessages: Record<string, ChatMessage[]>;
   loadHistoryMessages: () => Promise<void>;
-  chatExecutionIds: Map<string, string>;
+  getIsProcessing: (chatId: string) => boolean;
   createChat: (workflowId?: string, workflowStateKey?: string) => Promise<ChatMeta>;
   deleteChat: (chatId: string) => Promise<void>;
   renameChat: (chatId: string, name: string) => Promise<void>;
@@ -66,8 +67,6 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     renameChat,
     loadChatMessages,
     refreshChats,
-    setChatExecutionId,
-    chatExecutionIds,
     updateChatMeta: projectChatsUpdateChatMeta,
   } = useProjectChats(
     isNeutralinoConnected() ? (activeProjectId ?? undefined) : undefined
@@ -127,8 +126,6 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   const { messages, isLoading, sendMessage, stopGeneration, setMessages } = useChatApi(
     settings,
-    chatExecutionIds,
-    setChatExecutionId,
     selectedChatId || undefined,
     isNeutralinoConnected() ? (activeProjectId ?? undefined) : undefined,
     projectMeta || undefined,
@@ -267,6 +264,13 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     [flows, selectedChatId, workflowUpdateMeta, activeProjectId, activeProject?.folderPath, emitEvent, messages, onPushMessage, onCreateNewVersion]
   );
 
+  const getIsProcessing = useCallback((chatId: string) => {
+    if (!activeProjectId) return false;
+    const chat = chats.find((c) => c.id === chatId);
+    if (!chat?.logId) return false;
+    return chatLogsStore.getPendingMessageId(activeProjectId, chat.logId) !== undefined;
+  }, [activeProjectId, chats]);
+
   // Fire onEnter for the initial state when a workflow is linked
   useEffect(() => {
     if (selectedChatForWorkflow?.workflowId && selectedChatForWorkflow?.workflowStateKey) {
@@ -282,7 +286,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       isLoadingHistoryMessages,
       historyMessages,
       loadHistoryMessages,
-      chatExecutionIds,
+      getIsProcessing,
       createChat: wrappedCreateChat,
       deleteChat: wrappedDeleteChat,
       renameChat: wrappedRenameChat,
@@ -299,7 +303,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       selectedChatId,
       setSelectedChatId,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, chatExecutionIds, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

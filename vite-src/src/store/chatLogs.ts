@@ -84,6 +84,7 @@ type Listener = () => void;
 
 interface ChatLogState {
   logs: Map<string, ChatMessage[]>;
+  pendingMessageIds: Map<string, string>;
   isLoaded: boolean;
 }
 
@@ -95,6 +96,9 @@ interface ChatLogsStore {
   deleteLog(projectId: string, logId: string): Promise<void>;
   clearLog(projectId: string, logId: string): Promise<void>;
   subscribe(projectId: string, logId: string, listener: Listener): () => void;
+  setPendingMessage(projectId: string, logId: string, messageId: string): void;
+  clearPendingMessage(projectId: string, logId: string): void;
+  getPendingMessageId(projectId: string, logId: string): string | undefined;
 }
 
 const state = new Map<string, ChatLogState>();
@@ -124,7 +128,24 @@ function dispatch(projectId: string, logId: string) {
 
 const chatLogsStore: ChatLogsStore = {
   getLog(projectId: string, logId: string): ChatMessage[] | undefined {
-    return state.get(projectId)?.logs.get(logId);
+    const projectState = state.get(projectId);
+    if (!projectState) return undefined;
+    const messages = projectState.logs.get(logId);
+    if (!messages) return undefined;
+
+    const pendingId = projectState.pendingMessageIds.get(logId);
+    if (!pendingId) return messages;
+
+    const hasPending = messages.some((m) => m.id === pendingId);
+    if (hasPending) return messages;
+
+    return [...messages, {
+      id: pendingId,
+      role: "assistant",
+      content: "",
+      timestamp: Date.now(),
+      toolCalls: [],
+    }];
   },
 
   async load(projectId: string, logId: string) {
@@ -134,8 +155,9 @@ const chatLogsStore: ChatLogsStore = {
     const messages = await _readLog(projectId, logId);
     const current = state.get(projectId);
     const logs = current?.logs || new Map<string, ChatMessage[]>();
+    const pendingIds = current?.pendingMessageIds || new Map<string, string>();
     logs.set(logId, messages);
-    state.set(projectId, { logs, isLoaded: true });
+    state.set(projectId, { logs, pendingMessageIds: pendingIds, isLoaded: true });
     dispatch(projectId, logId);
   },
 
@@ -149,7 +171,11 @@ const chatLogsStore: ChatLogsStore = {
         const next = [...messages, message];
         const logs = new Map(projectState.logs);
         logs.set(logId, next);
-        state.set(projectId, { logs, isLoaded: true });
+        const pendingIds = new Map(projectState.pendingMessageIds);
+        if (pendingIds.get(logId) === message.id) {
+          pendingIds.delete(logId);
+        }
+        state.set(projectId, { logs, pendingMessageIds: pendingIds, isLoaded: true });
         dispatch(projectId, logId);
       }
     }
@@ -170,8 +196,9 @@ const chatLogsStore: ChatLogsStore = {
 
     const current = state.get(projectId);
     const logs = current?.logs || new Map<string, ChatMessage[]>();
+    const pendingIds = current?.pendingMessageIds || new Map<string, string>();
     logs.set(logId, []);
-    state.set(projectId, { logs, isLoaded: true });
+    state.set(projectId, { logs, pendingMessageIds: pendingIds, isLoaded: true });
     dispatch(projectId, logId);
 
     return logId;
@@ -183,8 +210,10 @@ const chatLogsStore: ChatLogsStore = {
     const projectState = state.get(projectId);
     if (projectState) {
       const logs = new Map(projectState.logs);
+      const pendingIds = new Map(projectState.pendingMessageIds);
+      pendingIds.delete(logId);
       logs.delete(logId);
-      state.set(projectId, { logs, isLoaded: true });
+      state.set(projectId, { logs, pendingMessageIds: pendingIds, isLoaded: true });
     }
     listeners.get(projectId)?.delete(logId);
   },
@@ -195,8 +224,10 @@ const chatLogsStore: ChatLogsStore = {
     const projectState = state.get(projectId);
     if (projectState) {
       const logs = new Map(projectState.logs);
+      const pendingIds = new Map(projectState.pendingMessageIds);
+      pendingIds.delete(logId);
       logs.set(logId, []);
-      state.set(projectId, { logs, isLoaded: true });
+      state.set(projectId, { logs, pendingMessageIds: pendingIds, isLoaded: true });
       dispatch(projectId, logId);
     }
   },
@@ -206,6 +237,28 @@ const chatLogsStore: ChatLogsStore = {
     return () => {
       listeners.get(projectId)?.get(logId)?.delete(listener);
     };
+  },
+
+  setPendingMessage(projectId: string, logId: string, messageId: string) {
+    const projectState = state.get(projectId);
+    if (!projectState) return;
+    const pendingIds = new Map(projectState.pendingMessageIds);
+    pendingIds.set(logId, messageId);
+    state.set(projectId, { logs: new Map(projectState.logs), pendingMessageIds: pendingIds, isLoaded: true });
+    dispatch(projectId, logId);
+  },
+
+  clearPendingMessage(projectId: string, logId: string) {
+    const projectState = state.get(projectId);
+    if (!projectState) return;
+    const pendingIds = new Map(projectState.pendingMessageIds);
+    pendingIds.delete(logId);
+    state.set(projectId, { logs: new Map(projectState.logs), pendingMessageIds: pendingIds, isLoaded: true });
+    dispatch(projectId, logId);
+  },
+
+  getPendingMessageId(projectId: string, logId: string): string | undefined {
+    return state.get(projectId)?.pendingMessageIds.get(logId);
   },
 };
 

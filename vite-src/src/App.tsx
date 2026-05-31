@@ -30,7 +30,7 @@ function App() {
     deleteProject,
     getProjectById,
   } = useProjects();
-  const { messages, isLoading, chatExecutionIds, sendMessage, stopGeneration, updateChatMeta, setSelectedChatId, createChat, deleteChat, renameChat, chats, selectedChatId } = useChats();
+  const { messages, isLoading, getIsProcessing, sendMessage, stopGeneration, updateChatMeta, setSelectedChatId, createChat, deleteChat, renameChat, chats, selectedChatId } = useChats();
   const { sidebarOpen, isMobile } = useUI();
   const { on: onEvent } = useEventBus();
   const {
@@ -190,7 +190,7 @@ function App() {
   const chatPanelProps = {
     messages,
     isLoading,
-    isProcessing: selectedChatId ? chatExecutionIds.has(selectedChatId) : false,
+    isProcessing: selectedChatId ? getIsProcessing(selectedChatId) : false,
     onSend: sendMessage,
     onStop: stopGeneration,
     activeModel,

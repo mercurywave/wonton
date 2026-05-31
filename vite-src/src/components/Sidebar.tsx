@@ -38,7 +38,7 @@ export default function Sidebar({
 }: SidebarProps) {
   const { sidebarOpen, setSidebarOpen } = useUI();
   const { projects, isLoading: projectsLoading } = useProjects();
-  const { chats, chatExecutionIds, selectedChatId } = useChats();
+  const { chats, getIsProcessing, selectedChatId } = useChats();
   const { state: nav, activeProjectId, navigateToPage } = useNav();
 
   const displayChats = chats.slice(0, 5).map((c) => ({
@@ -46,7 +46,7 @@ export default function Sidebar({
     name: c.name,
     updatedAt: c.updatedAt,
     draft: c.draft,
-    isProcessing: chatExecutionIds.has(c.id),
+    isProcessing: getIsProcessing(c.id),
   }));
   const navItems: { page: Page; icon: React.ReactNode; label: string; filterOut?: () => boolean }[] = [
     { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => sidebarOpen },

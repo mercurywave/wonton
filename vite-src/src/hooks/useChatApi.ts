@@ -487,8 +487,6 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
 
 export function useChatApi(
   settings: ChatSettings,
-  chatExecutionIds: Map<string, string>,
-  setChatExecutionId: (chatId: string, executionId: string | null) => void,
   chatId?: string,
   projectId?: string,
   projectMeta?: ProjectMeta,
@@ -512,19 +510,6 @@ export function useChatApi(
       const loadAndSet = (targetLogId: string) => {
         chatLogsStore.load(projectId, targetLogId).then(() => {
           const msgs = chatLogsStore.getLog(projectId, targetLogId) || [];
-          if (chatExecutionIds?.has(chatId)) {
-            const executionId = chatExecutionIds.get(chatId)!;
-            const hasExecutionMsg = msgs.some((m) => m.id === executionId);
-            if (!hasExecutionMsg) {
-              msgs.push({
-                id: executionId,
-                role: "assistant",
-                content: "",
-                timestamp: Date.now(),
-                toolCalls: [],
-              });
-            }
-          }
           setMessages(msgs);
         });
       };
@@ -594,8 +579,9 @@ export function useChatApi(
       setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
 
-      if(chatId){
-        setChatExecutionId(chatId, crypto.randomUUID());
+      if(chatId && projectId && logId){
+        const executionId = crypto.randomUUID();
+        chatLogsStore.setPendingMessage(projectId, logId, executionId);
       }
 
       try {
@@ -631,7 +617,6 @@ export function useChatApi(
           chatId,
           logId,
           onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId) => {
-            setChatExecutionId(chatId!, messageId);
             setMessages((prev) => {
               const existing = prev.find(m => m.id === messageId);
               if (existing) {
@@ -674,10 +659,12 @@ export function useChatApi(
         setMessages((prev) => [...prev, errorMessage]);
       } finally {
         setIsLoading(false);
-        setChatExecutionId(chatId!, null);
+        if (projectId && logId) {
+          chatLogsStore.clearPendingMessage(projectId, logId);
+        }
       }
     },
-    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, setChatExecutionId, onSendPrompt, onChatResponse]
+    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, onSendPrompt, onChatResponse]
   );
 
   const clearChat = useCallback(() => {
@@ -687,8 +674,10 @@ export function useChatApi(
   const stopGeneration = useCallback(() => {
     abortRef.current?.abort();
     setIsLoading(false);
-    setChatExecutionId(chatId!, null);
-  }, [setChatExecutionId]);
+    if (projectId && logId) {
+      chatLogsStore.clearPendingMessage(projectId, logId);
+    }
+  }, [projectId, logId]);
 
   return {
     messages,
