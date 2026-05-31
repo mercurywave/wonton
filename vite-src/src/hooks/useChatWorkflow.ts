@@ -35,7 +35,7 @@ export function buildWon(
 ): Won {
   async function reserveTempFile(baseName?: string): Promise<string> {
     const name = baseName ?? "temp.txt";
-    const meta = chatStore.getChatMetas(projectId).find((m) => m.id === chatId);
+    const meta = chatStore.getChat(projectId, chatId);
     const existing = (meta?.reservedTempFiles) ?? [];
 
     const nextBase = (() => {
@@ -72,17 +72,18 @@ export function buildWon(
       });
     },
     async setWorkflowData(partial) {
-      const meta = chatStore.getChatMetas(projectId).find((m) => m.id === chatId);
+      const meta = chatStore.getChat(projectId, chatId);
       const merged = { ...(meta?.workflowData ?? {}), ...partial };
       await chatStore.updateChatMeta(projectId, chatId, {
         workflowData: merged,
       });
     },
-    get(key) {
-      return ctx.workflowData[key];
+    async get(key) {
+      const meta = chatStore.getChat(projectId, chatId);
+      return meta?.workflowData?.[key];
     },
     async set(key, value) {
-      const meta = chatStore.getChatMetas(projectId).find((m) => m.id === chatId);
+      const meta = chatStore.getChat(projectId, chatId);
       const merged = { ...(meta?.workflowData ?? {}), [key]: value };
       await chatStore.updateChatMeta(projectId, chatId, {
         workflowData: merged,
@@ -127,7 +128,7 @@ export async function executeCommand(
 ): Promise<void> {
   if (!chatId || !projectId) return;
   const logId = chatStore.getLogId(projectId, chatId);
-  const meta = chatStore.getChatMetas(projectId).find((m) => m.id === chatId);
+  const meta = chatStore.getChat(projectId, chatId);
   const stateRef: WorkflowStateContext = {
     chatId,
     workflowId: flowId,
@@ -178,7 +179,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
   }, [flows, workflowId, chatId, projectId, folderPath, emit]);
 
   const advance = useCallback(async (nextStateKey: string) => {
-    const meta = projectId && chatId ? chatStore.getChatMetas(projectId).find((m) => m.id === chatId) : undefined;
+    const meta = projectId && chatId ? chatStore.getChat(projectId, chatId) : undefined;
     const data = meta?.workflowData ?? {};
     await runOnEnterForState(nextStateKey, data);
   }, [runOnEnterForState, projectId, chatId]);
@@ -192,7 +193,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
         return userContent;
       }
 
-      const meta = chatStore.getChatMetas(projectId).find((m) => m.id === chatId);
+      const meta = chatStore.getChat(projectId, chatId);
       const ctx: WorkflowStateContext = {
         chatId,
         workflowId,
@@ -223,7 +224,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     const state = flow?.states?.[workflowStateKey ?? ""];
     if (!state?.onSendPrompt || !chatId || !workflowId || !workflowStateKey || !projectId) return;
 
-    const meta = chatStore.getChatMetas(projectId).find((m) => m.id === chatId);
+    const meta = chatStore.getChat(projectId, chatId);
     const ctx: WorkflowStateContext = {
       chatId,
       workflowId,
@@ -247,7 +248,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     const state = flow?.states?.[workflowStateKey ?? ""];
     if (!state?.onChatResponse || !chatId || !workflowId || !workflowStateKey || !projectId) return;
 
-    const meta = chatStore.getChatMetas(projectId).find((m) => m.id === chatId);
+    const meta = chatStore.getChat(projectId, chatId);
     const ctx: WorkflowStateContext = {
       chatId,
       workflowId,
@@ -271,7 +272,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     const state = flow?.states?.[workflowStateKey ?? ""];
     if (!state?.onActionButton || !chatId || !workflowId || !workflowStateKey || !projectId) return;
 
-    const meta = chatStore.getChatMetas(projectId).find((m) => m.id === chatId);
+    const meta = chatStore.getChat(projectId, chatId);
     const ctx: WorkflowStateContext = {
       chatId,
       workflowId,

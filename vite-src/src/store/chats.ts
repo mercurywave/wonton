@@ -179,6 +179,7 @@ interface ChatsState {
 
 interface ChatsStore {
   getChatMetas(projectId: string): ChatMeta[];
+  getChat(projectId: string, chatId: string): ChatMeta | undefined;
   getLogId(projectId: string, chatId: string): string;
   load(projectId: string): Promise<void>;
   createChat(
@@ -216,6 +217,10 @@ function dispatch(projectId: string) {
 const chatStore: ChatsStore = {
   getChatMetas(projectId: string) {
     return state.get(projectId)?.metas ?? [];
+  },
+
+  getChat(projectId: string, chatId: string) {
+    return state.get(projectId)?.metas.find((m) => m.id === chatId);
   },
 
   getLogId(projectId: string, chatId: string) {
