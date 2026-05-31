@@ -1,5 +1,5 @@
-import { useRef, useCallback, useMemo, useEffect } from "react";
-import { ChatMessage, ChatMeta, ChatHistoryEntry, Flow, FlowState, FlowActionButton, TempFileReservation, Won, WorkflowStateContext } from "../types/chat";
+import { useRef, useCallback, useMemo } from "react";
+import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won, WorkflowStateContext } from "../types/chat";
 import { generateUniqueFileName, getProjectDataDir } from "../utils/neuUtils";
 import { useEventBus } from "../contexts";
 import { chatStore } from "../store/chats";
@@ -33,11 +33,10 @@ export function buildWon(
   ctx: WorkflowStateContext,
   emit?: (event: string, payload?: unknown) => void,
 ): Won {
-  const stateRef = { ...ctx };
-
   async function reserveTempFile(baseName?: string): Promise<string> {
     const name = baseName ?? "temp.txt";
-    const existing = (stateRef.workflowData.__reservedTempFiles as TempFileReservation[] | undefined) ?? [];
+    const meta = chatStore.getChatMetas(projectId).find((m) => m.id === chatId);
+    const existing = (meta?.reservedTempFiles) ?? [];
 
     const nextBase = (() => {
       const matching = existing.filter((r) => r.baseName === name);
@@ -58,7 +57,6 @@ export function buildWon(
     const uniqueName = await generateUniqueFileName(name, folders);
 
     const updated = [...existing, { baseName: nextBase, uniqueName }];
-    stateRef.workflowData.__reservedTempFiles = updated;
     await chatStore.updateChatMeta(projectId, chatId, {
       reservedTempFiles: updated,
       updatedAt: Date.now(),
@@ -69,27 +67,28 @@ export function buildWon(
 
   return {
     async advance(nextStateKey: string) {
-      stateRef.stateKey = nextStateKey;
       await chatStore.updateChatMeta(projectId, chatId, {
         workflowStateKey: nextStateKey,
-        workflowData: stateRef.workflowData,
+        workflowData: ctx.workflowData,
         updatedAt: Date.now(),
       });
     },
     async setWorkflowData(partial) {
-      stateRef.workflowData = { ...stateRef.workflowData, ...partial };
+      const meta = chatStore.getChatMetas(projectId).find((m) => m.id === chatId);
+      const merged = { ...(meta?.workflowData ?? {}), ...partial };
       await chatStore.updateChatMeta(projectId, chatId, {
-        workflowData: stateRef.workflowData,
+        workflowData: merged,
         updatedAt: Date.now(),
       });
     },
     get(key) {
-      return stateRef.workflowData[key];
+      return ctx.workflowData[key];
     },
     async set(key, value) {
-      stateRef.workflowData = { ...stateRef.workflowData, [key]: value };
+      const meta = chatStore.getChatMetas(projectId).find((m) => m.id === chatId);
+      const merged = { ...(meta?.workflowData ?? {}), [key]: value };
       await chatStore.updateChatMeta(projectId, chatId, {
-        workflowData: stateRef.workflowData,
+        workflowData: merged,
         updatedAt: Date.now(),
       });
     },
