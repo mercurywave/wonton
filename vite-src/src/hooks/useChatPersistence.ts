@@ -230,26 +230,6 @@ export async function getReservedTempFiles(projectId: string, chatId: string): P
   return meta?.reservedTempFiles;
 }
 
-export async function updateChatDraft(
-  projectId: string,
-  chatId: string,
-  draft: string
-): Promise<void> {
-  if (!isNeutralinoConnected()) return;
-
-  const projectDir = await getProjectDataDir(projectId);
-  const metaPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.json`;
-
-  try {
-    const content = await filesystem.readFile(metaPath);
-    const meta = JSON.parse(content) as ChatMeta;
-    const next = { ...meta, draft, updatedAt: Date.now() };
-    await filesystem.writeFile(metaPath, JSON.stringify(next, null, 2));
-  } catch (err) {
-    console.error("updateChatDraft: failed to update draft", err);
-  }
-}
-
 export async function clearChat(projectId: string, chatId: string): Promise<void> {
   if (!isNeutralinoConnected()) return;
 
