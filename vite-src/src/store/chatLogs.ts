@@ -50,20 +50,6 @@ async function _appendMessage(projectId: string, logId: string, message: ChatMes
   await filesystem.appendFile(jsonlPath, line);
 }
 
-async function _clearLog(projectId: string, logId: string): Promise<void> {
-  if (!isNeutralinoConnected()) return;
-
-  const projectDir = await getProjectDataDir(projectId);
-  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
-  const jsonlPath = `${msgsDir}/${logId}.jsonl`;
-
-  try {
-    await filesystem.writeFile(jsonlPath, "");
-  } catch (err) {
-    console.error("chatLogsStore: failed to clear log", err);
-  }
-}
-
 async function _deleteLog(projectId: string, logId: string): Promise<void> {
   if (!isNeutralinoConnected()) return;
 
@@ -94,7 +80,6 @@ interface ChatLogsStore {
   appendMessage(projectId: string, logId: string, message: ChatMessage): Promise<void>;
   createLog(projectId: string): Promise<string>;
   deleteLog(projectId: string, logId: string): Promise<void>;
-  clearLog(projectId: string, logId: string): Promise<void>;
   subscribe(projectId: string, logId: string, listener: Listener): () => void;
   setPendingMessage(projectId: string, logId: string, messageId: string): void;
   clearPendingMessage(projectId: string, logId: string): void;
@@ -216,20 +201,6 @@ const chatLogsStore: ChatLogsStore = {
       state.set(projectId, { logs, pendingMessageIds: pendingIds, isLoaded: true });
     }
     listeners.get(projectId)?.delete(logId);
-  },
-
-  async clearLog(projectId: string, logId: string) {
-    await _clearLog(projectId, logId);
-
-    const projectState = state.get(projectId);
-    if (projectState) {
-      const logs = new Map(projectState.logs);
-      const pendingIds = new Map(projectState.pendingMessageIds);
-      pendingIds.delete(logId);
-      logs.set(logId, []);
-      state.set(projectId, { logs, pendingMessageIds: pendingIds, isLoaded: true });
-      dispatch(projectId, logId);
-    }
   },
 
   subscribe(projectId: string, logId: string, listener: Listener) {
