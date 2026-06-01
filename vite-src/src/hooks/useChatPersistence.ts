@@ -1,5 +1,4 @@
 import { ChatMeta, ProjectMeta } from "../types/chat";
-import { ChatMessage } from "../types/chat";
 import {
   PROJ_FILE_NAME,
   CHATS_DIR_NAME,
@@ -10,7 +9,6 @@ import {
   getProjectDataDir
 } from "../utils/neuUtils";
 import { filesystem } from "@neutralinojs/lib";
-import { chatLogsStore } from "../store/chatLogs";
 
 export async function getProjectDataDirPath(projectId: string): Promise<string> {
   return getProjectDataDir(projectId);
@@ -104,32 +102,4 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
     console.error("ensureChatFolder: failed to write proj.json", err);
   }
 }
-
-export async function appendMessage(
-  projectId: string,
-  logId: string,
-  message: ChatMessage,
-  chatId?: string,
-): Promise<void> {
-  await chatLogsStore.appendMessage(projectId, logId, message);
-
-  if (!chatId) {
-    return;
-  }
-
-  if (!isNeutralinoConnected()) return;
-
-  const projectDir = await getProjectDataDir(projectId);
-  const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
-
-  try {
-    const metaContent = await filesystem.readFile(`${chatsDir}/${chatId}.json`);
-    const meta = JSON.parse(metaContent) as ChatMeta;
-    meta.updatedAt = Date.now();
-    await filesystem.writeFile(`${chatsDir}/${chatId}.json`, JSON.stringify(meta, null, 2));
-  } catch (err) {
-    console.error("appendMessage: failed to update chat meta", err);
-  }
-}
-
 

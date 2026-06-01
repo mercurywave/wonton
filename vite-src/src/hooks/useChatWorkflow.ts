@@ -97,7 +97,7 @@ export function buildWon(
         timestamp: Date.now(),
       };
       const logIdToApply = logId ?? chatStore.getLogId(projectId, chatId);
-      await chatLogsStore.appendMessage(projectId, logIdToApply, chatMessage);
+      await chatStore.appendMessage(projectId, chatId, logIdToApply, chatMessage);
     },
     async createNewVersion() {
       if(logId) { throw new Error("Cannot createNewVersion from sub agent"); }

@@ -1,4 +1,4 @@
-import { ChatMeta, SubagentMeta, TempFileReservation } from "../types/chat";
+import { ChatMeta, ChatMessage, SubagentMeta, TempFileReservation } from "../types/chat";
 import { chatLogsStore } from "./chatLogs";
 import {
   CHATS_DIR_NAME,
@@ -201,6 +201,7 @@ interface ChatsStore {
   getReservedTempFiles(projectId: string, chatId: string): Promise<TempFileReservation[] | undefined>;
   saveSubagentMeta(projectId: string, chatId: string, subagentMeta: SubagentMeta): Promise<void>;
   createNewVersionLog(projectId: string, chatId: string): Promise<string>;
+  appendMessage(projectId: string, chatId: string, logId: string, message: ChatMessage): Promise<void>;
 }
 
 const state = new Map<string, ChatsState>();
@@ -340,6 +341,11 @@ const chatStore: ChatsStore = {
     });
 
     return newLogId;
+  },
+
+  async appendMessage(projectId, chatId, logId, message) {
+    await chatLogsStore.appendMessage(projectId, logId, message);
+    await this.updateChatMeta(projectId, chatId, {});
   },
 };
 
