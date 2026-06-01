@@ -588,12 +588,17 @@ export function useChatApi(
         originalContent: originalContent || undefined,
       };
 
-      setMessages((prev) => [...prev, userMessage]);
       setIsLoading(true);
 
       if(chatId && projectId && logId){
-        const executionId = crypto.randomUUID();
-        chatLogsStore.setPendingMessage(projectId, logId, executionId);
+        const pendingMsg: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: "",
+          timestamp: Date.now(),
+          toolCalls: [],
+        };
+        chatLogsStore.setPendingMessage(projectId, logId, pendingMsg);
       }
 
       try {
@@ -629,24 +634,17 @@ export function useChatApi(
           chatId,
           logId,
           onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId) => {
-            setMessages((prev) => {
-              const existing = prev.find(m => m.id === messageId);
-              if (existing) {
-                return prev.map(m =>
-                  m.id === messageId
-                    ? { ...m, content: messageContent, toolCalls: messageToolCalls || m.toolCalls }
-                    : m
-                );
-              }
-              return [...prev, {
-                id: messageId,
-                role: messageRole || "assistant" as const,
+            if (logId) {
+              const pending = chatLogsStore.getPendingMessage(projectId!, logId);
+              const baseMsg = (pending?.id === messageId) ? pending : { id: messageId, timestamp: Date.now() };  
+              chatLogsStore.updatePendingMessage(projectId!, logId, {
+                ...baseMsg,
                 content: messageContent,
-                timestamp: Date.now(),
                 toolCalls: messageToolCalls || [],
+                role: (messageRole || "assistant") as ChatMessage["role"],
                 toolCallId: messageToolCallId,
-              } as ChatMessageWithToolCalls];
-            });
+              });
+            }
           },
           onChatUpdated,
         });

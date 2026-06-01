@@ -228,7 +228,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     if (!activeProjectId) return false;
     const chat = chats.find((c) => c.id === chatId);
     if (!chat?.logId) return false;
-    return chatLogsStore.getPendingMessageId(activeProjectId, chat.logId) !== undefined;
+    return chatLogsStore.getPendingMessage(activeProjectId, chat.logId) !== undefined;
   }, [activeProjectId, chats]);
 
   // Fire onEnter for the initial state when a workflow is linked

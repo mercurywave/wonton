@@ -70,7 +70,7 @@ type Listener = () => void;
 
 interface ChatLogState {
   logs: Map<string, ChatMessage[]>;
-  pendingMessageIds: Map<string, string>;
+  pendingMessages: Map<string, ChatMessage>;
   isLoaded: boolean;
 }
 
@@ -81,9 +81,10 @@ interface ChatLogsStore {
   createLog(projectId: string): Promise<string>;
   deleteLog(projectId: string, logId: string): Promise<void>;
   subscribe(projectId: string, logId: string, listener: Listener): () => void;
-  setPendingMessage(projectId: string, logId: string, messageId: string): void;
+  setPendingMessage(projectId: string, logId: string, message: ChatMessage): void;
+  updatePendingMessage(projectId: string, logId: string, message: ChatMessage): void;
   clearPendingMessage(projectId: string, logId: string): void;
-  getPendingMessageId(projectId: string, logId: string): string | undefined;
+  getPendingMessage(projectId: string, logId: string): ChatMessage | undefined;
 }
 
 const state = new Map<string, ChatLogState>();
@@ -118,19 +119,13 @@ const chatLogsStore: ChatLogsStore = {
     const messages = projectState.logs.get(logId);
     if (!messages) return undefined;
 
-    const pendingId = projectState.pendingMessageIds.get(logId);
-    if (!pendingId) return messages;
+    const pending = projectState.pendingMessages.get(logId);
+    if (!pending) return messages;
 
-    const hasPending = messages.some((m) => m.id === pendingId);
+    const hasPending = messages.some((m) => m.id === pending.id);
     if (hasPending) return messages;
 
-    return [...messages, {
-      id: pendingId,
-      role: "assistant",
-      content: "",
-      timestamp: Date.now(),
-      toolCalls: [],
-    }];
+    return [...messages, pending];
   },
 
   async load(projectId: string, logId: string) {
@@ -140,9 +135,9 @@ const chatLogsStore: ChatLogsStore = {
     const messages = await _readLog(projectId, logId);
     const current = state.get(projectId);
     const logs = current?.logs || new Map<string, ChatMessage[]>();
-    const pendingIds = current?.pendingMessageIds || new Map<string, string>();
+    const pendingMessages = current?.pendingMessages || new Map<string, ChatMessage>();
     logs.set(logId, messages);
-    state.set(projectId, { logs, pendingMessageIds: pendingIds, isLoaded: true });
+    state.set(projectId, { logs, pendingMessages, isLoaded: true });
     dispatch(projectId, logId);
   },
 
@@ -156,11 +151,11 @@ const chatLogsStore: ChatLogsStore = {
         const next = [...messages, message];
         const logs = new Map(projectState.logs);
         logs.set(logId, next);
-        const pendingIds = new Map(projectState.pendingMessageIds);
-        if (pendingIds.get(logId) === message.id) {
-          pendingIds.delete(logId);
+        const pendingMessages = new Map(projectState.pendingMessages);
+        if (pendingMessages.get(logId)?.id === message.id) {
+          pendingMessages.delete(logId);
         }
-        state.set(projectId, { logs, pendingMessageIds: pendingIds, isLoaded: true });
+        state.set(projectId, { logs, pendingMessages, isLoaded: true });
         dispatch(projectId, logId);
       }
     }
@@ -181,9 +176,9 @@ const chatLogsStore: ChatLogsStore = {
 
     const current = state.get(projectId);
     const logs = current?.logs || new Map<string, ChatMessage[]>();
-    const pendingIds = current?.pendingMessageIds || new Map<string, string>();
+    const pendingMessages = current?.pendingMessages || new Map<string, ChatMessage>();
     logs.set(logId, []);
-    state.set(projectId, { logs, pendingMessageIds: pendingIds, isLoaded: true });
+    state.set(projectId, { logs, pendingMessages, isLoaded: true });
     dispatch(projectId, logId);
 
     return logId;
@@ -195,10 +190,10 @@ const chatLogsStore: ChatLogsStore = {
     const projectState = state.get(projectId);
     if (projectState) {
       const logs = new Map(projectState.logs);
-      const pendingIds = new Map(projectState.pendingMessageIds);
-      pendingIds.delete(logId);
+      const pendingMessages = new Map(projectState.pendingMessages);
+      pendingMessages.delete(logId);
       logs.delete(logId);
-      state.set(projectId, { logs, pendingMessageIds: pendingIds, isLoaded: true });
+      state.set(projectId, { logs, pendingMessages, isLoaded: true });
     }
     listeners.get(projectId)?.delete(logId);
   },
@@ -210,26 +205,35 @@ const chatLogsStore: ChatLogsStore = {
     };
   },
 
-  setPendingMessage(projectId: string, logId: string, messageId: string) {
+setPendingMessage(projectId: string, logId: string, message: ChatMessage) {
     const projectState = state.get(projectId);
     if (!projectState) return;
-    const pendingIds = new Map(projectState.pendingMessageIds);
-    pendingIds.set(logId, messageId);
-    state.set(projectId, { logs: new Map(projectState.logs), pendingMessageIds: pendingIds, isLoaded: true });
+    const pendingMessages = new Map(projectState.pendingMessages);
+    pendingMessages.set(logId, message);
+    state.set(projectId, { logs: new Map(projectState.logs), pendingMessages, isLoaded: true });
+    dispatch(projectId, logId);
+  },
+
+  updatePendingMessage(projectId: string, logId: string, message: ChatMessage) {
+    const projectState = state.get(projectId);
+    if (!projectState) return;
+    const pendingMessages = new Map(projectState.pendingMessages);
+    pendingMessages.set(logId, message);
+    state.set(projectId, { logs: new Map(projectState.logs), pendingMessages, isLoaded: true });
     dispatch(projectId, logId);
   },
 
   clearPendingMessage(projectId: string, logId: string) {
     const projectState = state.get(projectId);
     if (!projectState) return;
-    const pendingIds = new Map(projectState.pendingMessageIds);
-    pendingIds.delete(logId);
-    state.set(projectId, { logs: new Map(projectState.logs), pendingMessageIds: pendingIds, isLoaded: true });
+    const pendingMessages = new Map(projectState.pendingMessages);
+    pendingMessages.delete(logId);
+    state.set(projectId, { logs: new Map(projectState.logs), pendingMessages, isLoaded: true });
     dispatch(projectId, logId);
   },
 
-  getPendingMessageId(projectId: string, logId: string): string | undefined {
-    return state.get(projectId)?.pendingMessageIds.get(logId);
+  getPendingMessage(projectId: string, logId: string): ChatMessage | undefined {
+    return state.get(projectId)?.pendingMessages.get(logId);
   },
 };
 
