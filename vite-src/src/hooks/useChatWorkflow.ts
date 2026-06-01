@@ -82,6 +82,24 @@ export function buildWon(
       const messages = chatLogsStore.getLog(projectId, logIdToApply) ?? [];
       return messages.map(m => ({ role: m.role, content: m.content }));
     },
+    async setWorkflowData(partial) {
+      const meta = chatStore.getChat(projectId, chatId);
+      const merged = { ...(meta?.workflowData ?? {}), ...partial };
+      await chatStore.updateChatMeta(projectId, chatId, {
+        workflowData: merged,
+      });
+    },
+    async get(key) {
+      const meta = chatStore.getChat(projectId, chatId);
+      return meta?.workflowData?.[key];
+    },
+    async set(key, value) {
+      const meta = chatStore.getChat(projectId, chatId);
+      const merged = { ...(meta?.workflowData ?? {}), [key]: value };
+      await chatStore.updateChatMeta(projectId, chatId, {
+        workflowData: merged,
+      });
+    },
     async pushMessage(entry: ChatHistoryEntry) {
       if (!entry.role || !["user", "assistant", "system", "tool"].includes(entry.role)) {
         throw new Error(`pushMessage: invalid role "${entry.role}"`);

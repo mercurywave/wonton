@@ -144,6 +144,9 @@ export interface ChatHistoryEntry {
 
 export interface Won {
   advance(nextStateKey: string): Promise<void>;
+  setWorkflowData(partial: Partial<Record<string, unknown>>): Promise<void>;
+  get(key: string): unknown;
+  set(key: string, value: unknown): Promise<void>;
   reserveTempFile(baseName?: string): Promise<string>;
   openFile(uniqueName: string): void;
   getChatHistory(): ChatHistoryEntry[];
