@@ -149,7 +149,7 @@ async function deleteChat(projectId: string, chatId: string): Promise<void> {
 async function updateChatMeta(
   projectId: string,
   chatId: string,
-  updates: Partial<ChatMeta>
+  updates: Partial<ChatMeta>,
 ): Promise<ChatMeta | null> {
   if (!isNeutralinoConnected()) return null;
 
@@ -159,8 +159,25 @@ async function updateChatMeta(
   try {
     const content = await filesystem.readFile(metaPath);
     const meta = JSON.parse(content) as ChatMeta;
-    const next = { ...meta, ...updates };
+    const effectiveUpdates = Object.fromEntries(
+      Object.entries(updates).filter(([k, v]) => {
+        const key = k as keyof ChatMeta;
+        return JSON.stringify(meta[key]) !== JSON.stringify(v);
+      })
+    );
+    if (Object.keys(effectiveUpdates).length === 0) return meta;
+    const next = { ...meta, ...effectiveUpdates, updatedAt: Date.now() };
     await filesystem.writeFile(metaPath, JSON.stringify(next, null, 2));
+    
+    const current = state.get(projectId);
+    if (current) {
+      const metas = current.metas.map((c) =>
+        c.id === chatId ? next : c
+      );
+      state.set(projectId, { metas, isLoaded: true });
+      dispatch(projectId);
+    }
+    
     return next;
   } catch (err) {
     console.error("updateChatMeta: failed to update chat meta", err);
@@ -268,21 +285,11 @@ const chatStore: ChatsStore = {
   },
 
   async setChatDraft(projectId, chatId, draft) {
-    await this.updateChatMeta(projectId, chatId, { draft });
+    await updateChatMeta(projectId, chatId, { draft });
   },
 
   async updateChatMeta(projectId, chatId, updates) {
-    const now = Date.now();
-    const replacement = await updateChatMeta(projectId, chatId, {...updates, updatedAt: now });
-
-    const current = state.get(projectId);
-    if (current && replacement) {
-      const metas = current.metas.map((c) =>
-        c.id === chatId ? replacement : c
-      );
-      state.set(projectId, { metas, isLoaded: true });
-      dispatch(projectId);
-    }
+    await updateChatMeta(projectId, chatId, updates);
   },
 
   async refresh(projectId) {
