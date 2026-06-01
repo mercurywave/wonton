@@ -525,6 +525,13 @@ export function useChatApi(
           loadAndSet(resolvedLogId, requestId);
         });
       }
+
+      const targetLogId = logId || (chatStore.getLogId(projectId, chatId) ?? "");
+      const unsubscribe = chatLogsStore.subscribe(projectId, targetLogId, () => {
+        const msgs = chatLogsStore.getLog(projectId, targetLogId) || [];
+        setMessages(msgs);
+      });
+      return unsubscribe;
     } else {
       setMessages([]);
     }
