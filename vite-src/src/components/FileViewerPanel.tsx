@@ -18,6 +18,7 @@ interface TempFileViewerPanelProps {
 }
 
 function isMarkdownFile(name: string): boolean {
+  if (typeof name !== "string") return false;
   const lower = name.toLowerCase();
   return lower.endsWith(".md") || lower.endsWith(".markdown");
 }

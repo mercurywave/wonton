@@ -75,6 +75,7 @@ export function buildWon(
     },
     reserveTempFile,
     openFile: (uniqueName: string) => {
+      if(typeof uniqueName !== "string") { throw new Error("openFile: uniqueName is required"); }
       emit?.("requestOpenFile", { uniqueName });
     },
     getChatHistory(): ChatHistoryEntry[] {
@@ -89,7 +90,7 @@ export function buildWon(
         workflowData: merged,
       });
     },
-    async get(key) {
+    get(key) {
       const meta = chatStore.getChat(projectId, chatId);
       return meta?.workflowData?.[key];
     },
