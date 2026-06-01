@@ -18,17 +18,19 @@ interface UseChatWorkflowReturn {
   executeAdjustPrompt(userContent: string, modelId?: string): Promise<string>;
   onSendPrompt(): Promise<void>;
   onChatResponse(response: ChatMessage): Promise<void>;
-  onActionButtonClick(button: FlowActionButton): Promise<void>;
+  onActionButtonClick(button: FlowActionButton, logId?: string): Promise<void>;
   currentFlow: Flow | undefined;
   currentState: FlowState | undefined;
   triggerOnEnterForState(stateKey: string, data: Record<string, unknown>): Promise<void>;
   advance(nextStateKey: string): Promise<void>;
 }
 
+// logId is assumed to mean that this is running in a subagent/historic version
+// Don't pass from main chat thread even if you know it
 export function buildWon(
   projectId: string,
   chatId: string,
-  logId: string,
+  logId?: string,
   emit?: (event: string, payload?: unknown) => void,
 ): Won {
   async function reserveTempFile(baseName?: string): Promise<string> {
@@ -66,6 +68,7 @@ export function buildWon(
 
   return {
     async advance(nextStateKey: string) {
+      if(logId) { throw new Error("Cannot advance from sub agent"); }
       await chatStore.updateChatMeta(projectId, chatId, {
         workflowStateKey: nextStateKey,
       });
@@ -75,7 +78,8 @@ export function buildWon(
       emit?.("requestOpenFile", { uniqueName });
     },
     getChatHistory(): ChatHistoryEntry[] {
-      const messages = chatLogsStore.getLog(projectId, logId) ?? [];
+      const logIdToApply = logId ?? chatStore.getLogId(projectId, chatId);
+      const messages = chatLogsStore.getLog(projectId, logIdToApply) ?? [];
       return messages.map(m => ({ role: m.role, content: m.content }));
     },
     async pushMessage(entry: ChatHistoryEntry) {
@@ -83,7 +87,8 @@ export function buildWon(
         throw new Error(`pushMessage: invalid role "${entry.role}"`);
       }
       if (typeof entry.content !== "string" || entry.content.length === 0) {
-        throw new Error("pushMessage: content must be a non-empty string");
+        console.error("pushMessage: content must be a non-empty string");
+        return;
       }
       const chatMessage: ChatMessage = {
         id: crypto.randomUUID(),
@@ -91,9 +96,11 @@ export function buildWon(
         content: entry.content,
         timestamp: Date.now(),
       };
-      await chatLogsStore.appendMessage(projectId, logId, chatMessage);
+      const logIdToApply = logId ?? chatStore.getLogId(projectId, chatId);
+      await chatLogsStore.appendMessage(projectId, logIdToApply, chatMessage);
     },
     async createNewVersion() {
+      if(logId) { throw new Error("Cannot createNewVersion from sub agent"); }
       await chatStore.createNewVersionLog(projectId, chatId);
     },
   };
@@ -107,8 +114,7 @@ export async function executeCommand(
   emit?: (event: string, payload?: unknown) => void,
 ): Promise<void> {
   if (!chatId || !projectId) return;
-  const logId = chatStore.getLogId(projectId, chatId);
-  const won = buildWon(projectId, chatId, logId, emit);
+  const won = buildWon(projectId, chatId, undefined, emit);
   const hookFn = new Function("won", `return (async () => {${command}})();`) as unknown as (won: Won) => Promise<void>;
   try {
     await hookFn(won);
@@ -132,8 +138,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     const state = flow?.states?.[stateKey];
     if (!state?.onEnter || !chatId || !workflowId || !projectId) return;
 
-    const logId = chatStore.getLogId(projectId, chatId);
-    const won = buildWon(projectId, chatId, logId, emit);
+    const won = buildWon(projectId, chatId, undefined, emit);
     const hookFn = new Function("won", `return (async () => {${state.onEnter}})();`) as unknown as (won: Won) => Promise<void>;
 
     try {
@@ -156,8 +161,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
         return userContent;
       }
 
-      const logId = chatStore.getLogId(projectId, chatId);
-      const won = buildWon(projectId, chatId, logId, emit);
+      const won = buildWon(projectId, chatId, undefined, emit);
 
       const hookfn = new Function("won", "userContent", `return (async () => {${currentState.hookAdjustPrompt}})();`) as unknown as (won: Won, userContent: string) => Promise<string>;
       try{
@@ -178,8 +182,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     const state = flow?.states?.[workflowStateKey ?? ""];
     if (!state?.onSendPrompt || !chatId || !workflowId || !workflowStateKey || !projectId) return;
 
-    const logId = chatStore.getLogId(projectId, chatId);
-    const won = buildWon(projectId, chatId, logId, emit);
+    const won = buildWon(projectId, chatId, undefined, emit);
     const hookFn = new Function("won", `return (async () => {${state.onSendPrompt}})();`) as unknown as (won: Won) => Promise<void>;
 
     try {
@@ -194,8 +197,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     const state = flow?.states?.[workflowStateKey ?? ""];
     if (!state?.onChatResponse || !chatId || !workflowId || !workflowStateKey || !projectId) return;
 
-    const logId = chatStore.getLogId(projectId, chatId);
-    const won = buildWon(projectId, chatId, logId, emit);
+    const won = buildWon(projectId, chatId, undefined, emit);
     const hookFn = new Function("won", "response", `return (async () => {${state.onChatResponse}})();`) as unknown as (won: Won, response: ChatMessage) => Promise<void>;
 
     try {
@@ -205,12 +207,11 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     }
   }, [flows, workflowId, chatId, workflowStateKey, projectId, emit]);
 
-  const onActionButtonClick = useCallback(async (button: FlowActionButton) => {
+  const onActionButtonClick = useCallback(async (button: FlowActionButton, logId?: string) => {
     const flow = flows.find((f) => f.id === workflowId);
     const state = flow?.states?.[workflowStateKey ?? ""];
     if (!state?.onActionButton || !chatId || !workflowId || !workflowStateKey || !projectId) return;
 
-    const logId = chatStore.getLogId(projectId, chatId);
     const won = buildWon(projectId, chatId, logId, emit);
     const hookFn = new Function("won", "idx", `return (async () => {${state.onActionButton}})();`) as unknown as (won: Won, idx: number) => Promise<void>;
 

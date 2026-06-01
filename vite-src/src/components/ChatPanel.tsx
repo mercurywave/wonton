@@ -624,7 +624,7 @@ export default function ChatPanel({
                 <button
                   key={`action-${btn.idx}`}
                   className={styles.workflowStateActionButton}
-                  onClick={() => onActionButtonClick(btn)}
+                  onClick={() => onActionButtonClick(btn, logId ?? undefined)}
                   type="button"
                 >
                   {btn.label}

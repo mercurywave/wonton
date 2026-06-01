@@ -41,7 +41,7 @@ interface ChatsContextValue {
   setWorkflowId: (chatId: string, workflowId: string | undefined) => Promise<void>;
   setSelectedChatWorkflowId: (workflowId: string | undefined, workflowStateKey?: string) => Promise<void>;
   executeAdjustPrompt: (content: string) => Promise<string>;
-  onActionButtonClick: (button: FlowActionButton) => Promise<void>;
+  onActionButtonClick: (button: FlowActionButton, logId?: string) => Promise<void>;
   executeCommand: (flowId: string) => Promise<void>;
   selectedChatId: string | null;
   setSelectedChatId: (id: string | null) => void;
