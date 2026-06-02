@@ -6,6 +6,7 @@ import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
 import { executeToolCall } from "../tools";
 import { getAvailableTools } from "../tools";
+import { EXECUTE_SUBAGENT_TOOL_NAME } from "../tools/executeSubagent";
 
 interface SSEDelta {
   content?: string;
@@ -377,7 +378,12 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
 
     const toolCalls: ToolCall[] = Array.from(toolCallsMap.entries())
       .filter(([, call]) => call.id && call.name)
-      .map(([, call]) => ({ id: call.id, name: call.name, arguments: call.args }));
+      .map(([, call]) => ({
+        id: call.id,
+        name: call.name,
+        arguments: call.args,
+        logId: call.name === EXECUTE_SUBAGENT_TOOL_NAME ? crypto.randomUUID() : undefined,
+      }));
 
     const assistantMessage: ChatMessageWithToolCalls = {
       id: assistantId,
@@ -429,7 +435,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
           args = { raw: tc.arguments };
         }
 
-        const result = await executeToolCall(tc.name, args, {
+        const result = await executeToolCall(tc.name, tc, args, {
           folderPath,
           projectId,
           chatId,

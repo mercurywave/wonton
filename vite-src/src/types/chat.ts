@@ -20,6 +20,7 @@ export interface ToolCall {
   id: string;
   name: string;
   arguments: string;
+  logId?: string;
 }
 
 export interface ToolResult {

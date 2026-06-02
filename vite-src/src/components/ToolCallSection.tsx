@@ -81,7 +81,7 @@ function SubagentSection({ toolCall, result }: { toolCall: ToolCall; result?: st
 
   const agentName = extractArgString(parsedArgs, "agentName");
   const query = extractArgString(parsedArgs, "query");
-  const logId = parsedResult.parsed?.logId as string | undefined;
+  const logId = toolCall.logId;
 
   const handleHeaderClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;

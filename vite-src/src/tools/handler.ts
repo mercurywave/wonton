@@ -1,4 +1,4 @@
-import { ToolResult } from "../types/chat";
+import { ToolCall, ToolResult } from "../types/chat";
 import { ChatSettings } from "../hooks/useChatSettings";
 
 export interface ToolContext {
@@ -21,5 +21,5 @@ export interface ToolDefinition {
 export interface ToolHandler {
   readonly name: string;
   readonly definition: ToolDefinition;
-  execute(args: object, context: ToolContext): Promise<ToolResult>;
+  execute(args: object, context: ToolContext, toolCall: ToolCall): Promise<ToolResult>;
 }

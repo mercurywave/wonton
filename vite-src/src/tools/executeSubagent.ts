@@ -1,5 +1,5 @@
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
-import { ToolResult, ChatMessage } from "../types/chat";
+import { ToolResult, ChatMessage, ToolCall } from "../types/chat";
 import { runToolCallLoop } from "../hooks/useChatApi";
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
@@ -46,7 +46,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
     return ExecuteSubagentHandler.instance;
   }
 
-  async execute(args: object, context: ToolContext): Promise<ToolResult> {
+  async execute(args: object, context: ToolContext, toolCall: ToolCall): Promise<ToolResult> {
     const { agentName, query } = args as { agentName: string; query: string };
     const { folderPath, projectId, chatId, settings, onChatUpdated } = context;
 
@@ -90,7 +90,8 @@ export class ExecuteSubagentHandler implements ToolHandler {
     // Create subagent log
     const agentId = agent.id;
     const subagentId = crypto.randomUUID();
-    const subagentLogId = await chatLogsStore.createLog(projectId);
+    const subagentLogId = toolCall.logId ?? crypto.randomUUID();
+    await chatLogsStore.reserveLog(projectId, subagentLogId);
 
     // Create subagent meta
     const subagentMeta: SubagentMeta = {

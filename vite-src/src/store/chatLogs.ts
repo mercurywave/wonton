@@ -79,6 +79,7 @@ interface ChatLogsStore {
   load(projectId: string, logId: string): Promise<void>;
   appendMessage(projectId: string, logId: string, message: ChatMessage): Promise<void>;
   createLog(projectId: string): Promise<string>;
+  reserveLog(projectId: string, logId: string): Promise<void>;
   deleteLog(projectId: string, logId: string): Promise<void>;
   subscribe(projectId: string, logId: string, listener: Listener): () => void;
   setPendingMessage(projectId: string, logId: string, message: ChatMessage): void;
@@ -163,6 +164,11 @@ const chatLogsStore: ChatLogsStore = {
 
   async createLog(projectId: string): Promise<string> {
     const logId = generateGuid();
+    await this.reserveLog(projectId, logId);
+    return logId;
+  },
+
+  async reserveLog(projectId: string, logId: string): Promise<void> {
 
     if (isNeutralinoConnected()) {
       try {
@@ -180,8 +186,6 @@ const chatLogsStore: ChatLogsStore = {
     logs.set(logId, []);
     state.set(projectId, { logs, pendingMessages, isLoaded: true });
     dispatch(projectId, logId);
-
-    return logId;
   },
 
   async deleteLog(projectId: string, logId: string) {

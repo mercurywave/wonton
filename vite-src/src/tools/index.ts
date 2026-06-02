@@ -1,4 +1,4 @@
-import { ToolDefinition, ToolResult } from "../types/chat";
+import { ToolCall, ToolDefinition, ToolResult } from "../types/chat";
 import { ToolContext, ToolHandler } from "./handler";
 export type { ToolContext, ToolHandler } from "./handler";
 import { SearchFilesHandler } from "./searchFiles";
@@ -27,6 +27,7 @@ export function getToolHandler(toolName: string): ToolHandler | undefined {
 
 export async function executeToolCall(
   toolName: string,
+  toolCall: ToolCall,
   args: object,
   context: ToolContext
 ): Promise<ToolResult> {
@@ -38,7 +39,7 @@ export async function executeToolCall(
       isError: true,
     };
   }
-  return handler.execute(args, context);
+  return handler.execute(args, context, toolCall);
 }
 
 export function getAvailableTools(folderPath?: string): ToolDefinition[] {
