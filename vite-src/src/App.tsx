@@ -186,6 +186,13 @@ function App() {
     });
   }, [onEvent, setSelectedTempFile]);
 
+  useEffect(() => {
+    return onEvent("navigateToChat", (payload: unknown) => {
+      const { chatId } = payload as { chatId: string };
+      navigateToChat(chatId);
+    });
+  }, [onEvent, navigateToChat]);
+
   const showProjectFeatures = isNeutralinoConnected() && projects.length > 0;
 
   const chatPanelProps = {

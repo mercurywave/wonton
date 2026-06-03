@@ -4,6 +4,7 @@ import { generateUniqueFileName, getProjectDataDir } from "../utils/neuUtils";
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
 import { projectStore } from "../store/projects";
+import { flowStore } from "../store/flows";
 import { useEventBus } from "../contexts";
 
 interface UseChatWorkflowOptions {
@@ -121,6 +122,65 @@ export function buildWon(
     async createNewVersion() {
       if(logId) { throw new Error("Cannot createNewVersion from sub agent"); }
       await chatStore.createNewVersionLog(projectId, chatId);
+    },
+    async createChatWithHistory(history, options) {
+      const name = (() => {
+        if (options?.name) return options.name;
+        const currentChat = chatStore.getChat(projectId, chatId);
+        const previousName = currentChat?.name ?? "Chat";
+        if (previousName.startsWith("⸙ ")) return previousName;
+        return `⸙ ${previousName}`;
+      })();
+
+      const chatMeta = await chatStore.createChat(
+        projectId,
+        name,
+        options?.workflowId,
+        undefined,
+      );
+
+      const newChatId = chatMeta.id;
+      const newLogId = chatMeta.logId;
+
+      const validRoles = ["user", "assistant", "system", "tool"] as const;
+      for (const entry of history) {
+        if (!entry.role || !validRoles.includes(entry.role as typeof validRoles[number])) {
+          throw new Error(`createChatWithHistory: invalid role "${entry.role}"`);
+        }
+        if (typeof entry.content !== "string" || entry.content.length === 0) {
+          throw new Error(`createChatWithHistory: content must be a non-empty string`);
+        }
+        const chatMessage: ChatMessage = {
+          id: crypto.randomUUID(),
+          role: entry.role,
+          content: entry.content,
+          timestamp: Date.now(),
+        };
+        await chatStore.appendMessage(projectId, newChatId, newLogId, chatMessage);
+      }
+
+      if (options?.initialPrompt) {
+        chatMeta.draft = options.initialPrompt;
+        await chatStore.updateChatMeta(projectId, newChatId, {
+          draft: options.initialPrompt,
+          updatedAt: Date.now(),
+        });
+      }
+
+      if (options?.workflowId) {
+        const allFlows = flowStore.getFlows();
+        const flow = allFlows.find((f) => f.id === options.workflowId);
+        if (flow?.initialState) {
+          await chatStore.updateChatMeta(projectId, newChatId, {
+            workflowStateKey: flow.initialState,
+            updatedAt: Date.now(),
+          });
+        }
+      }
+
+      emit?.("navigateToChat", { chatId: newChatId });
+
+      return chatMeta;
     },
   };
 }

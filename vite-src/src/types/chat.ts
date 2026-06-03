@@ -153,6 +153,14 @@ export interface Won {
   getChatHistory(): ChatHistoryEntry[];
   pushMessage(entry: ChatHistoryEntry): Promise<void>;
   createNewVersion(): Promise<void>;
+  createChatWithHistory(
+    history: ChatHistoryEntry[],
+    options?: {
+      name?: string;
+      workflowId?: string;
+      initialPrompt?: string;
+    }
+  ): Promise<ChatMeta>;
 }
 
 export interface StatsEntry {
