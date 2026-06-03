@@ -151,6 +151,7 @@ export interface Won {
   reserveTempFile(baseName?: string): Promise<string>;
   openFile(uniqueName: string): void;
   getChatHistory(): ChatHistoryEntry[];
+  getChatName(): string;
   pushMessage(entry: ChatHistoryEntry): Promise<void>;
   createNewVersion(): Promise<void>;
   createChatWithHistory(

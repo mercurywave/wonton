@@ -84,6 +84,10 @@ export function buildWon(
       const messages = chatLogsStore.getLog(projectId, logIdToApply) ?? [];
       return messages.map(m => ({ role: m.role, content: m.content }));
     },
+    getChatName(): string {
+      const meta = chatStore.getChat(projectId, chatId);
+      return meta?.name ?? "";
+    },
     async setWorkflowData(partial) {
       const meta = chatStore.getChat(projectId, chatId);
       const merged = { ...(meta?.workflowData ?? {}), ...partial };
