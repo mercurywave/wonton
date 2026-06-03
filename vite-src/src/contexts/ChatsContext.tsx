@@ -138,6 +138,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     refreshAndNotify,
     () => workflowExecuteOnSendPrompt(),
     (response: ChatMessage) => workflowExecuteOnChatResponse(response),
+    selectedChatMeta?.activeAgentId,
   );
 
   // Workflow execution for the selected chat

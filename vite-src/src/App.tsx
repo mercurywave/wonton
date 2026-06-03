@@ -15,6 +15,7 @@ import ProjectsPage from "./components/ProjectsPage";
 import ProjectSettingsPage from "./components/ProjectSettingsPage";
 import ChatHistoryPage from "./components/ChatHistoryPage";
 import WorkflowsPage from "./components/WorkflowsPage";
+import StatsPage from "./components/StatsPage";
 import SplitPanel from "./components/SplitPanel";
 import "./App.css";
 import FileViewerPanel from "./components/FileViewerPanel";
@@ -286,6 +287,9 @@ function App() {
         )}
         {nav.page === "workflows" && (
           <WorkflowsPage />
+        )}
+        {nav.page === "stats" && (
+          <StatsPage />
         )}
       </div>
     </div>

@@ -4,6 +4,7 @@ import { ChatSettings } from "./useChatSettings";
 
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
+import { statsStore } from "../store/stats";
 import { executeToolCall } from "../tools";
 import { getAvailableTools } from "../tools";
 import { EXECUTE_SUBAGENT_TOOL_NAME } from "../tools/executeSubagent";
@@ -254,6 +255,7 @@ interface ToolCallLoopOptions {
   chatId?: string;
   logId?: string;
   isSubagent?: boolean;
+  agentId?: string;
   onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string) => void;
   onChatUpdated?: () => void;
 }
@@ -277,6 +279,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     chatId,
     logId,
     isSubagent,
+    agentId,
     onUpdateMessage,
     onChatUpdated,
   } = options;
@@ -396,6 +399,30 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
       assistantMessage.stats = { ...parsedStats, timeMs: Date.now() - requestStartTime };
     }
 
+    // Record stats for this API call
+    if (parsedStats && projectId && chatId && logId) {
+      statsStore.appendEntry(
+        projectId,
+        chatId,
+        logId,
+        parsedStats.model,
+        agentId || "",
+        parsedStats.promptTokens,
+        parsedStats.completionTokens,
+        parsedStats.totalTokens,
+        parsedStats.timeMs,
+        parsedStats.cacheN,
+        parsedStats.promptN,
+        parsedStats.promptMs,
+        parsedStats.promptPerTokenMs,
+        parsedStats.promptPerSecond,
+        parsedStats.predictedN,
+        parsedStats.predictedMs,
+        parsedStats.predictedPerTokenMs,
+        parsedStats.predictedPerSecond,
+      ).catch(() => {});
+    }
+
     if (toolCalls.length > 0) {
       assistantMessage.toolCalls = toolCalls;
     }
@@ -504,6 +531,7 @@ export function useChatApi(
   onChatUpdated?: () => void,
   onSendPrompt?: () => Promise<void>,
   onChatResponse?: (response: ChatMessage) => Promise<void>,
+  agentId?: string,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -549,6 +577,7 @@ export function useChatApi(
 
       const baseUrl = settings.serverUrl.replace(/\/+$/, "");
       const apiUrl = `${baseUrl}/v1/chat/completions`;
+      const requestStartTime = Date.now();
 
       try {
         const response = await fetch(apiUrl, {
@@ -573,6 +602,22 @@ export function useChatApi(
         const data = await response.json();
         const title = data.choices?.[0]?.message?.content?.trim();
         if (!title) return;
+
+        const usage = data.usage;
+        if (usage) {
+          const agentId = "";
+          statsStore.appendEntry(
+            projectId,
+            chatId,
+            logId || "",
+            model,
+            agentId,
+            usage.prompt_tokens || 0,
+            usage.completion_tokens || 0,
+            usage.total_tokens || 0,
+            Date.now() - requestStartTime,
+          ).catch(() => {});
+        }
 
         await chatStore.updateChatMeta(projectId, chatId, { name: title });
         onTitleGenerated?.(chatId, title);
@@ -639,10 +684,11 @@ export function useChatApi(
           projectId,
           chatId,
           logId,
+          agentId,
           onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId) => {
             if (logId) {
               const pending = chatLogsStore.getPendingMessage(projectId!, logId);
-              const baseMsg = (pending?.id === messageId) ? pending : { id: messageId, timestamp: Date.now() };  
+              const baseMsg = (pending?.id === messageId) ? pending : { id: messageId, timestamp: Date.now() };
               chatLogsStore.updatePendingMessage(projectId!, logId, {
                 ...baseMsg,
                 content: messageContent,
@@ -680,7 +726,7 @@ export function useChatApi(
         }
       }
     },
-    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, onSendPrompt, onChatResponse]
+    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, onSendPrompt, onChatResponse, agentId]
   );
 
   const stopGeneration = useCallback(() => {

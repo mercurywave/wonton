@@ -155,7 +155,31 @@ export interface Won {
   createNewVersion(): Promise<void>;
 }
 
-export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows";
+export interface StatsEntry {
+  id: string;
+  timestamp: number;
+  projectId: string;
+  chatId: string;
+  logId: string;
+  model: string;
+  agentId: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  timeMs: number;
+  // llama.cpp timings (optional)
+  cacheN?: number;
+  promptN?: number;
+  promptMs?: number;
+  promptPerTokenMs?: number;
+  promptPerSecond?: number;
+  predictedN?: number;
+  predictedMs?: number;
+  predictedPerTokenMs?: number;
+  predictedPerSecond?: number;
+}
+
+export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows" | "stats";
 
 export interface ServerModel {
   id: string;

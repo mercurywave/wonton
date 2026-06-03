@@ -12,6 +12,7 @@ import {
   DraftingCompass,
   Loader2,
   GitBranch,
+  BarChart3,
 } from "lucide-react";
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
@@ -53,6 +54,7 @@ export default function Sidebar({
     { page: "projects", icon: <Folder size={18} />, label: "Projects" },
     { page: "history", icon: <Clock size={18} />, label: "History" },
     { page: "workflows", icon: <GitBranch size={18} />, label: "Workflows" },
+    { page: "stats", icon: <BarChart3 size={18} />, label: "Stats" },
     { page: "settings", icon: <Settings size={18} />, label: "Settings" },
   ];
 

@@ -132,6 +132,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
       chatId: chatId,
       logId: subagentLogId,
       isSubagent: true,
+      agentId: agent.id,
       onUpdateMessage: () => {
         // No UI update needed for subagent — it's a background tool call
       },
