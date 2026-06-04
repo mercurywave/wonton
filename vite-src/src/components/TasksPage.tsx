@@ -7,6 +7,9 @@ import {
   ExternalLink,
   Clock,
   CheckCircle2,
+  Pencil,
+  Save,
+  X,
 } from "lucide-react";
 import styles from "../components/TasksPage.module.css";
 import { useTasks } from "../contexts";
@@ -38,7 +41,7 @@ const PRIORITY_COLORS: Record<TaskPriority, string> = {
 };
 
 export default function TasksPage() {
-  const { tasks, isLoading, createTask, deleteTask, createChatAndGraduate } =
+  const { tasks, isLoading, createTask, updateTask, deleteTask, createChatAndGraduate } =
     useTasks();
   const { navigateToChat } = useNav();
 
@@ -48,6 +51,10 @@ export default function TasksPage() {
   const [creating, setCreating] = useState(false);
   const [graduatingId, setGraduatingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
+  const [editPriority, setEditPriority] = useState<TaskPriority | undefined>();
+  const [updating, setUpdating] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const activeTasks = tasks.filter((t) => !t.graduatedAt);
@@ -79,6 +86,26 @@ export default function TasksPage() {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const startEdit = (task: typeof tasks[0]) => {
+    setEditingId(task.id);
+    setEditText(task.text);
+    setEditPriority(task.priority);
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditText("");
+    setEditPriority(undefined);
+  };
+
+  const handleUpdate = async () => {
+    if (!editText.trim() || !editingId) return;
+    setUpdating(true);
+    await updateTask(editingId, { text: editText.trim(), priority: editPriority });
+    cancelEdit();
+    setUpdating(false);
   };
 
   const handleOpenChat = (chatId: string) => {
@@ -207,9 +234,60 @@ export default function TasksPage() {
                   )}
                 </div>
 
-                <div className={styles.taskText}>{task.text}</div>
+                {editingId === task.id ? (
+                  <div className={styles.editTaskForm}>
+                    <textarea
+                      className={styles.editTaskTextarea}
+                      value={editText}
+                      onChange={(e) => setEditText(e.target.value)}
+                      rows={4}
+                    />
+                    <div className={styles.editTaskMeta}>
+                      <select
+                        className={styles.prioritySelect}
+                        value={editPriority || ""}
+                        onChange={(e) =>
+                          setEditPriority(e.target.value as TaskPriority | undefined)
+                        }
+                      >
+                        <option value="">No priority</option>
+                        <option value="low">Low</option>
+                        <option value="medium">Medium</option>
+                        <option value="high">High</option>
+                        <option value="critical">Critical</option>
+                      </select>
+                      <div className={styles.editTaskActions}>
+                        <button
+                          className={styles.cancelBtn}
+                          onClick={cancelEdit}
+                          disabled={updating}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          className={styles.submitBtn}
+                          onClick={handleUpdate}
+                          disabled={!editText.trim() || updating}
+                        >
+                          {updating ? "Saving..." : "Save"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.taskText}>{task.text}</div>
+                )}
 
                 <div className={styles.taskActions}>
+                  {!task.graduatedAt && (
+                    <button
+                      className={styles.editBtn}
+                      onClick={() => startEdit(task)}
+                    >
+                      <Pencil size={11} />
+                      Edit
+                    </button>
+                  )}
                   {!task.graduatedAt && (
                     <button
                       className={styles.graduateBtn}

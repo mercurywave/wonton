@@ -315,6 +315,61 @@
   cursor: not-allowed;
 }
 
+.editBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.editBtn:hover {
+  border-color: #eab308;
+  color: #eab308;
+}
+
+.editTaskForm {
+  margin-bottom: 10px;
+}
+
+.editTaskTextarea {
+  width: 100%;
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 13px;
+  padding: 10px 12px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.editTaskTextarea:focus {
+  outline: none;
+  border-color: #eab308;
+}
+
+.editTaskMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  gap: 12px;
+}
+
+.editTaskActions {
+  display: flex;
+  gap: 8px;
+}
+
 /* Sections */
 .section {
   margin-top: 32px;
