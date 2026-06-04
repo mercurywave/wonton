@@ -285,11 +285,6 @@
   position: relative;
 }
 
-.taskItem:hover {
-  background: #1a1a2e;
-  color: #d0d0e0;
-}
-
 .taskItem.active {
   background: #16162a;
   color: #e0e0e0;
@@ -309,6 +304,27 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.taskGraduateBtn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.taskItem:hover .taskGraduateBtn {
+  opacity: 1;
+}
+
+.taskGraduateBtn:hover {
+  background: #1a1a2e;
+  color: #e0e0e0;
 }
 
 .contextMenu {

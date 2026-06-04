@@ -14,6 +14,7 @@ import {
   GitBranch,
   BarChart3,
   Flag,
+  CircleFadingArrowUp,
 } from "lucide-react";
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
@@ -247,11 +248,7 @@ export default function Sidebar({
             </div>
             <div className={styles.taskList}>
               {displayTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className={styles.taskItem}
-                  onClick={() => handleTaskClick(task.id)}
-                >
+                <div key={task.id} className={styles.taskItem}>
                   {task.priority && (
                     <span
                       className={styles.taskPriorityBadge}
@@ -264,6 +261,16 @@ export default function Sidebar({
                     </span>
                   )}
                   <span className={styles.taskName}>{task.text}</span>
+                  <button
+                    className={styles.taskGraduateBtn}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleTaskClick(task.id);
+                    }}
+                    title="Create chat and graduate"
+                  >
+                    <CircleFadingArrowUp size={14} />
+                  </button>
                 </div>
               ))}
             </div>
