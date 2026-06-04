@@ -17,9 +17,10 @@ import {
 } from "lucide-react";
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
-import { useUI, useProjects, useChats } from "../contexts";
+import { useUI, useProjects, useChats, useTasks } from "../contexts";
 import { useNav } from "../contexts";
 import ProjectSelector from "../components/ProjectSelector";
+import { PRIORITY_COLORS } from "../utils/taskUtils";
 
 interface SidebarProps {
   onNewChat: () => void;
@@ -41,7 +42,8 @@ export default function Sidebar({
   const { sidebarOpen, setSidebarOpen } = useUI();
   const { projects, isLoading: projectsLoading } = useProjects();
   const { chats, getIsProcessing, selectedChatId } = useChats();
-  const { state: nav, activeProjectId, navigateToPage } = useNav();
+  const { state: nav, activeProjectId, navigateToPage, navigateToChat } = useNav();
+  const { tasks, getSortedActiveTasks, createChatAndGraduateWithId } = useTasks();
 
   const displayChats = chats.slice(0, 5).map((c) => ({
     id: c.id,
@@ -50,6 +52,9 @@ export default function Sidebar({
     draft: c.draft,
     isProcessing: getIsProcessing(c.id),
   }));
+
+  const sortedActiveTasks = getSortedActiveTasks();
+  const displayTasks = sortedActiveTasks.slice(0, 3);
   const navItems: { page: Page; icon: React.ReactNode; label: string; filterOut?: () => boolean }[] = [
     { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => sidebarOpen },
     { page: "tasks", icon: <Flag size={18} />, label: "Tasks" },
@@ -112,6 +117,11 @@ export default function Sidebar({
       setRenamingChatId(null);
       setRenameValue("");
     }
+  };
+
+  const handleTaskClick = async (taskId: string) => {
+    const chatId = await createChatAndGraduateWithId(taskId);
+    navigateToChat(chatId);
   };
 
   return (
@@ -224,6 +234,36 @@ export default function Sidebar({
                       )}
                     </>
                   )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {sidebarOpen && displayTasks.length > 0 && (
+          <div className={styles.taskListSection}>
+            <div className={styles.taskListHeader}>
+              <span className={styles.taskListTitle}>Tasks</span>
+            </div>
+            <div className={styles.taskList}>
+              {displayTasks.map((task) => (
+                <div
+                  key={task.id}
+                  className={styles.taskItem}
+                  onClick={() => handleTaskClick(task.id)}
+                >
+                  {task.priority && (
+                    <span
+                      className={styles.taskPriorityBadge}
+                      style={{
+                        backgroundColor: `${PRIORITY_COLORS[task.priority]}22`,
+                        color: PRIORITY_COLORS[task.priority],
+                      }}
+                    >
+                      <Flag size={10} />
+                    </span>
+                  )}
+                  <span className={styles.taskName}>{task.text}</span>
                 </div>
               ))}
             </div>

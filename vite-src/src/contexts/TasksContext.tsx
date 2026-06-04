@@ -12,6 +12,7 @@ import { useNav } from "./NavContext";
 import { useChats } from "./ChatsContext";
 import { isNeutralinoConnected } from "../utils/neuUtils";
 import { Task } from "../types/chat";
+import { PRIORITY_ORDER } from "../utils/taskUtils";
 
 interface TasksContextValue {
   tasks: Task[];
@@ -21,6 +22,8 @@ interface TasksContextValue {
   deleteTask: (taskId: string) => Promise<void>;
   graduateTask: (taskId: string, chatId: string) => Promise<void>;
   createChatAndGraduate: (taskId: string) => Promise<void>;
+  createChatAndGraduateWithId: (taskId: string) => Promise<string>;
+  getSortedActiveTasks: () => Task[];
 }
 
 const TasksContext = createContext<TasksContextValue | null>(null);
@@ -54,6 +57,23 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     await createChatAndGraduateRef.current(taskId);
   }, []);
 
+  const getSortedActiveTasks = useMemo(() => {
+    return () => {
+      const active = tasks.filter((t) => !t.graduatedAt);
+      return [...active].sort(
+        (a, b) =>
+          (PRIORITY_ORDER[a.priority || "low"] - PRIORITY_ORDER[b.priority || "low"]) ||
+          b.createdAt - a.createdAt
+      );
+    };
+  }, [tasks]);
+
+  const createChatAndGraduateWithId = useCallback(async (taskId: string): Promise<string> => {
+    const chat = await createChat();
+    await graduateTask(taskId, chat.id);
+    return chat.id;
+  }, [createChat, graduateTask]);
+
   const value = useMemo(
     () => ({
       tasks,
@@ -63,8 +83,10 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       deleteTask,
       graduateTask,
       createChatAndGraduate,
+      createChatAndGraduateWithId,
+      getSortedActiveTasks,
     }),
-    [tasks, isLoading, createTask, updateTask, deleteTask, graduateTask, createChatAndGraduate]
+    [tasks, isLoading, createTask, updateTask, deleteTask, graduateTask, createChatAndGraduate, createChatAndGraduateWithId, getSortedActiveTasks]
   );
 
   return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;

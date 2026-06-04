@@ -10,11 +10,10 @@ import {
   Pencil,
 } from "lucide-react";
 import styles from "../components/TasksPage.module.css";
-import { useTasks } from "../contexts";
-import { useNav } from "../contexts";
-import { TaskPriority } from "../types/chat";
+import { useTasks, useNav } from "../contexts";
 import { chatStore } from "../store/chats";
-
+import { TaskPriority } from "../types/chat";
+import { PRIORITY_COLORS } from "../utils/taskUtils";
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleString("en-US", {
     month: "short",
@@ -25,22 +24,8 @@ function formatDate(ts: number): string {
   });
 }
 
-const PRIORITY_ORDER: Record<TaskPriority, number> = {
-  critical: 0,
-  high: 1,
-  medium: 2,
-  low: 3,
-};
-
-const PRIORITY_COLORS: Record<TaskPriority, string> = {
-  critical: "#ef4444",
-  high: "#f97316",
-  medium: "#eab308",
-  low: "#22c55e",
-};
-
 export default function TasksPage() {
-  const { tasks, isLoading, createTask, updateTask, deleteTask, createChatAndGraduate } =
+  const { tasks, isLoading, createTask, updateTask, deleteTask, createChatAndGraduate, getSortedActiveTasks } =
     useTasks();
   const { navigateToChat, activeProjectId } = useNav();
 
@@ -71,7 +56,7 @@ export default function TasksPage() {
     [activeProjectId]
   );
 
-  const activeTasks = tasks.filter((t) => !t.graduatedAt);
+  const sortedActiveTasks = getSortedActiveTasks();
   const graduatedTasks = tasks.filter((t) => t.graduatedAt);
 
   const handleCreate = async () => {
@@ -125,12 +110,6 @@ export default function TasksPage() {
   const handleOpenChat = (chatId: string) => {
     navigateToChat(chatId);
   };
-
-  const sortedTasks = [...activeTasks].sort(
-    (a, b) =>
-      (PRIORITY_ORDER[a.priority || "low"] - PRIORITY_ORDER[b.priority || "low"]) ||
-      b.createdAt - a.createdAt
-  );
 
   if (isLoading) {
     return (
@@ -207,15 +186,15 @@ export default function TasksPage() {
           </div>
         )}
 
-        {sortedTasks.length === 0 && (
+        {sortedActiveTasks.length === 0 && (
           <div className={styles.noData}>
             {showNewTask ? "Fill in the form above to create a task." : "No active tasks. Click 'New Task' to get started."}
           </div>
         )}
 
-        {sortedTasks.length > 0 && (
+        {sortedActiveTasks.length > 0 && (
           <div className={styles.taskList}>
-            {sortedTasks.map((task) => (
+            {sortedActiveTasks.map((task) => (
               <div
                 key={task.id}
                 className={`${styles.taskCard} ${task.graduatedAt ? styles.graduated : ""}`}
