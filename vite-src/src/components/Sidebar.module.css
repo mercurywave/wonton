@@ -128,8 +128,10 @@
 .taskListHeader {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 4px 12px;
   margin-bottom: 4px;
+  position: relative;
 }
 
 .chatListTitle {
@@ -166,6 +168,25 @@
 }
 
 .newChatBtn:hover {
+  background: #1a1a2e;
+  color: #d0d0e0;
+  border-color: #3a3a4e;
+}
+
+.newTaskBtn {
+  background: none;
+  border: 1px solid #2a2a3e;
+  color: #666;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.newTaskBtn:hover {
   background: #1a1a2e;
   color: #d0d0e0;
   border-color: #3a3a4e;
@@ -499,4 +520,98 @@
   .sidebar:not(.open) .footer .action span {
     display: inline-flex;
   }
+}
+
+/* Task Quick-Add Popup */
+.taskPopupWrapper {
+  position: fixed;
+  z-index: 200;
+}
+
+.taskPopup {
+  background: #1e1e3a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 12px;
+  width: 400px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.taskPopupTextarea {
+  width: 100%;
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 13px;
+  padding: 8px 10px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.taskPopupTextarea:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.taskPopupActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  gap: 8px;
+}
+
+.taskPopupClose {
+  background: none;
+  border: 1px solid #2a2a4a;
+  color: #888;
+  cursor: pointer;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.taskPopupClose:hover {
+  border-color: #444;
+  color: #ccc;
+}
+
+.taskPopupSave {
+  padding: 5px 14px;
+  background: #4a6cf7;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.taskPopupSave:hover {
+  background: #3b5de7;
+}
+
+.taskPopupSave:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

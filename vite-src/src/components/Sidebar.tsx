@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   MessageSquare,
   Settings,
@@ -15,6 +15,7 @@ import {
   BarChart3,
   Flag,
   CircleFadingArrowUp,
+  X,
 } from "lucide-react";
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
@@ -44,7 +45,7 @@ export default function Sidebar({
   const { projects, isLoading: projectsLoading } = useProjects();
   const { chats, getIsProcessing, selectedChatId } = useChats();
   const { state: nav, activeProjectId, navigateToPage, navigateToChat } = useNav();
-  const { tasks, getSortedActiveTasks, createChatAndGraduateWithId } = useTasks();
+  const { getSortedActiveTasks, createChatAndGraduateWithId, createTask } = useTasks();
 
   const displayChats = chats.slice(0, 5).map((c) => ({
     id: c.id,
@@ -72,6 +73,14 @@ export default function Sidebar({
   const renameInputRef = useRef<HTMLInputElement>(null);
   const contextMenuRef = useRef<HTMLDivElement>(null);
 
+  const [showTaskPopup, setShowTaskPopup] = useState(false);
+  const [taskPopupText, setTaskPopupText] = useState("");
+  const [taskCreating, setTaskCreating] = useState(false);
+  const [popupPosition, setPopupPosition] = useState<{ top: number; left: number } | null>(null);
+  const taskPopupRef = useRef<HTMLDivElement>(null);
+  const taskInputRef = useRef<HTMLTextAreaElement>(null);
+  const taskBtnRef = useRef<HTMLButtonElement>(null);
+
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (
@@ -80,10 +89,57 @@ export default function Sidebar({
       ) {
         setContextMenu(null);
       }
+      if (
+        showTaskPopup &&
+        taskPopupRef.current &&
+        !taskPopupRef.current.contains(e.target as Node)
+      ) {
+        setShowTaskPopup(false);
+        setTaskPopupText("");
+        setPopupPosition(null);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showTaskPopup]);
+
+  useEffect(() => {
+    if (showTaskPopup) {
+      if (taskBtnRef.current) {
+        const rect = taskBtnRef.current.getBoundingClientRect();
+        const MIN_LEFT = 10;
+        const popupWidth = 400;
+        let left = rect.left;
+        if (left + popupWidth > window.innerWidth - MIN_LEFT) {
+          left = window.innerWidth - popupWidth - MIN_LEFT;
+        }
+        if (left < MIN_LEFT) left = MIN_LEFT;
+        setPopupPosition({ top: rect.bottom + 4, left });
+      }
+      setTimeout(() => taskInputRef.current?.focus(), 0);
+    } else {
+      setTaskPopupText("");
+      setPopupPosition(null);
+    }
+  }, [showTaskPopup]);
+
+  const handleTaskPopupKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      setShowTaskPopup(false);
+      setTaskPopupText("");
+    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      handleTaskPopupSave();
+    }
   }, []);
+
+  const handleTaskPopupSave = useCallback(async () => {
+    if (!taskPopupText.trim()) return;
+    setTaskCreating(true);
+    await createTask(taskPopupText.trim());
+    setTaskPopupText("");
+    setShowTaskPopup(false);
+    setTaskCreating(false);
+  }, [taskPopupText, createTask]);
 
   const handleContextMenu = (e: React.MouseEvent, chatId: string) => {
     e.preventDefault();
@@ -245,6 +301,52 @@ export default function Sidebar({
           <div className={styles.taskListSection}>
             <div className={styles.taskListHeader}>
               <span className={styles.taskListTitle}>Tasks</span>
+              <button
+                ref={taskBtnRef}
+                className={styles.newTaskBtn}
+                onClick={() => setShowTaskPopup(true)}
+                title="New task"
+              >
+                <Plus size={14} />
+              </button>
+              {showTaskPopup && popupPosition && (
+                <div
+                  ref={taskPopupRef}
+                  className={styles.taskPopupWrapper}
+                  style={{ top: popupPosition.top, left: popupPosition.left }}
+                >
+                  <div className={styles.taskPopup}>
+                    <textarea
+                      ref={taskInputRef}
+                      className={styles.taskPopupTextarea}
+                      placeholder="Describe the task..."
+                      value={taskPopupText}
+                      onChange={(e) => setTaskPopupText(e.target.value)}
+                      onKeyDown={handleTaskPopupKeyDown}
+                      rows={3}
+                    />
+                    <div className={styles.taskPopupActions}>
+                      <button
+                        className={styles.taskPopupClose}
+                        onClick={() => {
+                          setShowTaskPopup(false);
+                          setTaskPopupText("");
+                        }}
+                        title="Cancel"
+                      >
+                        <X size={14} />
+                      </button>
+                      <button
+                        className={styles.taskPopupSave}
+                        onClick={handleTaskPopupSave}
+                        disabled={!taskPopupText.trim() || taskCreating}
+                      >
+                        {taskCreating ? "Creating..." : "Create"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className={styles.taskList}>
               {displayTasks.map((task) => (
