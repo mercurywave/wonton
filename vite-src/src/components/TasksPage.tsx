@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import {
   Flag,
   Trash2,
@@ -8,8 +8,6 @@ import {
   Clock,
   CheckCircle2,
   Pencil,
-  Save,
-  X,
 } from "lucide-react";
 import styles from "../components/TasksPage.module.css";
 import { useTasks } from "../contexts";
@@ -55,6 +53,7 @@ export default function TasksPage() {
   const [editText, setEditText] = useState("");
   const [editPriority, setEditPriority] = useState<TaskPriority | undefined>();
   const [updating, setUpdating] = useState(false);
+  const [showGraduated, setShowGraduated] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const activeTasks = tasks.filter((t) => !t.graduatedAt);
@@ -327,58 +326,68 @@ export default function TasksPage() {
 
         {graduatedTasks.length > 0 && (
           <div className={styles.section}>
-            <h3 className={styles.sectionTitle}>Graduated ({graduatedTasks.length})</h3>
-            <div className={styles.taskList}>
-              {graduatedTasks.map((task) => (
-                <div key={task.id} className={`${styles.taskCard} ${styles.graduated}`}>
-                  <div className={styles.taskCardHeader}>
-                    {task.priority && (
-                      <span
-                        className={styles.priorityBadge}
-                        style={{
-                          backgroundColor: `${PRIORITY_COLORS[task.priority]}22`,
-                          color: PRIORITY_COLORS[task.priority],
-                          borderColor: `${PRIORITY_COLORS[task.priority]}44`,
-                        }}
-                      >
-                        <Flag size={11} />
-                        {task.priority}
+            <button
+              className={styles.sectionTitleBtn}
+              onClick={() => setShowGraduated((prev) => !prev)}
+            >
+              <span className={styles.sectionTitle}>
+                Graduated ({graduatedTasks.length})
+              </span>
+              <span className={styles.sectionChevron}>{showGraduated ? "▾" : "▸"}</span>
+            </button>
+            {showGraduated && (
+              <div className={styles.taskList}>
+                {graduatedTasks.map((task) => (
+                  <div key={task.id} className={`${styles.taskCard} ${styles.graduated}`}>
+                    <div className={styles.taskCardHeader}>
+                      {task.priority && (
+                        <span
+                          className={styles.priorityBadge}
+                          style={{
+                            backgroundColor: `${PRIORITY_COLORS[task.priority]}22`,
+                            color: PRIORITY_COLORS[task.priority],
+                            borderColor: `${PRIORITY_COLORS[task.priority]}44`,
+                          }}
+                        >
+                          <Flag size={11} />
+                          {task.priority}
+                        </span>
+                      )}
+                      <span className={styles.taskDate}>
+                        <Clock size={11} />
+                        {formatDate(task.createdAt)}
                       </span>
-                    )}
-                    <span className={styles.taskDate}>
-                      <Clock size={11} />
-                      {formatDate(task.createdAt)}
-                    </span>
-                    <span className={styles.graduatedBadge}>
-                      <CheckCircle2 size={11} />
-                      Graduated {formatDate(task.graduatedAt!)}
-                    </span>
-                  </div>
+                      <span className={styles.graduatedBadge}>
+                        <CheckCircle2 size={11} />
+                        Graduated {formatDate(task.graduatedAt!)}
+                      </span>
+                    </div>
 
-                  <div className={styles.taskText}>{task.text}</div>
+                    <div className={styles.taskText}>{task.text}</div>
 
-                  <div className={styles.taskActions}>
-                    {task.chatId && (
+                    <div className={styles.taskActions}>
+                      {task.chatId && (
+                        <button
+                          className={styles.openChatBtn}
+                          onClick={() => handleOpenChat(task.chatId!)}
+                        >
+                          <ExternalLink size={13} />
+                          Open Chat
+                        </button>
+                      )}
                       <button
-                        className={styles.openChatBtn}
-                        onClick={() => handleOpenChat(task.chatId!)}
+                        className={`${styles.deleteBtn} ${styles.deleteBtnDanger}`}
+                        onClick={() => handleDelete(task.id)}
+                        disabled={deletingId === task.id}
                       >
-                        <ExternalLink size={13} />
-                        Open Chat
+                        <Trash2 size={13} />
+                        {deletingId === task.id ? "Deleting..." : "Delete"}
                       </button>
-                    )}
-                    <button
-                      className={`${styles.deleteBtn} ${styles.deleteBtnDanger}`}
-                      onClick={() => handleDelete(task.id)}
-                      disabled={deletingId === task.id}
-                    >
-                      <Trash2 size={13} />
-                      {deletingId === task.id ? "Deleting..." : "Delete"}
-                    </button>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
