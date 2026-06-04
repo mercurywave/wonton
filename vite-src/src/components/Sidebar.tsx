@@ -13,6 +13,7 @@ import {
   Loader2,
   GitBranch,
   BarChart3,
+  Flag,
 } from "lucide-react";
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
@@ -51,6 +52,7 @@ export default function Sidebar({
   }));
   const navItems: { page: Page; icon: React.ReactNode; label: string; filterOut?: () => boolean }[] = [
     { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => sidebarOpen },
+    { page: "tasks", icon: <Flag size={18} />, label: "Tasks" },
     { page: "projects", icon: <Folder size={18} />, label: "Projects" },
     { page: "history", icon: <Clock size={18} />, label: "History" },
     { page: "workflows", icon: <GitBranch size={18} />, label: "Workflows" },

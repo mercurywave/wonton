@@ -4,6 +4,7 @@ import { ProjectsProvider } from "./ProjectsContext";
 import { AgentsProvider } from "./AgentsContext";
 import { FlowsProvider } from "./FlowsContext";
 import { ChatsProvider } from "./ChatsContext";
+import { TasksProvider } from "./TasksContext";
 import { UIProvider } from "./UIContext";
 import { NavProvider } from "./NavContext";
 import { EventBusProvider } from "./EventBusContext";
@@ -13,6 +14,7 @@ export { ProjectsProvider, useProjects } from "./ProjectsContext";
 export { AgentsProvider, useAgentsContext } from "./AgentsContext";
 export { FlowsProvider, useFlowsContext } from "./FlowsContext";
 export { ChatsProvider, useChats } from "./ChatsContext";
+export { TasksProvider, useTasks } from "./TasksContext";
 export { UIProvider, useUI } from "./UIContext";
 export { NavProvider, useNav } from "./NavContext";
 export { EventBusProvider, useEventBus } from "./EventBusContext";
@@ -26,9 +28,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
             <FlowsProvider>
               <EventBusProvider>
                 <ChatsProvider>
-                  <UIProvider>
-                    {children}
-                  </UIProvider>
+                  <TasksProvider>
+                    <UIProvider>
+                      {children}
+                    </UIProvider>
+                  </TasksProvider>
                 </ChatsProvider>
               </EventBusProvider>
             </FlowsProvider>

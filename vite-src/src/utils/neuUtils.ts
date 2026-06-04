@@ -10,6 +10,7 @@ export const TMP_DIR_NAME = "tmp";
 export const PROJECTS_FILE_NAME = "projects.json";
 export const AGENTS_FILE_NAME = "agents.json";
 export const FLOWS_DIR_NAME = "flows";
+export const TASKS_DIR_NAME = "tasks";
 export const DEFAULT_PROJECT_ID = "default";
 
 export function isNeutralinoConnected() {

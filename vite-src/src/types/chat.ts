@@ -188,7 +188,19 @@ export interface StatsEntry {
   predictedPerSecond?: number;
 }
 
-export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows" | "stats";
+export type TaskPriority = "low" | "medium" | "high" | "critical";
+
+export interface Task {
+  id: string;
+  projectId: string;
+  text: string;
+  createdAt: number;
+  graduatedAt?: number;
+  chatId?: string;
+  priority?: TaskPriority;
+}
+
+export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows" | "stats" | "tasks";
 
 export interface ServerModel {
   id: string;

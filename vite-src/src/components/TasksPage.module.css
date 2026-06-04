@@ -1,0 +1,347 @@
+.container {
+  display: flex;
+  justify-content: center;
+  height: 100%;
+  overflow-y: auto;
+  padding: 24px 0;
+}
+
+.content {
+  max-width: 800px;
+  width: 100%;
+  padding: 0 24px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  color: #e0e0e0;
+}
+
+.header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  flex: 1;
+}
+
+.newTaskBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #4a6cf7;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.newTaskBtn:hover {
+  background: #3b5de7;
+}
+
+.loading {
+  text-align: center;
+  color: #666;
+  font-size: 13px;
+  padding: 24px;
+}
+
+.noData {
+  text-align: center;
+  color: #555;
+  font-size: 13px;
+  padding: 32px 0;
+}
+
+/* New Task Form */
+.newTaskForm {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 24px;
+}
+
+.newTaskTextarea {
+  width: 100%;
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 13px;
+  padding: 10px 12px;
+  resize: vertical;
+  font-family: inherit;
+  line-height: 1.5;
+  box-sizing: border-box;
+}
+
+.newTaskTextarea:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.newTaskMeta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 12px;
+  gap: 12px;
+}
+
+.prioritySelect {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  color: #e0e0e0;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.prioritySelect:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.newTaskActions {
+  display: flex;
+  gap: 8px;
+}
+
+.cancelBtn {
+  padding: 7px 14px;
+  background: transparent;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.cancelBtn:hover {
+  border-color: #444;
+  color: #ccc;
+}
+
+.cancelBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.submitBtn {
+  padding: 7px 14px;
+  background: #4a6cf7;
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.submitBtn:hover {
+  background: #3b5de7;
+}
+
+.submitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Task List */
+.taskList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.taskCard {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 14px 16px;
+  transition: border-color 0.15s ease;
+}
+
+.taskCard:hover {
+  border-color: #2a2a3e;
+}
+
+.taskCard.graduated {
+  opacity: 0.65;
+}
+
+.taskCard.graduated:hover {
+  opacity: 0.8;
+}
+
+.taskCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.priorityBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  border: 1px solid;
+}
+
+.taskDate {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: #666;
+}
+
+.activeBadge {
+  font-size: 11px;
+  color: #22c55e;
+  font-weight: 500;
+}
+
+.graduatedBadge {
+  font-size: 11px;
+  color: #888;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.taskText {
+  font-size: 13px;
+  color: #c0c0d0;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  margin-bottom: 10px;
+}
+
+.taskActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.graduateBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: rgba(74, 108, 247, 0.15);
+  border: 1px solid rgba(74, 108, 247, 0.3);
+  border-radius: 6px;
+  color: #4a6cf7;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.graduateBtn:hover {
+  background: rgba(74, 108, 247, 0.25);
+}
+
+.graduateBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.openChatBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  color: #888;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.openChatBtn:hover {
+  border-color: #4a6cf7;
+  color: #4a6cf7;
+}
+
+.deleteBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 12px;
+  background: transparent;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  color: #666;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.deleteBtn:hover {
+  border-color: #ef4444;
+  color: #ef4444;
+}
+
+.deleteBtnDanger:hover {
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.deleteBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Sections */
+.section {
+  margin-top: 32px;
+  padding-top: 24px;
+  border-top: 1px solid #2a2a4a;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #888;
+  margin: 0 0 16px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+  .content {
+    padding: 0 16px;
+  }
+
+  .newTaskMeta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .newTaskActions {
+    justify-content: flex-end;
+  }
+}
