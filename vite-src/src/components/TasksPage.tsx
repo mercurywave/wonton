@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import {
   Flag,
   Trash2,
@@ -13,6 +13,7 @@ import styles from "../components/TasksPage.module.css";
 import { useTasks } from "../contexts";
 import { useNav } from "../contexts";
 import { TaskPriority } from "../types/chat";
+import { chatStore } from "../store/chats";
 
 function formatDate(ts: number): string {
   return new Date(ts).toLocaleString("en-US", {
@@ -41,7 +42,7 @@ const PRIORITY_COLORS: Record<TaskPriority, string> = {
 export default function TasksPage() {
   const { tasks, isLoading, createTask, updateTask, deleteTask, createChatAndGraduate } =
     useTasks();
-  const { navigateToChat } = useNav();
+  const { navigateToChat, activeProjectId } = useNav();
 
   const [showNewTask, setShowNewTask] = useState(false);
   const [newText, setNewText] = useState("");
@@ -55,6 +56,20 @@ export default function TasksPage() {
   const [updating, setUpdating] = useState(false);
   const [showGraduated, setShowGraduated] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (activeProjectId) {
+      chatStore.load(activeProjectId);
+    }
+  }, [activeProjectId]);
+
+  const chatExists = useCallback(
+    (chatId: string) => {
+      if (!activeProjectId) return true;
+      return chatStore.getChat(activeProjectId, chatId) !== undefined;
+    },
+    [activeProjectId]
+  );
 
   const activeTasks = tasks.filter((t) => !t.graduatedAt);
   const graduatedTasks = tasks.filter((t) => t.graduatedAt);
@@ -366,7 +381,7 @@ export default function TasksPage() {
                     <div className={styles.taskText}>{task.text}</div>
 
                     <div className={styles.taskActions}>
-                      {task.chatId && (
+                      {task.chatId && chatExists(task.chatId) && (
                         <button
                           className={styles.openChatBtn}
                           onClick={() => handleOpenChat(task.chatId!)}
