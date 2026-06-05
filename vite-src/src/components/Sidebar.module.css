@@ -112,11 +112,6 @@
   padding: 8px 0;
 }
 
-.taskListSection {
-  border-top: 1px solid #1a1a2e;
-  padding: 8px 0;
-}
-
 .chatListHeader {
   display: flex;
   align-items: center;
@@ -129,7 +124,6 @@
   display: flex;
   align-items: center;
   padding: 0;
-  margin-bottom: 4px;
   position: relative;
 }
 
@@ -498,7 +492,6 @@
 
 .nav {
   flex: 1;
-  padding: 8px;
 }
 
 .navItem {

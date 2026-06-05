@@ -272,10 +272,8 @@ export default function Sidebar({
                     />
                   ) : (
                     <>
-                      {chat.isProcessing ? (
+                      {chat.isProcessing && (
                         <Loader2 size={14} className={`${styles.chatIcon} ${styles.spinner}`} />
-                      ) : (
-                        <MessageSquare size={14} className={styles.chatIcon} />
                       )}
                       <span className={styles.chatName}>{chat.name}</span>
                       {chat.draft ? (
