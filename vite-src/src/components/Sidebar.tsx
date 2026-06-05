@@ -229,7 +229,7 @@ export default function Sidebar({
           </div>
         )}
 
-        {sidebarOpen && chats.length > 0 && (
+        {sidebarOpen && (
           <div className={styles.chatListSection}>
             <div className={styles.chatListHeader}>
               <button
@@ -306,7 +306,7 @@ export default function Sidebar({
           </div>
         )}
 
-        {sidebarOpen && displayTasks.length > 0 && (
+        {sidebarOpen && (
           <div className={styles.taskListSection}>
             <div className={styles.taskListHeader}>
               <button
