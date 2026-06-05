@@ -59,7 +59,7 @@ export default function Sidebar({
   const displayTasks = sortedActiveTasks.slice(0, 3);
   const navItems: { page: Page; icon: React.ReactNode; label: string; filterOut?: () => boolean }[] = [
     { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => sidebarOpen },
-    { page: "tasks", icon: <Flag size={18} />, label: "Tasks" },
+    { page: "tasks", icon: <Flag size={18} />, label: "Tasks", filterOut: () => sidebarOpen },
     { page: "projects", icon: <Folder size={18} />, label: "Projects" },
     { page: "history", icon: <Clock size={18} />, label: "History" },
     { page: "workflows", icon: <GitBranch size={18} />, label: "Workflows" },
@@ -79,7 +79,7 @@ export default function Sidebar({
   const [popupPosition, setPopupPosition] = useState<{ top: number; left: number } | null>(null);
   const taskPopupRef = useRef<HTMLDivElement>(null);
   const taskInputRef = useRef<HTMLTextAreaElement>(null);
-  const taskBtnRef = useRef<HTMLButtonElement>(null);
+  const taskBtnRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -300,14 +300,23 @@ export default function Sidebar({
         {sidebarOpen && displayTasks.length > 0 && (
           <div className={styles.taskListSection}>
             <div className={styles.taskListHeader}>
-              <span className={styles.taskListTitle}>Tasks</span>
               <button
-                ref={taskBtnRef}
-                className={styles.newTaskBtn}
-                onClick={() => setShowTaskPopup(true)}
-                title="New task"
+                className={`${styles.taskListTitle} ${nav.page === "tasks" ? styles.active : ""}`}
+                onClick={() => navigateToPage("tasks")}
               >
-                <Plus size={14} />
+                <Flag size={18} />
+                <span className={styles.taskListLabel}>Tasks</span>
+                <div
+                  ref={taskBtnRef}
+                  className={styles.newTaskBtnWrapper}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowTaskPopup(true);
+                  }}
+                  title="New task"
+                >
+                  <Plus size={14} />
+                </div>
               </button>
               {showTaskPopup && popupPosition && (
                 <div

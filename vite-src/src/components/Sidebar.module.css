@@ -128,8 +128,7 @@
 .taskListHeader {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: 4px 12px;
+  padding: 0;
   margin-bottom: 4px;
   position: relative;
 }
@@ -143,11 +142,58 @@
 }
 
 .taskListTitle {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: all 0.15s ease;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.taskListLabel {
+  flex: 1;
+  min-width: 0;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.newTaskBtnWrapper {
+  background: none;
+  border: 1px solid #2a2a3e;
   color: #666;
-  letter-spacing: 0.5px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.newTaskBtnWrapper:hover {
+  background: #1a1a2e;
+  color: #d0d0e0;
+  border-color: #3a3a4e;
+}
+
+.taskListTitle:hover {
+  background: #1a1a2e;
+  color: #d0d0e0;
+}
+
+.taskListTitle.active {
+  background: #16162a;
+  color: #e0e0e0;
 }
 
 .chatListIcon {
@@ -175,7 +221,7 @@
 
 .newTaskBtn {
   background: none;
-  border: 1px solid #2a2a3e;
+  border: none;
   color: #666;
   cursor: pointer;
   padding: 4px;
@@ -183,13 +229,13 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
   transition: all 0.15s ease;
 }
 
 .newTaskBtn:hover {
   background: #1a1a2e;
   color: #d0d0e0;
-  border-color: #3a3a4e;
 }
 
 .chatList {
@@ -297,7 +343,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
+  padding: 5px 12px;
   border-radius: 6px;
   cursor: pointer;
   transition: all 0.15s ease;
