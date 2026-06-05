@@ -263,20 +263,40 @@
 .chatList {
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .chatItem {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 12px;
-  border-radius: 6px;
+  padding: 8px 12px 8px 10px;
+  margin-left: 10px;
   cursor: pointer;
   transition: all 0.15s ease;
   color: #9090a0;
   font-size: 13px;
   position: relative;
+}
+
+.chatItem::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 2px;
+  height: 100%;
+  background: #1a1a2e;
+  transform: translateY(-50%);
+  border-radius: 1px;
+  transition: background 0.15s ease;
+}
+
+.chatItem:hover::before {
+  background: #464655;
+}
+
+.chatItem.active::before {
+  background: #2a2a32;
 }
 
 .chatItem:hover {
@@ -358,20 +378,32 @@
 .taskList {
   display: flex;
   flex-direction: column;
-  gap: 2px;
 }
 
 .taskItem {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 5px 12px;
+  padding: 5px 12px 5px 10px;
+  margin-left: 10px;
   border-radius: 6px;
-  cursor: pointer;
   transition: all 0.15s ease;
   color: #9090a0;
   font-size: 13px;
   position: relative;
+}
+
+.taskItem::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 50%;
+  width: 2px;
+  height: 100%;
+  background: #1a1a2e;
+  transform: translateY(-50%);
+  border-radius: 1px;
+  transition: background 0.15s ease;
 }
 
 .taskItem.active {
