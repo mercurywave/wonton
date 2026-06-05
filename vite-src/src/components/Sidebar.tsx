@@ -61,7 +61,7 @@ export default function Sidebar({
     { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => sidebarOpen },
     { page: "tasks", icon: <Flag size={18} />, label: "Tasks", filterOut: () => sidebarOpen },
     { page: "projects", icon: <Folder size={18} />, label: "Projects" },
-    { page: "history", icon: <Clock size={18} />, label: "History" },
+    { page: "history", icon: <Clock size={18} />, label: "History", filterOut: () => sidebarOpen },
     { page: "workflows", icon: <GitBranch size={18} />, label: "Workflows" },
     { page: "stats", icon: <BarChart3 size={18} />, label: "Stats" },
     { page: "settings", icon: <Settings size={18} />, label: "Settings" },
@@ -232,13 +232,22 @@ export default function Sidebar({
         {sidebarOpen && chats.length > 0 && (
           <div className={styles.chatListSection}>
             <div className={styles.chatListHeader}>
-              <span className={styles.chatListTitle}>Chats</span>
               <button
-                className={styles.newChatBtn}
-                onClick={onNewChat}
-                title="New chat"
+                className={`${styles.chatListTitle} ${nav.page === "history" ? styles.active : ""}`}
+                onClick={() => navigateToPage("history")}
               >
-                <Plus size={14} />
+                <MessageSquare size={18} />
+                <span className={styles.chatListLabel}>Chats</span>
+                <div
+                  className={styles.newChatBtnWrapper}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onNewChat();
+                  }}
+                  title="New chat"
+                >
+                  <Plus size={14} />
+                </div>
               </button>
             </div>
             <div className={styles.chatList}>
