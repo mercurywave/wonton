@@ -1,0 +1,224 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.topBar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 24px 12px;
+  flex-shrink: 0;
+  color: #e0e0e0;
+}
+
+.topBarLeft {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.topBarLeft h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.topBarRight {
+  flex-shrink: 0;
+}
+
+.searchRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 8px 14px;
+  transition: border-color 0.15s ease;
+}
+
+.searchRow:focus-within {
+  border-color: #4a6cf7;
+}
+
+.searchIcon {
+  color: #666;
+  flex-shrink: 0;
+}
+
+.searchInput {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  color: #e0e0e0;
+  font-size: 14px;
+  font-family: inherit;
+  min-width: 0;
+}
+
+.searchInput::placeholder {
+  color: #555;
+}
+
+.searchBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(74, 108, 247, 0.15);
+  border: 1px solid rgba(74, 108, 247, 0.3);
+  color: #4a6cf7;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.searchBtn:hover {
+  background: rgba(74, 108, 247, 0.25);
+  border-color: #4a6cf7;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+  color: #4a6cf7;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.openFolderBtn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid #2a2a4a;
+  color: #888;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.openFolderBtn:hover {
+  border-color: #4a6cf7;
+  color: #e0e0e0;
+  background: rgba(74, 108, 247, 0.05);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  padding: 0 24px 24px;
+}
+
+.fullResults {
+  height: 100%;
+  overflow-y: auto;
+}
+
+.empty {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 60px 16px;
+  color: #666;
+  font-size: 14px;
+}
+
+.emptyIcon {
+  opacity: 0.3;
+  color: #555;
+}
+
+.empty p {
+  margin: 0;
+}
+
+.resultsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resultCard {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.resultCard:hover {
+  border-color: #3a3a5a;
+  background: #1a1a30;
+}
+
+.resultPath {
+  font-size: 13px;
+  font-weight: 500;
+  color: #4a6cf7;
+  margin-bottom: 8px;
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+}
+
+.matchBlock {
+  margin-bottom: 8px;
+}
+
+.matchBlock:last-child {
+  margin-bottom: 0;
+}
+
+.matchLine {
+  display: flex;
+  gap: 8px;
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #e0e0e0;
+  background: rgba(74, 108, 247, 0.06);
+  padding: 2px 6px;
+  border-radius: 4px;
+  overflow-x: auto;
+}
+
+.lineNumber {
+  color: #555;
+  flex-shrink: 0;
+  min-width: 24px;
+  text-align: right;
+  user-select: none;
+}
+
+.contextLine {
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #666;
+  padding: 0 6px;
+  overflow-x: auto;
+}
+
+mark {
+  background: rgba(74, 108, 247, 0.25);
+  color: #a0baff;
+  border-radius: 2px;
+  padding: 0 1px;
+}

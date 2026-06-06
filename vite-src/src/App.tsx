@@ -17,6 +17,7 @@ import ChatHistoryPage from "./components/ChatHistoryPage";
 import WorkflowsPage from "./components/WorkflowsPage";
 import StatsPage from "./components/StatsPage";
 import TasksPage from "./components/TasksPage";
+import ReferencesPage from "./components/ReferencesPage";
 import SplitPanel from "./components/SplitPanel";
 import "./App.css";
 import FileViewerPanel from "./components/FileViewerPanel";
@@ -301,6 +302,9 @@ function App() {
         )}
         {nav.page === "tasks" && (
           <TasksPage />
+        )}
+        {nav.page === "references" && (
+          <ReferencesPage />
         )}
       </div>
     </div>

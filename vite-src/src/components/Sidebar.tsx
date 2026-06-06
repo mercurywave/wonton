@@ -16,6 +16,7 @@ import {
   Flag,
   CircleFadingArrowUp,
   X,
+  Book,
 } from "lucide-react";
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
@@ -61,6 +62,7 @@ export default function Sidebar({
     { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => sidebarOpen },
     { page: "tasks", icon: <Flag size={18} />, label: "Tasks", filterOut: () => sidebarOpen },
     { page: "projects", icon: <Folder size={18} />, label: "Projects" },
+    { page: "references", icon: <Book size={18} />, label: "References" },
     { page: "history", icon: <Clock size={18} />, label: "History", filterOut: () => sidebarOpen },
     { page: "workflows", icon: <GitBranch size={18} />, label: "Workflows" },
     { page: "stats", icon: <BarChart3 size={18} />, label: "Stats" },
