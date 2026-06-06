@@ -179,3 +179,56 @@
   margin: 0;
   line-height: 1.6;
 }
+
+.navToolbar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 16px;
+  border-bottom: 1px solid #1a1a2e;
+  background: #16162a;
+  flex-shrink: 0;
+}
+
+.navButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid #2a2a4a;
+  color: #ccc;
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.navButton:hover {
+  background: rgba(74, 108, 247, 0.15);
+  border-color: #4a6cf7;
+  color: #fff;
+}
+
+.navLabel {
+  font-size: 12px;
+  color: #aaa;
+  min-width: 40px;
+  text-align: center;
+  user-select: none;
+}
+
+.searchMatch {
+  background: rgba(255, 200, 0, 0.25);
+  color: #fff;
+  padding: 0 2px;
+  border-radius: 2px;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.searchMatch.searchMatchCurrent {
+  background: rgba(255, 165, 0, 0.5) !important;
+  border-color: #ffa500 !important;
+  box-shadow: 0 0 4px rgba(255, 165, 0, 0.4) !important;
+}

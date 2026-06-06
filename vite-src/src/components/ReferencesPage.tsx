@@ -242,6 +242,16 @@ export default function ReferencesPage() {
 
   const showSplit = !!selectedFile;
 
+  const currentFileMatches = results.find((r) => {
+    if (!docsPath) return false;
+    const fullPath = `${docsPath}/${r.path}`;
+    return normalizePath(fullPath) === normalizePath(selectedFile || "");
+  });
+
+  const matchLineIndices = currentFileMatches
+    ? currentFileMatches.matches.map((m) => m.line)
+    : [];
+
   return (
     <div className={styles.container}>
       <div className={styles.topBar}>
@@ -295,6 +305,8 @@ export default function ReferencesPage() {
                 filePath={selectedFile}
                 fileName={selectedFileName}
                 onClose={handleCloseViewer}
+                searchQuery={searchInput.trim()}
+                matchIndices={matchLineIndices}
               />
             }
             initialRatio={0.45}
