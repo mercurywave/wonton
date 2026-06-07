@@ -597,4 +597,37 @@
   color: #e0e0e0;
 }
 
+.allowlistCheckboxes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.allowlistCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #c0c0d0;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.allowlistCheckbox:hover {
+  background: rgba(74, 108, 247, 0.08);
+}
+
+.allowlistCheckbox input[type="checkbox"] {
+  accent-color: #4a6cf7;
+  width: 14px;
+  height: 14px;
+  cursor: pointer;
+}
+
+.allowlistCheckbox span {
+  flex: 1;
+}
+
 

@@ -56,6 +56,7 @@ export interface Agent {
   main: boolean;
   defaultToolSet?: string[];
   folderOverride?: string;
+  subagentAllowlist?: string[];
 }
 
 export interface SubagentMeta {

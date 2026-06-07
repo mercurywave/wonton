@@ -14,7 +14,7 @@ interface AgentsContextValue {
   allAgents: Agent[];
   mainAgents: Agent[];
   addAgent: (agent: Omit<Agent, "id">) => Promise<void>;
-  updateAgent: (id: string, name: string, systemPrompt: string) => Promise<void>;
+  updateAgent: (id: string, name: string, systemPrompt: string, subagentAllowlist?: string[]) => Promise<void>;
   deleteAgent: (id: string) => Promise<void>;
 }
 

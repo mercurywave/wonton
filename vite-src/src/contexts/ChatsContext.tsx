@@ -110,13 +110,20 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     return selectedChatMeta?.logId;
   }, [navLogId, selectedChatMeta]);
 
-  // Resolve the selected agent's system prompt
+  // Resolve the selected agent's system prompt and full agent object
   const activeAgentSystemPrompt = useMemo(() => {
     if (!selectedChatId) return undefined;
     const chat = chats.find((c) => c.id === selectedChatId);
     if (!chat?.activeAgentId) return undefined;
     const agent = allAgents.find((a) => a.id === chat.activeAgentId);
     return agent?.systemPrompt;
+  }, [chats, selectedChatId, allAgents]);
+
+  const activeAgent = useMemo(() => {
+    if (!selectedChatId) return undefined;
+    const chat = chats.find((c) => c.id === selectedChatId);
+    if (!chat?.activeAgentId) return undefined;
+    return allAgents.find((a) => a.id === chat.activeAgentId);
   }, [chats, selectedChatId, allAgents]);
 
   const refreshAndNotify = useCallback(async () => {
@@ -139,6 +146,8 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     () => workflowExecuteOnSendPrompt(),
     (response: ChatMessage) => workflowExecuteOnChatResponse(response),
     selectedChatMeta?.activeAgentId,
+    activeAgent,
+    allAgents,
   );
 
   // Workflow execution for the selected chat

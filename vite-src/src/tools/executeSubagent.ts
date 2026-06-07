@@ -1,9 +1,9 @@
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
-import { ToolResult, ChatMessage, ToolCall } from "../types/chat";
+import { ToolResult, ChatMessage, ToolCall, Agent } from "../types/chat";
 import { runToolCallLoop } from "../hooks/useChatApi";
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
-import { getAgentByName } from "../utils/agents";
+import { getAgentByName, getAvailableSubagents } from "../utils/agents";
 import { getAllAgents, loadAgentsFile } from "../hooks/useAgents";
 import { SubagentMeta } from "../types/chat";
 import { getProjectDataDir, DOCS_DIR_NAME, DOCS_FOLDER_OVERRIDE } from "../utils/neuUtils";
@@ -37,6 +37,47 @@ export class ExecuteSubagentHandler implements ToolHandler {
       },
     },
   };
+
+  getDynamicDefinition(agent: Agent, allAgents?: Agent[]): ToolDefinition {
+    const agents = allAgents ?? getAllAgents([]);
+    const availableSubagents = getAvailableSubagents(agent, agents);
+    const agentNames = availableSubagents.map((a) => a.name);
+
+    let description: string;
+    if (agentNames.length === 0) {
+      description = "Send a message to an agent to perform a complex focused task. No subagents are available for this agent.";
+    } else {
+      description = `Send a message to an agent to perform a complex focused task. Agents available: [${agentNames.map((n) => `"${n}"`).join(", ")}]`;
+    }
+
+    const properties: Record<string, unknown> = {
+      agentName: {
+        type: "string",
+        description: "The ID of the agent to use for this subagent task",
+      },
+      query: {
+        type: "string",
+        description: "The specific task or question to give to the subagent",
+      },
+    };
+
+    if (agentNames.length > 0) {
+      (properties.agentName as Record<string, unknown>).enum = agentNames;
+    }
+
+    return {
+      type: "function",
+      function: {
+        name: EXECUTE_SUBAGENT_TOOL_NAME,
+        description,
+        parameters: {
+          type: "object",
+          properties,
+          required: ["agentName", "query"],
+        },
+      },
+    };
+  }
 
   private constructor() {}
 
@@ -143,6 +184,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
       logId: subagentLogId,
       isSubagent: true,
       agentId: agent.id,
+      agent,
       onUpdateMessage: () => {
         // No UI update needed for subagent — it's a background tool call
       },

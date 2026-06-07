@@ -7,6 +7,7 @@ import { ReadFileHandler } from "./readFile";
 import { WriteFileHandler } from "./writeFile";
 import { EditFileHandler } from "./editFile";
 import { ExecuteSubagentHandler } from "./executeSubagent";
+import { Agent } from "../types/chat";
 
 const toolHandlers: Record<string, ToolHandler> = {};
 
@@ -47,4 +48,24 @@ export function getAvailableTools(folderPath?: string): ToolDefinition[] {
     return [];
   }
   return Object.values(toolHandlers).map((h) => h.definition);
+}
+
+export function getToolDefinitions(folderPath: string, agent?: Agent, allAgents?: Agent[]): ToolDefinition[] {
+  if (!folderPath) {
+    return [];
+  }
+
+  const allDefs = Object.values(toolHandlers).map((h) => h.definition);
+  const sendHandler = toolHandlers["send"] as ExecuteSubagentHandler | undefined;
+
+  if (sendHandler && agent && agent.defaultToolSet?.includes("send")) {
+    return allDefs.map((def) => {
+      if (def.function.name === "send") {
+        return sendHandler.getDynamicDefinition(agent, allAgents);
+      }
+      return def;
+    });
+  }
+
+  return allDefs;
 }

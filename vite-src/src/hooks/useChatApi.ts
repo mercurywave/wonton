@@ -1,12 +1,11 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { ChatMessage, LLMStats, ProjectMeta, ToolCall, ToolDefinition } from "../types/chat";
+import { ChatMessage, LLMStats, ProjectMeta, ToolCall, ToolDefinition, Agent } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
 
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
 import { statsStore } from "../store/stats";
-import { executeToolCall } from "../tools";
-import { getAvailableTools } from "../tools";
+import { executeToolCall, getToolDefinitions } from "../tools";
 import { EXECUTE_SUBAGENT_TOOL_NAME } from "../tools/executeSubagent";
 
 interface SSEDelta {
@@ -256,6 +255,8 @@ interface ToolCallLoopOptions {
   logId?: string;
   isSubagent?: boolean;
   agentId?: string;
+  agent?: Agent;
+  allAgents?: Agent[];
   onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string) => void;
   onChatUpdated?: () => void;
 }
@@ -280,11 +281,14 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     logId,
     isSubagent,
     agentId,
+    agent,
+    allAgents,
     onUpdateMessage,
     onChatUpdated,
   } = options;
 
-  const tools = getAvailableTools(folderPath).filter(t => toolNames.includes(t.function.name));
+  const allTools = folderPath ? getToolDefinitions(folderPath, agent, allAgents) : [];
+  const tools = allTools.filter(t => toolNames.includes(t.function.name));
 
   const { messages: initialApiMessages } = buildApiMessages(initialMessages, systemPrompt, tools);
 
@@ -532,6 +536,8 @@ export function useChatApi(
   onSendPrompt?: () => Promise<void>,
   onChatResponse?: (response: ChatMessage) => Promise<void>,
   agentId?: string,
+  agent?: Agent,
+  allAgents?: Agent[],
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -685,6 +691,8 @@ export function useChatApi(
           chatId,
           logId,
           agentId,
+          agent,
+          allAgents,
           onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId) => {
             if (logId) {
               const pending = chatLogsStore.getPendingMessage(projectId!, logId);

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Settings as SettingsIcon, Eye, EyeOff, Check, Plus, Trash2, Pencil, Save, X } from "lucide-react";
 import styles from "../components/Settings.module.css";
 import { ChatSettings as ChatSettingsType } from "../hooks/useChatSettings";
 import { Agent } from "../types/chat";
 import { BUILTIN_AGENTS } from "../utils/agents";
+import { getMainAgents } from "../hooks/useAgents";
 import { useSettings, useAgentsContext } from "../contexts";
 
 interface SettingsProps {
@@ -20,8 +21,12 @@ export default function Settings({ onUpdateProjectSettings }: SettingsProps) {
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
   const [agentName, setAgentName] = useState("");
   const [agentPrompt, setAgentPrompt] = useState("");
+  const [agentAllowlist, setAgentAllowlist] = useState<string[]>([]);
   const [editName, setEditName] = useState("");
   const [editPrompt, setEditPrompt] = useState("");
+  const [editAllowlist, setEditAllowlist] = useState<string[]>([]);
+
+  const allAvailableAgents = useMemo(() => getMainAgents(customAgents), [customAgents]);
 
   const handleToggleDefault = (modelId: string) => {
     onUpdate({ defaultModel: modelId });
@@ -61,9 +66,10 @@ export default function Settings({ onUpdateProjectSettings }: SettingsProps) {
 
   const handleAddAgent = async () => {
     if (!agentName.trim() || !agentPrompt.trim()) return;
-    await addAgent({ name: agentName.trim(), systemPrompt: agentPrompt.trim(), main: true });
+    await addAgent({ name: agentName.trim(), systemPrompt: agentPrompt.trim(), main: true, subagentAllowlist: agentAllowlist.length > 0 ? agentAllowlist : undefined });
     setAgentName("");
     setAgentPrompt("");
+    setAgentAllowlist([]);
     setShowAddAgent(false);
   };
 
@@ -75,20 +81,23 @@ export default function Settings({ onUpdateProjectSettings }: SettingsProps) {
     setEditingAgentId(agent.id);
     setEditName(agent.name);
     setEditPrompt(agent.systemPrompt);
+    setEditAllowlist(agent.subagentAllowlist || []);
   };
 
   const handleSaveEdit = async (id: string) => {
     if (!editName.trim() || !editPrompt.trim()) return;
-    await updateAgent(id, editName.trim(), editPrompt.trim());
+    await updateAgent(id, editName.trim(), editPrompt.trim(), editAllowlist.length > 0 ? editAllowlist : undefined);
     setEditingAgentId(null);
     setEditName("");
     setEditPrompt("");
+    setEditAllowlist([]);
   };
 
   const handleCancelEdit = () => {
     setEditingAgentId(null);
     setEditName("");
     setEditPrompt("");
+    setEditAllowlist([]);
   };
 
   return (
@@ -316,15 +325,36 @@ export default function Settings({ onUpdateProjectSettings }: SettingsProps) {
                             placeholder="Agent name"
                           />
                         </div>
-                        <div className={styles.editField}>
-                          <textarea
-                            className={styles.textarea}
-                            value={editPrompt}
-                            onChange={(e) => setEditPrompt(e.target.value)}
-                            placeholder="System prompt for this agent"
-                            rows={4}
-                          />
-                        </div>
+<div className={styles.editField}>
+                            <textarea
+                              className={styles.textarea}
+                              value={editPrompt}
+                              onChange={(e) => setEditPrompt(e.target.value)}
+                              placeholder="System prompt for this agent"
+                              rows={4}
+                            />
+                          </div>
+                          <div className={styles.editField}>
+                            <label>Allowed Subagents</label>
+                            <div className={styles.allowlistCheckboxes}>
+                              {allAvailableAgents.map((a) => (
+                                <label key={a.id} className={styles.allowlistCheckbox}>
+                                  <input
+                                    type="checkbox"
+                                    checked={editAllowlist.includes(a.id)}
+                                    onChange={(e) => {
+                                      if (e.target.checked) {
+                                        setEditAllowlist([...editAllowlist, a.id]);
+                                      } else {
+                                        setEditAllowlist(editAllowlist.filter((id) => id !== a.id));
+                                      }
+                                    }}
+                                  />
+                                  <span>{a.name}</span>
+                                </label>
+                              ))}
+                            </div>
+                          </div>
                       </>
                     ) : (
                       <>
@@ -380,6 +410,27 @@ export default function Settings({ onUpdateProjectSettings }: SettingsProps) {
                     rows={4}
                   />
                 </div>
+                <div className={styles.addAgentField}>
+                  <label>Allowed Subagents</label>
+                  <div className={styles.allowlistCheckboxes}>
+                    {allAvailableAgents.map((a) => (
+                      <label key={a.id} className={styles.allowlistCheckbox}>
+                        <input
+                          type="checkbox"
+                          checked={agentAllowlist.includes(a.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setAgentAllowlist([...agentAllowlist, a.id]);
+                            } else {
+                              setAgentAllowlist(agentAllowlist.filter((id) => id !== a.id));
+                            }
+                          }}
+                        />
+                        <span>{a.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
                 <div className={styles.addAgentActions}>
                   <button
                     className={styles.addAgentButton}
@@ -395,6 +446,7 @@ export default function Settings({ onUpdateProjectSettings }: SettingsProps) {
                       setShowAddAgent(false);
                       setAgentName("");
                       setAgentPrompt("");
+                      setAgentAllowlist([]);
                     }}
                     type="button"
                   >
