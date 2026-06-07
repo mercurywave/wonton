@@ -49,7 +49,18 @@ export default function Sidebar({
   const { state: nav, activeProjectId, navigateToPage, navigateToChat } = useNav();
   const { getSortedActiveTasks, createChatAndGraduateWithId, createTask } = useTasks();
 
-  const displayChats = chats.slice(0, 5).map((c) => ({
+  const [windowHeight, setWindowHeight] = useState(window.innerHeight);
+
+  useEffect(() => {
+    function handleResize() {
+      setWindowHeight(window.innerHeight);
+    }
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  const chatLimit = (windowHeight < 640) ? (windowHeight < 540 ? 0 : 3) : 5;
+  const displayChats = chats.slice(0, chatLimit).map((c) => ({
     id: c.id,
     name: c.name,
     updatedAt: c.updatedAt,
@@ -58,7 +69,7 @@ export default function Sidebar({
   }));
 
   const sortedActiveTasks = getSortedActiveTasks();
-  const displayTasks = sortedActiveTasks.slice(0, 3);
+  const displayTasks = windowHeight < 720 ? [] : sortedActiveTasks.slice(0, 3);
   const navItems: { page: Page; icon: React.ReactNode; label: string; filterOut?: () => boolean }[] = [
     { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => sidebarOpen },
     { page: "tasks", icon: <Flag size={18} />, label: "Tasks", filterOut: () => sidebarOpen },
