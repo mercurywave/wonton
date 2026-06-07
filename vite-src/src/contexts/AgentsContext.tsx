@@ -1,19 +1,18 @@
 import {
   createContext,
   useContext,
-  useState,
-  useEffect,
   useMemo,
   ReactNode,
 } from "react";
-import { useAgents } from "../hooks/useAgents";
 import { Agent } from "../types/chat";
+import { agentStore } from "../store/agents";
+import { useAgentsData } from "../hooks/useAgents";
 
 interface AgentsContextValue {
   customAgents: Agent[];
   allAgents: Agent[];
   mainAgents: Agent[];
-  addAgent: (agent: Omit<Agent, "id">) => Promise<void>;
+  addAgent: (name: string, systemPrompt: string, defaultToolSet?: string[], folderOverride?: string, subagentAllowlist?: string[]) => Promise<void>;
   updateAgent: (id: string, name: string, systemPrompt: string, subagentAllowlist?: string[]) => Promise<void>;
   deleteAgent: (id: string) => Promise<void>;
 }
@@ -21,18 +20,10 @@ interface AgentsContextValue {
 const AgentsContext = createContext<AgentsContextValue | null>(null);
 
 export function AgentsProvider({ children }: { children: ReactNode }) {
-  const [customAgents, addAgent, updateAgent, deleteAgent] = useAgents();
-  const [allAgents, setAllAgents] = useState<Agent[]>([]);
-  const [mainAgents, setMainAgents] = useState<Agent[]>([]);
+  const { customAgents, addAgent, updateAgent, deleteAgent } = useAgentsData();
 
-  useEffect(() => {
-    import("../hooks/useAgents").then(({ loadAgentsFile, getAllAgents, getMainAgents }) => {
-      loadAgentsFile().then((custom) => {
-        setAllAgents(getAllAgents(custom));
-        setMainAgents(getMainAgents(custom));
-      });
-    });
-  }, []);
+  const allAgents = useMemo(() => agentStore.getAllAgents(), [customAgents]);
+  const mainAgents = useMemo(() => agentStore.getMainAgents(), [customAgents]);
 
   const value = useMemo(
     () => ({

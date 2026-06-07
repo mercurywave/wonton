@@ -22,7 +22,7 @@ export default function AgentsPage() {
 
   const handleAddAgent = async () => {
     if (!agentName.trim() || !agentPrompt.trim()) return;
-    await addAgent({ name: agentName.trim(), systemPrompt: agentPrompt.trim(), main: true, subagentAllowlist: agentAllowlist.length > 0 ? agentAllowlist : undefined });
+    await addAgent(agentName.trim(), agentPrompt.trim(), undefined, undefined, agentAllowlist.length > 0 ? agentAllowlist : undefined);
     setAgentName("");
     setAgentPrompt("");
     setAgentAllowlist([]);

@@ -1,114 +1,81 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Agent } from "../types/chat";
-import {
-  AGENTS_FILE_NAME,
-  isNeutralinoConnected,
-  getRootDataDir,
-} from "../utils/neuUtils";
+import { agentStore } from "../store/agents";
 import { BUILTIN_AGENTS } from "../utils/agents";
-import { filesystem } from "@neutralinojs/lib";
-
-const STORAGE_KEY = "wonton_agents";
-
-function loadCachedAgents(): Agent[] {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      return JSON.parse(stored);
-    }
-  } catch {
-    // ignore
-  }
-  return [];
-}
-
-function saveCachedAgents(agents: Agent[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(agents));
-  } catch {
-    // ignore
-  }
-}
 
 export async function loadAgentsFile(): Promise<Agent[]> {
-  if (!isNeutralinoConnected()) {
-    return loadCachedAgents();
-  }
-
-  const rootDir = await getRootDataDir();
-  const agentsPath = `${rootDir}/${AGENTS_FILE_NAME}`;
-
-  try {
-    const content = await filesystem.readFile(agentsPath);
-    const parsed = JSON.parse(content) as Agent[];
-    saveCachedAgents(parsed);
-    return parsed;
-  } catch {
-    // File doesn't exist or error reading
-    return loadCachedAgents();
-  }
+  await agentStore.load();
+  return agentStore.getCustomAgents();
 }
 
-export async function saveAgentsFile(agents: Agent[]): Promise<void> {
-  if (!isNeutralinoConnected()) {
-    saveCachedAgents(agents);
-    return;
+export function getAllAgents(customAgents?: Agent[]): Agent[] {
+  if (customAgents !== undefined) {
+    return [...BUILTIN_AGENTS, ...customAgents];
   }
-
-  const rootDir = await getRootDataDir();
-  const agentsPath = `${rootDir}/${AGENTS_FILE_NAME}`;
-
-  // Ensure root data directory exists
-  try {
-    await filesystem.writeFile(agentsPath, JSON.stringify(agents, null, 2));
-    saveCachedAgents(agents);
-  } catch (err) {
-    console.error("saveAgentsFile: failed to write agents.json", err);
-  }
+  return agentStore.getAllAgents();
 }
 
-export function getAllAgents(customAgents: Agent[]): Agent[] {
-  return [...BUILTIN_AGENTS, ...customAgents];
+export function getMainAgents(customAgents?: Agent[]): Agent[] {
+  const all = getAllAgents(customAgents);
+  return all.filter((a) => a.main);
 }
 
-export function getMainAgents(customAgents: Agent[]): Agent[] {
-  return getAllAgents(customAgents).filter((a) => a.main);
+export function getAgentById(agents: Agent[], id: string): Agent | undefined {
+  return agents.find((a) => a.id === id);
 }
 
-export function useAgents(): [
-  Agent[],
-  (agent: Omit<Agent, "id">) => Promise<void>,
-  (id: string, name: string, systemPrompt: string, subagentAllowlist?: string[]) => Promise<void>,
-  (id: string) => Promise<void>,
-] {
-  const [agents, setAgents] = useState<Agent[]>(() => {
-    const cached = loadCachedAgents();
-    return cached;
-  });
+export function getAgentByName(agents: Agent[], name: string): Agent | undefined {
+  return agents.find((a) => a.name.toLowerCase() === name.toLowerCase());
+}
 
-  const addAgent = useCallback(async (agent: Omit<Agent, "id">) => {
-    const newAgent: Agent = {
-      ...agent,
-      id: `custom:${crypto.randomUUID()}`,
+export function useAgentsData() {
+  const [customAgents, setCustomAgents] = useState<Agent[]>(() => agentStore.getCustomAgents());
+  const [isLoading, setIsLoading] = useState(true);
+  const [initialized, setInitialized] = useState(false);
+
+  const refresh = useCallback(() => {
+    setCustomAgents(agentStore.getCustomAgents());
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    (async () => {
+      setIsLoading(true);
+      await agentStore.load();
+      if (!cancelled) {
+        refresh();
+        setIsLoading(false);
+        setInitialized(true);
+      }
+    })();
+
+    const unsubscribe = agentStore.subscribe(refresh);
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
     };
-    const next = [...agents, newAgent];
-    setAgents(next);
-    await saveAgentsFile(next);
-  }, [agents]);
+  }, [refresh]);
+
+  const addAgent = useCallback(async (name: string, systemPrompt: string, defaultToolSet?: string[], folderOverride?: string, subagentAllowlist?: string[]) => {
+    await agentStore.addAgent(name, systemPrompt, defaultToolSet, folderOverride, subagentAllowlist);
+  }, []);
 
   const updateAgent = useCallback(async (id: string, name: string, systemPrompt: string, subagentAllowlist?: string[]) => {
-    const next = agents.map((a) =>
-      a.id === id ? { ...a, name, systemPrompt, ...(subagentAllowlist !== undefined && { subagentAllowlist }) } : a
-    );
-    setAgents(next);
-    await saveAgentsFile(next);
-  }, [agents]);
+    await agentStore.updateAgent(id, name, systemPrompt, subagentAllowlist);
+  }, []);
 
   const deleteAgent = useCallback(async (id: string) => {
-    const next = agents.filter((a) => a.id !== id);
-    setAgents(next);
-    await saveAgentsFile(next);
-  }, [agents]);
+    await agentStore.deleteAgent(id);
+  }, []);
 
-  return [agents, addAgent, updateAgent, deleteAgent];
+  return {
+    customAgents,
+    isLoading,
+    initialized,
+    addAgent,
+    updateAgent,
+    deleteAgent,
+  };
 }
