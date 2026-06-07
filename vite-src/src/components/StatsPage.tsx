@@ -75,8 +75,8 @@ export default function StatsPage() {
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - 29);
 
-    const startStr = startDate.toISOString().split("T")[0];
-    const endStr = endDate.toISOString().split("T")[0];
+    const startStr = `${startDate.getFullYear()}-${String(startDate.getMonth() + 1).padStart(2, "0")}-${String(startDate.getDate()).padStart(2, "0")}`;
+    const endStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, "0")}-${String(endDate.getDate()).padStart(2, "0")}`;
 
     statsStore.loadRange(startStr, endStr).then((data) => {
       setEntries(data);
@@ -107,7 +107,22 @@ export default function StatsPage() {
         });
       }
     }
-    return Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date));
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 29);
+    const result: DailyTokens[] = [];
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(startDate);
+      d.setDate(startDate.getDate() + i);
+      const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const existing = map.get(dateStr);
+      if (existing) {
+        result.push(existing);
+      } else {
+        result.push({ date: dateStr, promptTokens: 0, completionTokens: 0, totalTokens: 0, calls: 0 });
+      }
+    }
+    return result;
   }, [entries]);
 
   const modelStats = useMemo((): ModelStats[] => {

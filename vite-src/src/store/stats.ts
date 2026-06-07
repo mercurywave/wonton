@@ -124,9 +124,10 @@ const statsStore = {
 
   async loadRange(startDate: string, endDate: string): Promise<StatsEntry[]> {
     const entries: StatsEntry[] = [];
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const current = new Date(start);
+    const [startY, startM, startD] = startDate.split("-").map(Number);
+    const [endY, endM, endD] = endDate.split("-").map(Number);
+    const current = new Date(startY, startM - 1, startD);
+    const end = new Date(endY, endM - 1, endD);
 
     while (current <= end) {
       const dateStr = getStatsDate(current);
