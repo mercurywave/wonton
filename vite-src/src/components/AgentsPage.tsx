@@ -78,6 +78,29 @@ export default function AgentsPage() {
                     ? agent.systemPrompt.slice(0, 120) + "..."
                     : agent.systemPrompt}
                 </div>
+                {(agent.defaultToolSet || agent.subagentAllowlist) && (
+                  <div className={styles.tagSection}>
+                    {agent.defaultToolSet && agent.defaultToolSet.length > 0 && (
+                      <div className={styles.tagRow}>
+                        <span className={styles.tagLabel}>Tools</span>
+                        {agent.defaultToolSet.map((tool) => (
+                          <span key={tool} className={`${styles.tagBubble} ${styles.toolTag}`}>{tool}</span>
+                        ))}
+                      </div>
+                    )}
+                    {agent.subagentAllowlist && agent.subagentAllowlist.length > 0 && (
+                      <div className={styles.tagRow}>
+                        <span className={styles.tagLabel}>Subagents</span>
+                        {agent.subagentAllowlist.map((id) => {
+                          const subagent = BUILTIN_AGENTS.find((a) => a.id === id);
+                          return subagent ? (
+                            <span key={id} className={`${styles.tagBubble} ${styles.subagentTag}`}>{subagent.name}</span>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
             {customAgents.map((agent) => {
@@ -176,6 +199,29 @@ export default function AgentsPage() {
                           ? agent.systemPrompt.slice(0, 120) + "..."
                           : agent.systemPrompt}
                       </div>
+                      {(agent.defaultToolSet || agent.subagentAllowlist) && (
+                        <div className={styles.tagSection}>
+                          {agent.defaultToolSet && agent.defaultToolSet.length > 0 && (
+                            <div className={styles.tagRow}>
+                              <span className={styles.tagLabel}>Tools</span>
+                              {agent.defaultToolSet.map((tool) => (
+                                <span key={tool} className={`${styles.tagBubble} ${styles.toolTag}`}>{tool}</span>
+                              ))}
+                            </div>
+                          )}
+                          {agent.subagentAllowlist && agent.subagentAllowlist.length > 0 && (
+                            <div className={styles.tagRow}>
+                              <span className={styles.tagLabel}>Subagents</span>
+                              {agent.subagentAllowlist.map((id) => {
+                                const subagent = [...BUILTIN_AGENTS, ...customAgents].find((a) => a.id === id);
+                                return subagent ? (
+                                  <span key={id} className={`${styles.tagBubble} ${styles.subagentTag}`}>{subagent.name}</span>
+                                ) : null;
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
