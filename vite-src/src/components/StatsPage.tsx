@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { BarChart3, Clock, Zap, Hash, ArrowUpRight } from "lucide-react";
 import { StatsEntry } from "../types/chat";
 import styles from "../components/StatsPage.module.css";
@@ -64,6 +64,7 @@ export default function StatsPage() {
   const [entries, setEntries] = useState<StatsEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [browserMode, setBrowserMode] = useState(false);
+  const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isNeutralinoConnected()) {
@@ -86,6 +87,12 @@ export default function StatsPage() {
       setLoading(false);
     });
   }, []);
+
+  useEffect(() => {
+    if (chartRef.current && entries.length > 0) {
+      chartRef.current.scrollLeft = chartRef.current.scrollWidth;
+    }
+  }, [entries]);
 
   const dailyTokens = useMemo((): DailyTokens[] => {
     const map = new Map<string, DailyTokens>();
@@ -263,7 +270,7 @@ export default function StatsPage() {
         {dailyTokens.length > 0 && (
           <div className={styles.section}>
             <h3 className={styles.sectionTitle}>Daily Token Usage (Last 30 Days)</h3>
-            <div className={styles.chartContainer}>
+            <div className={styles.chartContainer} ref={chartRef}>
               {dailyTokens.map((day) => (
                 <div key={day.date} className={styles.chartBarWrapper}>
                   <div className={styles.chartBarGroup}>
