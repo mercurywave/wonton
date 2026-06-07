@@ -56,7 +56,7 @@ const agentStore: AgentStoreInternal = {
   _listeners: new Set<Listener>(),
 
   getCustomAgents() {
-    return state.customAgents;
+    return [...state.customAgents];
   },
 
   async load() {
