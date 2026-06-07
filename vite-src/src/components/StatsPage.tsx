@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { BarChart3, Clock, Zap, Hash, ArrowUpRight } from "lucide-react";
 import { StatsEntry } from "../types/chat";
 import styles from "../components/StatsPage.module.css";
-import { useSettings } from "../contexts";
+import { useSettings, useProjects } from "../contexts";
 import { statsStore } from "../store/stats";
 import { isNeutralinoConnected } from "../utils/neuUtils";
 import { getDisplayName } from "../utils/modelUtils";
@@ -60,6 +60,7 @@ function formatDate(dateStr: string): string {
 
 export default function StatsPage() {
   const { settings } = useSettings();
+  const { getProjectById } = useProjects();
   const [entries, setEntries] = useState<StatsEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [browserMode, setBrowserMode] = useState(false);
@@ -161,9 +162,10 @@ export default function StatsPage() {
         existing.totalTokens += e.totalTokens;
         existing.calls += 1;
       } else {
+        const project = getProjectById(e.projectId);
         map.set(e.projectId, {
           projectId: e.projectId,
-          projectName: e.projectId,
+          projectName: project?.name || "(unknown)",
           promptTokens: e.promptTokens,
           completionTokens: e.completionTokens,
           totalTokens: e.totalTokens,
@@ -352,7 +354,7 @@ export default function StatsPage() {
                 <tbody>
                   {projectStats.map((ps) => (
                     <tr key={ps.projectId}>
-                      <td className={styles.td}>{ps.projectId}</td>
+                      <td className={styles.td} title={ps.projectId}>{ps.projectName}</td>
                       <td className={styles.td}>{ps.calls.toLocaleString()}</td>
                       <td className={styles.td}>{ps.promptTokens.toLocaleString()}</td>
                       <td className={styles.td}>{ps.completionTokens.toLocaleString()}</td>
