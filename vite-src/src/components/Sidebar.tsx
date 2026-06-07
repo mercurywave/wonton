@@ -213,6 +213,7 @@ export default function Sidebar({
           />
         </div>
 
+        <div className={styles.scrollable}>
         {sidebarOpen && showProjectFeatures && !projectsLoading && (
           <div className={styles.projectSection}>
             <ProjectSelector
@@ -418,6 +419,7 @@ export default function Sidebar({
             src="/takeout.svg"
             alt="Takeout"
           />
+        </div>
         </div>
       </div>
 

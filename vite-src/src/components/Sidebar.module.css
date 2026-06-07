@@ -27,6 +27,7 @@
   gap: 8px;
   border-bottom: none;
   min-height: 48px;
+  flex-shrink: 0;
 }
 
 .header .title {
@@ -451,7 +452,7 @@
 
 .taskGraduateBtn:hover {
   background: #1a1a2e;
-  color: #e0e0e0;
+  color: #d0d0e0;
 }
 
 .contextMenu {
@@ -725,4 +726,20 @@
 .taskPopupSave:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.scrollable {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.scrollable::-webkit-scrollbar {
+  width: 0;
+  background: transparent;
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+  background: transparent;
 }
