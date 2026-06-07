@@ -6,6 +6,7 @@ import { chatLogsStore } from "../store/chatLogs";
 import { getAgentByName } from "../utils/agents";
 import { getAllAgents, loadAgentsFile } from "../hooks/useAgents";
 import { SubagentMeta } from "../types/chat";
+import { getProjectDataDir, DOCS_DIR_NAME, DOCS_FOLDER_OVERRIDE } from "../utils/neuUtils";
 
 export const EXECUTE_SUBAGENT_TOOL_NAME = "message";
 
@@ -19,7 +20,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
     function: {
       name: EXECUTE_SUBAGENT_TOOL_NAME,
       description:
-        "Send a message to an agent to perform a complex focused task. Agents available: [\"subagent\"]",
+        "Send a message to an agent to perform a complex focused task. Agents available: [\"subagent\", \"docs\"]",
       parameters: {
         type: "object",
         properties: {
@@ -86,6 +87,15 @@ export class ExecuteSubagentHandler implements ToolHandler {
         isError: true,
       };
     }
+
+    // Resolve the working directory for agents with folderOverride
+    let subagentFolderPath = folderPath;
+    if (agent.folderOverride === DOCS_FOLDER_OVERRIDE) {
+      const projectDir = await getProjectDataDir(projectId);
+      if (projectDir) {
+        subagentFolderPath = `${projectDir}/${DOCS_DIR_NAME}`;
+      }
+    }
     
     // Create subagent log
     const agentId = agent.id;
@@ -119,13 +129,13 @@ export class ExecuteSubagentHandler implements ToolHandler {
     // Resolve model for subagent
     const subagentModel = settings.defaultModel || agentId;
 
-    // Run the subagent tool-call loop
+     // Run the subagent tool-call loop
     const result = await runToolCallLoop({
       settings,
       systemPrompt: agent.systemPrompt,
       model: subagentModel,
       toolNames: agent.defaultToolSet || [],
-      folderPath,
+      folderPath: subagentFolderPath,
       initialMessages: [subagentUserMessage],
       signal: undefined,
       projectId,

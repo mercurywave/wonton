@@ -55,6 +55,7 @@ export interface Agent {
   systemPrompt: string;
   main: boolean;
   defaultToolSet?: string[];
+  folderOverride?: string;
 }
 
 export interface SubagentMeta {

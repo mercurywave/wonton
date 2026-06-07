@@ -6,6 +6,7 @@ export const PROJ_FILE_NAME = "proj.json";
 export const CHATS_DIR_NAME = "chats";
 export const MSGS_DIR_NAME = "msgs";
 export const DOCS_DIR_NAME = "docs";
+export const DOCS_FOLDER_OVERRIDE = "docs";
 export const TMP_DIR_NAME = "tmp";
 export const PROJECTS_FILE_NAME = "projects.json";
 export const AGENTS_FILE_NAME = "agents.json";

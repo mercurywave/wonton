@@ -1,4 +1,5 @@
 import { Agent } from "../types/chat";
+import { DOCS_FOLDER_OVERRIDE } from "./neuUtils";
 
 export const DEFAULT_AGENT: Agent = {
   id: "builtin:default",
@@ -26,7 +27,17 @@ export const SUBAGENT_AGENT: Agent = {
   defaultToolSet: ["glob", "grep", "read", "write", "edit"],
 };
 
-export const BUILTIN_AGENTS: Agent[] = [DEFAULT_AGENT, SUMMARIZE_AGENT, SUBAGENT_AGENT];
+export const DOCS_AGENT: Agent = {
+  id: "builtin:docs",
+  name: "Docs",
+  systemPrompt:
+    "You are a documentation specialist. You have access to the project's docs folder in the appdata directory. Use glob, grep, read, write, and edit tools to search and manage documentation. When asked about frameworks, APIs, or reference material, check the docs folder for relevant files first.",
+  main: true,
+  defaultToolSet: ["glob", "grep", "read", "write", "edit", "send"],
+  folderOverride: DOCS_FOLDER_OVERRIDE,
+};
+
+export const BUILTIN_AGENTS: Agent[] = [DEFAULT_AGENT, SUMMARIZE_AGENT, SUBAGENT_AGENT, DOCS_AGENT];
 
 export function getAgentById(agents: Agent[], id: string): Agent | undefined {
   return agents.find((a) => a.id === id);

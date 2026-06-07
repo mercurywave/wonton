@@ -7,6 +7,7 @@ export interface ToolContext {
   chatId?: string;
   settings?: ChatSettings;
   onChatUpdated?: () => void;
+  folderOverride?: string;
 }
 
 export interface ToolDefinition {
