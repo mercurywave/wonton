@@ -24,6 +24,11 @@ interface ElectronAPI {
   computer: {
     getOSInfo: () => Promise<{ name: string; arch: string; platform: string; version: string; type: string }>;
   };
+  dataDir: {
+    getAppPath: () => Promise<string>;
+    getHomeDir: () => Promise<string>;
+    getPlatform: () => Promise<string>;
+  };
   events: {
     on: (eventName: string, callback: (event: any, ...args: any[]) => void) => () => void;
     off: (eventName: string, callback: (event: any, ...args: any[]) => void) => void;

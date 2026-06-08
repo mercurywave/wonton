@@ -2,7 +2,7 @@ import { useState } from "react";
 import { GitBranch, RotateCw, FolderOpen, Loader2, Play } from "lucide-react";
 import styles from "../components/WorkflowsPage.module.css";
 import { useFlowsContext } from "../contexts/FlowsContext";
-import { isBackendConnected, isWindows } from "../utils/platformUtils";
+import { isBackendConnected, isWindowsSync } from "../utils/platformUtils";
 
 function normalizePath(p: string): string {
   return p.replace(/\//g, "\\").replace(/\\/g, "\\");
@@ -11,7 +11,7 @@ function normalizePath(p: string): string {
 export default function WorkflowsPage() {
   const { flows, disabledFlows, isLoading, refreshFlows, flowsPath, toggleFlow, conflictIds, conflictFiles } = useFlowsContext();
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const windowsOnly = isWindows();
+  const windowsOnly = isWindowsSync();
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

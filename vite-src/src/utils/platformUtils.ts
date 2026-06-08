@@ -18,21 +18,46 @@ export const FLOWS_DIR_NAME = "flows";
 export const TASKS_DIR_NAME = "tasks";
 export const DEFAULT_PROJECT_ID = "default";
 
-export function getPlatform(): string {
-  return process.platform;
+let _cachedPlatform: string | undefined;
+
+async function getPlatformFromMain(): Promise<string> {
+  if (_cachedPlatform) return _cachedPlatform;
+  if (typeof window !== "undefined" && "electronAPI" in window) {
+    _cachedPlatform = await window.electronAPI.dataDir.getPlatform();
+    return _cachedPlatform;
+  }
+  // Fallback for non-Electron environments
+  _cachedPlatform = process.platform;
+  return _cachedPlatform;
 }
 
-export function isWindows(): boolean {
-  return process.platform === "win32";
+export async function getPlatform(): Promise<string> {
+  return getPlatformFromMain();
+}
+
+export function isWindowsSync(): boolean {
+  if (!_cachedPlatform) {
+    // Default to false (not Windows) when platform not yet known
+    return false;
+  }
+  return _cachedPlatform === "win32";
+}
+
+export async function isWindows(): Promise<boolean> {
+  return (await getPlatformFromMain()) === "win32";
 }
 
 export async function getRootDataDir(): Promise<string> {
   let dataDir: string;
+  const platform = await getPlatformFromMain();
 
-  if (process.platform === "win32") {
+  if (typeof window !== "undefined" && "electronAPI" in window) {
+    const appPath = await window.electronAPI.dataDir.getAppPath();
+    dataDir = path.join(appPath, DATA_DIR_NAME);
+  } else if (platform === "win32") {
     const localAppData = process.env.LOCALAPPDATA || "";
     dataDir = path.join(localAppData, DATA_DIR_NAME);
-  } else if (process.platform === "darwin") {
+  } else if (platform === "darwin") {
     const home = os.homedir();
     dataDir = path.join(home, "Library", "Application Support", DATA_DIR_NAME);
   } else {

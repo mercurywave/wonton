@@ -5,7 +5,7 @@ import styles from "./ReferencesPage.module.css";
 import SplitPanel from "./SplitPanel";
 import DocumentViewerPanel from "./DocumentViewerPanel";
 import { useNav } from "../contexts";
-import { isBackendConnected, isWindows, getProjectDataDir, DOCS_DIR_NAME } from "../utils/platformUtils";
+import { isBackendConnected, isWindowsSync, getProjectDataDir, DOCS_DIR_NAME } from "../utils/platformUtils";
 import { ReferenceSearchResult, ReferenceMatch, getCache, setQuery, setResults, setSelectedFilePath, clearOnProjectChange } from "../store/references";
 
 function normalizePath(p: string): string {
@@ -157,7 +157,7 @@ export default function ReferencesPage() {
   const [selectedFileName, setSelectedFileName] = useState<string>("");
   const [searching, setSearching] = useState(false);
   const [docsPath, setDocsPath] = useState<string | null>(null);
-  const windowsOnly = isWindows();
+  const windowsOnly = isWindowsSync();
 
   // Restore cached state on mount / project switch
   useEffect(() => {

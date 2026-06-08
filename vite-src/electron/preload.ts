@@ -31,6 +31,13 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getOSInfo: () => ipcRenderer.invoke("computer:getOSInfo"),
   },
 
+  // dataDir module
+  dataDir: {
+    getAppPath: () => ipcRenderer.invoke("dataDir:getAppPath"),
+    getHomeDir: () => ipcRenderer.invoke("dataDir:getHomeDir"),
+    getPlatform: () => ipcRenderer.invoke("dataDir:getPlatform"),
+  },
+
   // events module
   events: {
     on: (eventName: string, callback: (event: any, ...args: any[]) => void) => {

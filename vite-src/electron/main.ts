@@ -195,6 +195,26 @@ for (const [method, handler] of Object.entries(computerHandlers)) {
   ipcMain.handle(`computer:${method}`, handler);
 }
 
+// dataDir module - path resolution that requires Node.js access
+const dataDirHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ...args: any[]) => Promise<any> | any> = {
+  async getAppPath(_event) {
+    return app.getPath("userData");
+  },
+
+  async getHomeDir(_event) {
+    return os.homedir();
+  },
+
+  async getPlatform(_event) {
+    return process.platform;
+  },
+};
+
+// Register dataDir IPC handlers
+for (const [method, handler] of Object.entries(dataDirHandlers)) {
+  ipcMain.handle(`dataDir:${method}`, handler);
+}
+
 // events module - file watching
 // The renderer will request a file watch via 'watch:start', and the main process
 // will forward 'watch:change' events back to the renderer via the webContents.
