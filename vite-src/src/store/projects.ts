@@ -147,11 +147,8 @@ const projectStore: ProjectStoreInternal = {
 
     // Ensure the default project's folder structure exists before loading
     try {
+      await ensureChatFolderNative(DEFAULT_PROJECT_ID);
       await projectMetaStore.load(DEFAULT_PROJECT_ID);
-      const projMeta = projectMetaStore.getProjectMeta(DEFAULT_PROJECT_ID);
-      if (!projMeta?.createdAt) {
-        await ensureChatFolderNative(DEFAULT_PROJECT_ID);
-      }
     } catch (err) {
       console.error("projectStore: failed to ensure default project folder", err);
     }
