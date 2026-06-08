@@ -6,6 +6,8 @@
     "moduleResolution": "NodeNext",
     "target": "ES2022",
     "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "allowImportingTsExtensions": false,
     "skipLibCheck": true,
     "strict": true,
     "noUnusedLocals": false,

@@ -1,9 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog, shell } from "electron";
 import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 import { promises as fs } from "fs";
 import { exec } from "child_process";
 import os from "os";
@@ -23,7 +19,7 @@ function createWindow() {
     title: "Wonton",
     icon: path.resolve(__dirname, "../../public/takeout.png"),
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"),
+      preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
     },

@@ -3,14 +3,14 @@
 	"private": true,
 	"version": "1.0.0",
 	"type": "module",
-	"main": "out/electron/main.js",
+	"main": "out/electron/main.cjs",
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc -b && vite build",
 		"build:electron": "tsc -b electron/tsconfig.json && vite build && tsc -p electron/tsconfig.main.json",
 		"lint": "eslint .",
 		"preview": "vite preview",
-		"electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && tsc -p electron/tsconfig.main.json --watch --noEmit\" \"nodemon --watch electron --exec electron .\"",
+		"electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && tsc -p electron/tsconfig.main.json --watch\" \"tsc -p electron/tsconfig.main.json --watch --noEmit\" \"tsc -p electron/tsconfig.main.json && node rename-main.cjs && nodemon --watch electron --watch rename-main.cjs --exec electron .\"",
 		"electron:build": "tsc -b && vite build && tsc -p electron/tsconfig.main.json && electron-builder"
 	},
 	"dependencies": {
@@ -56,7 +56,7 @@
 			"out/electron/**/*"
 		],
 		"extraMetadata": {
-			"main": "out/electron/main.js"
+			"main": "out/electron/main.cjs"
 		},
 		"win": {
 			"target": "nsis",
