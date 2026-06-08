@@ -47,13 +47,17 @@ export async function isWindows(): Promise<boolean> {
   return (await getPlatformFromMain()) === "win32";
 }
 
+async function joinPath(...parts: string[]): Promise<string> {
+  return filesystem.joinPath(...parts);
+}
+
 export async function getRootDataDir(): Promise<string> {
   let dataDir: string;
   const platform = await getPlatformFromMain();
 
   if (typeof window !== "undefined" && "electronAPI" in window) {
     const appPath = await window.electronAPI.dataDir.getAppPath();
-    dataDir = path.join(appPath, DATA_DIR_NAME);
+    dataDir = await joinPath(appPath, DATA_DIR_NAME);
   } else if (platform === "win32") {
     const localAppData = process.env.LOCALAPPDATA || "";
     dataDir = path.join(localAppData, DATA_DIR_NAME);
@@ -76,7 +80,7 @@ export async function getRootDataDir(): Promise<string> {
 
 export async function getProjectDataDir(projectId: string): Promise<string> {
   const rootDir = await getRootDataDir();
-  return path.join(rootDir, projectId);
+  return await joinPath(rootDir, projectId);
 }
 
 export function isBackendConnected(): boolean {

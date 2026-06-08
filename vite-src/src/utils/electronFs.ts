@@ -68,6 +68,15 @@ export const filesystem = {
     return window.electronAPI.filesystem.getJoinedPath(basePath, relativePath);
   },
 
+  async joinPath(...parts: string[]): Promise<string> {
+    throwIfNotElectron();
+    let result = parts[0];
+    for (let i = 1; i < parts.length; i++) {
+      result = await window.electronAPI.filesystem.getJoinedPath(result, parts[i]);
+    }
+    return result;
+  },
+
   async getAbsolutePath(filePath: string): Promise<string> {
     throwIfNotElectron();
     return window.electronAPI.filesystem.getAbsolutePath(filePath);
