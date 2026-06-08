@@ -10,7 +10,7 @@
 		"build:electron": "tsc -b electron/tsconfig.json && vite build && tsc -p electron/tsconfig.main.json",
 		"lint": "eslint .",
 		"preview": "vite preview",
-		"electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && tsc -p electron/tsconfig.main.json --watch\" \"nodemon --watch out/electron/main.js --exec electron .\"",
+		"electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && tsc -p electron/tsconfig.main.json --watch --noEmit\" \"nodemon --watch electron --exec electron .\"",
 		"electron:build": "tsc -b && vite build && tsc -p electron/tsconfig.main.json && electron-builder"
 	},
 	"dependencies": {
