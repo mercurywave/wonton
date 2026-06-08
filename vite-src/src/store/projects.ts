@@ -5,6 +5,7 @@ import {
   isBackendConnected,
   getProjectDataDir,
   generateGuid,
+  FLOWS_DIR_NAME,
 } from "../utils/platformUtils";
 import {
   ensureChatFolder as ensureChatFolderNative,
@@ -88,8 +89,17 @@ async function ensureDataDir(): Promise<string> {
   try {
     await filesystem.createDirectory(wontonDir);
   } catch (err: any) {
-    if (err.code !== "NE_FS_DIRCRER") {
+    if (err.code !== "EEXIST") {
       console.error("projectStore: failed to create directory", err);
+    }
+  }
+
+  const flowsDir = `${wontonDir}/${FLOWS_DIR_NAME}`;
+  try {
+    await filesystem.createDirectory(flowsDir);
+  } catch (err: any) {
+    if (err.code !== "EEXIST") {
+      console.error("projectStore: failed to create flows dir", err);
     }
   }
 

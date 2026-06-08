@@ -44,7 +44,7 @@ async function ensureTasksDir(projectId: string): Promise<void> {
   try {
     await filesystem.createDirectory(tasksDir);
   } catch (err: any) {
-    if (err.code !== "NE_FS_DIRCRER") {
+    if (err.code !== "EEXIST") {
       console.error("taskStore: failed to create tasks dir", err);
     }
   }

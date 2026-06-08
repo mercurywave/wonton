@@ -22,7 +22,7 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   try {
     await filesystem.createDirectory(projectDir);
   } catch (err: any) {
-    if (err.code !== "NE_FS_DIRCRER") {
+    if (err.code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create project dir", err);
     }
   }
@@ -31,7 +31,7 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   try {
     await filesystem.createDirectory(chatsDir);
   } catch (err: any) {
-    if (err.code !== "NE_FS_DIRCRER") {
+    if (err.code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create chats dir", err);
     }
   }
@@ -40,7 +40,7 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   try {
     await filesystem.createDirectory(msgsDir);
   } catch (err: any) {
-    if (err.code !== "NE_FS_DIRCRER") {
+    if (err.code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create msgs dir", err);
     }
   }
@@ -49,7 +49,7 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   try {
     await filesystem.createDirectory(docsDir);
   } catch (err: any) {
-    if (err.code !== "NE_FS_DIRCRER") {
+    if (err.code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create docs dir", err);
     }
   }
@@ -58,7 +58,7 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   try {
     await filesystem.createDirectory(tmpDir);
   } catch (err: any) {
-    if (err.code !== "NE_FS_DIRCRER") {
+    if (err.code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create tmp dir", err);
     }
   }
