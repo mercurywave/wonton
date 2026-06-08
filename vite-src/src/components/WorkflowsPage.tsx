@@ -22,7 +22,7 @@ export default function WorkflowsPage() {
   const handleOpenFolder = async () => {
     if (!isBackendConnected() || !flowsPath) return;
     try {
-      await window.electronAPI.os.execCommand(`explorer "${normalizePath(flowsPath)}"`)
+      await window.electronAPI.os.open(flowsPath);
     } catch (err) {
       console.error("handleOpenFolder: failed to open flows folder", err);
     }

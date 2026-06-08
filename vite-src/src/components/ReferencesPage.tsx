@@ -219,7 +219,7 @@ export default function ReferencesPage() {
   const handleOpenFolder = async () => {
     if (!isBackendConnected() || !docsPath) return;
     try {
-      await window.electronAPI.os.execCommand(`explorer "${normalizePath(docsPath)}"`)
+      await window.electronAPI.os.open(docsPath);
     } catch (err) {
       console.error("handleOpenFolder: failed to open docs folder", err);
     }
