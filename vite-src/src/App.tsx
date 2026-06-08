@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Page } from "./types/chat";
-import { isNeutralinoConnected } from "./utils/neuUtils";
-import { os } from "@neutralinojs/lib";
+import { isBackendConnected } from "./utils/platformUtils";
 import { useSettings } from "./contexts";
 import { useProjects } from "./contexts";
 import { useChats } from "./contexts";
@@ -122,9 +121,9 @@ function App() {
   }, [createProject]);
 
   const handleCreateProjectFromFolder = useCallback(async () => {
-    if (!isNeutralinoConnected()) return;
+    if (!isBackendConnected()) return;
     try {
-      const result = await os.showFolderDialog("Select Project Folder");
+      const result = await window.electronAPI.os.showFolderDialog("Select Project Folder");
       if (result) {
         await createProjectFromFolder(result);
       }
@@ -134,9 +133,9 @@ function App() {
   }, [createProjectFromFolder]);
 
   const handleLinkFolder = useCallback(async (id: string) => {
-    if (!isNeutralinoConnected()) return;
+    if (!isBackendConnected()) return;
     try {
-      const result = await os.showFolderDialog("Select Folder for Project");
+      const result = await window.electronAPI.os.showFolderDialog("Select Folder for Project");
       if (result) {
         await updateProjectFolder(id, result);
       }
@@ -146,9 +145,9 @@ function App() {
   }, [updateProjectFolder]);
 
   const handleChangeFolder = useCallback(async (id: string) => {
-    if (!isNeutralinoConnected()) return;
+    if (!isBackendConnected()) return;
     try {
-      const result = await os.showFolderDialog("Select New Folder for Project");
+      const result = await window.electronAPI.os.showFolderDialog("Select New Folder for Project");
       if (result) {
         await updateProjectFolder(id, result);
       }
@@ -158,9 +157,9 @@ function App() {
   }, [updateProjectFolder]);
 
   const handleOpenFolder = useCallback(async (folderPath: string) => {
-    if (!isNeutralinoConnected()) return;
+    if (!isBackendConnected()) return;
     try {
-      await os.open(folderPath);
+      await window.electronAPI.os.open(folderPath);
     } catch (err) {
       console.error("handleOpenFolder: failed to open folder", err);
     }
@@ -196,7 +195,7 @@ function App() {
     });
   }, [onEvent, navigateToChat]);
 
-  const showProjectFeatures = isNeutralinoConnected() && projects.length > 0;
+  const showProjectFeatures = isBackendConnected() && projects.length > 0;
 
   const chatPanelProps = {
     messages,

@@ -1,0 +1,12 @@
+{
+  "name": "wonton",
+  "private": true,
+  "workspaces": [
+    "vite-src"
+  ],
+  "scripts": {
+    "dev": "npm run electron:dev --workspace=vite-src",
+    "build": "npm run build:electron --workspace=vite-src",
+    "lint": "npm run lint --workspace=vite-src"
+  }
+}

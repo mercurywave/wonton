@@ -1,12 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
 import { Book, FolderOpen, Search, FileText, Loader2 } from "lucide-react";
-import { filesystem } from "@neutralinojs/lib";
-import { os } from "@neutralinojs/lib";
+import { filesystem } from "../utils/electronFs";
 import styles from "./ReferencesPage.module.css";
 import SplitPanel from "./SplitPanel";
 import DocumentViewerPanel from "./DocumentViewerPanel";
 import { useNav } from "../contexts";
-import { isNeutralinoConnected, isWindows, getProjectDataDir, DOCS_DIR_NAME } from "../utils/neuUtils";
+import { isBackendConnected, isWindows, getProjectDataDir, DOCS_DIR_NAME } from "../utils/platformUtils";
 import { ReferenceSearchResult, ReferenceMatch, getCache, setQuery, setResults, setSelectedFilePath, clearOnProjectChange } from "../store/references";
 
 function normalizePath(p: string): string {
@@ -218,9 +217,9 @@ export default function ReferencesPage() {
   };
 
   const handleOpenFolder = async () => {
-    if (!isNeutralinoConnected() || !docsPath) return;
+    if (!isBackendConnected() || !docsPath) return;
     try {
-      await os.execCommand(`explorer "${normalizePath(docsPath)}"`)
+      await window.electronAPI.os.execCommand(`explorer "${normalizePath(docsPath)}"`)
     } catch (err) {
       console.error("handleOpenFolder: failed to open docs folder", err);
     }

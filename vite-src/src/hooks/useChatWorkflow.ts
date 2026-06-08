@@ -1,6 +1,6 @@
 import { useRef, useCallback, useMemo } from "react";
 import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won } from "../types/chat";
-import { generateUniqueFileName, getProjectDataDir } from "../utils/neuUtils";
+import { generateUniqueFileName, getProjectDataDir } from "../utils/platformUtils";
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
 import { projectStore } from "../store/projects";

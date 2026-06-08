@@ -1,10 +1,10 @@
 import { StatsEntry } from "../types/chat";
 import {
-  isNeutralinoConnected,
+  isBackendConnected,
   getRootDataDir,
   generateGuid,
-} from "../utils/neuUtils";
-import { filesystem } from "@neutralinojs/lib";
+} from "../utils/platformUtils";
+import { filesystem } from "../utils/electronFs";
 
 const STATS_DIR_NAME = "stats";
 
@@ -18,7 +18,7 @@ function getStatsDate(date: Date): string {
 async function _getStatsFilePath(dateStr: string): Promise<string> {
   const rootDir = await getRootDataDir();
   const statsDir = `${rootDir}/${STATS_DIR_NAME}`;
-  if (isNeutralinoConnected()) {
+  if (isBackendConnected()) {
     try {
       await filesystem.createDirectory(statsDir);
     } catch {
@@ -29,7 +29,7 @@ async function _getStatsFilePath(dateStr: string): Promise<string> {
 }
 
 async function _appendEntry(jsonlPath: string, entry: StatsEntry): Promise<void> {
-  if (!isNeutralinoConnected()) return;
+  if (!isBackendConnected()) return;
   const line = JSON.stringify(entry) + "\n";
   await filesystem.appendFile(jsonlPath, line);
 }
@@ -82,8 +82,8 @@ const statsStore = {
     predictedPerTokenMs?: number,
     predictedPerSecond?: number
   ): Promise<void> {
-    if (!isNeutralinoConnected()) {
-      console.warn("statsStore: skipping entry — not in Neutralino mode");
+    if (!isBackendConnected()) {
+      console.warn("statsStore: skipping entry — not in Electron mode");
       return;
     }
 

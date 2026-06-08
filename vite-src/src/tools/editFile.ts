@@ -1,8 +1,8 @@
-import { filesystem } from "@neutralinojs/lib";
+import { filesystem } from "../utils/electronFs";
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
 import { sanitizeAndResolvePath } from "./pathTools";
-import { resolveTempFilePath } from "../utils/neuUtils";
+import { resolveTempFilePath } from "../utils/platformUtils";
 import { chatStore } from "../store/chats";
 
 export const EDIT_FILE_TOOL_NAME = "edit";

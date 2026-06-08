@@ -17,7 +17,7 @@ import { useProjects } from "./ProjectsContext";
 import { useNav } from "./NavContext";
 import { useAgentsContext } from "./AgentsContext";
 import { useFlowsContext } from "./FlowsContext";
-import { isNeutralinoConnected } from "../utils/neuUtils";
+import { isBackendConnected } from "../utils/platformUtils";
 import { getAvailableTools } from "../tools";
 import { ChatMessage, ChatMeta, FlowActionButton, ToolDefinition } from "../types/chat";
 import { chatLogsStore } from "../store/chatLogs";
@@ -68,7 +68,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     refreshChats,
     updateChatMeta: projectChatsUpdateChatMeta,
   } = useProjectChats(
-    isNeutralinoConnected() ? (activeProjectId ?? undefined) : undefined
+    isBackendConnected() ? (activeProjectId ?? undefined) : undefined
   );
 
   // Auto-select most recent chat when the currently selected one is deleted
@@ -133,7 +133,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     settings,
     selectedChatId || undefined,
-    isNeutralinoConnected() ? (activeProjectId ?? undefined) : undefined,
+    isBackendConnected() ? (activeProjectId ?? undefined) : undefined,
     projectMeta || undefined,
     activeAgentSystemPrompt,
     async (chatId: string, name: string) => {
@@ -183,7 +183,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const historyLoadedRef = useRef(false);
 
   const loadHistoryMessages = useCallback(async () => {
-    if (!isNeutralinoConnected()) return;
+    if (!isBackendConnected()) return;
     setIsLoadingHistoryMessages(true);
     const remaining: Record<string, ChatMessage[]> = {};
     for (const chat of chats) {

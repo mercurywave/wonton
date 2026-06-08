@@ -4,7 +4,7 @@ import { StatsEntry } from "../types/chat";
 import styles from "../components/StatsPage.module.css";
 import { useSettings, useProjects } from "../contexts";
 import { statsStore } from "../store/stats";
-import { isNeutralinoConnected } from "../utils/neuUtils";
+import { isBackendConnected } from "../utils/platformUtils";
 import { getDisplayName } from "../utils/modelUtils";
 
 interface DailyTokens {
@@ -67,7 +67,7 @@ export default function StatsPage() {
   const chartRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!isNeutralinoConnected()) {
+    if (!isBackendConnected()) {
       setBrowserMode(true);
       setLoading(false);
       return;
@@ -205,7 +205,7 @@ export default function StatsPage() {
             <h2>Stats</h2>
           </div>
           <div className={styles.browserWarning}>
-            <p>Stats tracking requires desktop mode (Neutralino). It is not available in browser dev mode.</p>
+            <p>Stats tracking requires desktop mode (Electron). It is not available in browser dev mode.</p>
           </div>
         </div>
       </div>

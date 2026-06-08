@@ -2,19 +2,19 @@ import { Project } from "../types/project";
 import {
   PROJECTS_FILE_NAME,
   DEFAULT_PROJECT_ID,
-  isNeutralinoConnected,
+  isBackendConnected,
   getProjectDataDir,
   generateGuid,
-} from "../utils/neuUtils";
+} from "../utils/platformUtils";
 import {
   ensureChatFolder as ensureChatFolderNative,
 } from "../hooks/useChatPersistence";
-import { CHATS_DIR_NAME, MSGS_DIR_NAME } from "../utils/neuUtils";
+import { CHATS_DIR_NAME, MSGS_DIR_NAME } from "../utils/platformUtils";
 import { projectMetaStore } from "./projectMeta";
-import { filesystem } from "@neutralinojs/lib";
+import { filesystem } from "../utils/electronFs";
 
 async function deleteProjectFolder(projectId: string): Promise<void> {
-  if (!isNeutralinoConnected()) return;
+  if (!isBackendConnected()) return;
 
   const projectDir = await getProjectDataDir(projectId);
 
@@ -109,7 +109,7 @@ const projectStore: ProjectStoreInternal = {
   },
 
   async _save() {
-    if (!isNeutralinoConnected()) return;
+    if (!isBackendConnected()) return;
     const filePath = await getFilePath();
     if (!filePath) return;
     try {
@@ -122,7 +122,7 @@ const projectStore: ProjectStoreInternal = {
   async load() {
     if (state.isLoaded) return;
 
-    if (!isNeutralinoConnected()) {
+    if (!isBackendConnected()) {
       state.projects = [createDefaultProject()];
       state.isLoaded = true;
       return;
@@ -185,7 +185,7 @@ const projectStore: ProjectStoreInternal = {
     };
     state.projects = [...state.projects, newProject];
     await this._save();
-    if (isNeutralinoConnected()) {
+    if (isBackendConnected()) {
       try {
         await ensureChatFolderNative(newProject.id);
       } catch (err) {
@@ -214,7 +214,7 @@ const projectStore: ProjectStoreInternal = {
     if (id === DEFAULT_PROJECT_ID) return;
     state.projects = state.projects.filter((p) => p.id !== id);
     await this._save();
-    if (isNeutralinoConnected()) {
+    if (isBackendConnected()) {
       try {
         await deleteProjectFolder(id);
       } catch (err) {

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef, useLayoutEffect, useMemo } fr
 import { X, ChevronUp, ChevronDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { filesystem } from "@neutralinojs/lib";
+import { filesystem } from "../utils/electronFs";
 import styles from "./DocumentViewerPanel.module.css";
 
 interface DocumentViewerPanelProps {

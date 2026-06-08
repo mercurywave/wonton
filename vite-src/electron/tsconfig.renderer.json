@@ -1,0 +1,8 @@
+{
+  "extends": "@electron-toolkit/tsconfig/tsconfig.renderer.json",
+  "compilerOptions": {
+    "composite": true,
+    "types": ["vite/client", "electron"]
+  },
+  "include": ["src/**/*.ts", "src/**/*.tsx"]
+}

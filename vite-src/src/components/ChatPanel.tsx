@@ -8,7 +8,7 @@ import { useContextWindow } from "../hooks/useContextWindow";
 import { useSelectionBubble } from "../hooks/useSelectionBubble";
 import { useSettings, useAgentsContext, useChats, useProjects, useNav, useFlowsContext, useEventBus } from "../contexts";
 import { chatStore } from "../store/chats";
-import { isNeutralinoConnected } from "../utils/neuUtils";
+import { isBackendConnected } from "../utils/platformUtils";
 import ModelPicker from "./ModelPicker";
 import AgentPicker from "./AgentPicker";
 import ContextRing from "./ContextRing";
@@ -261,7 +261,7 @@ export default function ChatPanel({
     }
 
     const loadDraft = async () => {
-      if (!isNeutralinoConnected()) {
+      if (!isBackendConnected()) {
         setDraft("");
         return;
       }

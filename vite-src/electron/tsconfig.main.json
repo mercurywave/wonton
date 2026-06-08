@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "outDir": "../out/electron",
+    "rootDir": ".",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ES2022",
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "resolveJsonModule": true,
+    "declaration": true,
+    "sourceMap": true,
+    "types": ["node", "electron"]
+  },
+  "include": ["main.ts", "preload.ts"],
+  "exclude": ["node_modules", "../../src"]
+}

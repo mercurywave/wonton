@@ -10,7 +10,7 @@ import {
 import { useTasksData } from "../hooks/useTasksData";
 import { useNav } from "./NavContext";
 import { useChats } from "./ChatsContext";
-import { isNeutralinoConnected } from "../utils/neuUtils";
+import { isBackendConnected } from "../utils/platformUtils";
 import { Task } from "../types/chat";
 import { PRIORITY_ORDER } from "../utils/taskUtils";
 
@@ -39,7 +39,7 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     updateTask,
     deleteTask,
     graduateTask,
-  } = useTasksData(isNeutralinoConnected() ? (activeProjectId ?? undefined) : undefined);
+  } = useTasksData(isBackendConnected() ? (activeProjectId ?? undefined) : undefined);
 
   const createChatAndGraduateRef = useRef(async (taskId: string) => {
     const chat = await createChat();

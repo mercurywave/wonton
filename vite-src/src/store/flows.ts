@@ -1,10 +1,10 @@
 import { Flow } from "../types/chat";
 import {
   FLOWS_DIR_NAME,
-  isNeutralinoConnected,
+  isBackendConnected,
   getRootDataDir,
-} from "../utils/neuUtils";
-import { filesystem } from "@neutralinojs/lib";
+} from "../utils/platformUtils";
+import { filesystem } from "../utils/electronFs";
 import { parse as yamlParse } from "yaml";
 
 const FLOW_EXT = ".yaml";
@@ -49,7 +49,7 @@ function dispatch() {
 }
 
 async function loadFlowsFromDisk(): Promise<LoadResult> {
-  if (!isNeutralinoConnected()) {
+  if (!isBackendConnected()) {
     return { flows: [...state.flows], flowsPath: "", conflictIds: [], conflictFiles: {} };
   }
 

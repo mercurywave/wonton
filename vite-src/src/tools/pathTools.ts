@@ -1,4 +1,4 @@
-import { filesystem } from "@neutralinojs/lib";
+import { filesystem } from "../utils/electronFs";
 
 export interface SanitizePathResult {
   success: boolean;

@@ -1,16 +1,16 @@
 import { ChatMessage } from "../types/chat";
 import {
   MSGS_DIR_NAME,
-  isNeutralinoConnected,
+  isBackendConnected,
   getProjectDataDir,
   generateGuid,
-} from "../utils/neuUtils";
-import { filesystem } from "@neutralinojs/lib";
+} from "../utils/platformUtils";
+import { filesystem } from "../utils/electronFs";
 
 // --- persistence functions ---
 
 async function _readLog(projectId: string, logId: string): Promise<ChatMessage[]> {
-  if (!isNeutralinoConnected()) return [];
+  if (!isBackendConnected()) return [];
 
   const projectDir = await getProjectDataDir(projectId);
   const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
@@ -40,7 +40,7 @@ async function _readLog(projectId: string, logId: string): Promise<ChatMessage[]
 }
 
 async function _appendMessage(projectId: string, logId: string, message: ChatMessage): Promise<void> {
-  if (!isNeutralinoConnected()) return;
+  if (!isBackendConnected()) return;
 
   const projectDir = await getProjectDataDir(projectId);
   const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
@@ -51,7 +51,7 @@ async function _appendMessage(projectId: string, logId: string, message: ChatMes
 }
 
 async function _deleteLog(projectId: string, logId: string): Promise<void> {
-  if (!isNeutralinoConnected()) return;
+  if (!isBackendConnected()) return;
 
   const projectDir = await getProjectDataDir(projectId);
   const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
@@ -170,7 +170,7 @@ const chatLogsStore: ChatLogsStore = {
 
   async reserveLog(projectId: string, logId: string): Promise<void> {
 
-    if (isNeutralinoConnected()) {
+    if (isBackendConnected()) {
       try {
         const projectDir = await getProjectDataDir(projectId);
         const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;

@@ -1,10 +1,10 @@
 import { ProjectMeta } from "../types/chat";
-import { filesystem } from "@neutralinojs/lib";
+import { filesystem } from "../utils/electronFs";
 import {
   PROJ_FILE_NAME,
-  isNeutralinoConnected,
+  isBackendConnected,
   getProjectDataDir,
-} from "../utils/neuUtils";
+} from "../utils/platformUtils";
 
 type Listener = () => void;
 
@@ -35,7 +35,7 @@ function dispatch(projectId: string) {
 }
 
 async function _loadProjectMeta(projectId: string): Promise<ProjectMeta> {
-  if (!isNeutralinoConnected()) return { createdAt: Date.now() };
+  if (!isBackendConnected()) return { createdAt: Date.now() };
 
   const projectDir = await getProjectDataDir(projectId);
   const projPath = `${projectDir}/${PROJ_FILE_NAME}`;
@@ -52,7 +52,7 @@ async function _updateProjectMeta(
   projectId: string,
   updates: Partial<ProjectMeta>
 ): Promise<void> {
-  if (!isNeutralinoConnected()) return;
+  if (!isBackendConnected()) return;
 
   const projectDir = await getProjectDataDir(projectId);
   const projPath = `${projectDir}/${PROJ_FILE_NAME}`;

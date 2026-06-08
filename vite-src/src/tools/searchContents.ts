@@ -1,4 +1,4 @@
-import { filesystem } from "@neutralinojs/lib";
+import { filesystem } from "../utils/electronFs";
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
 

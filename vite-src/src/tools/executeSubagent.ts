@@ -6,7 +6,7 @@ import { chatLogsStore } from "../store/chatLogs";
 import { getAgentByName, getAvailableSubagents } from "../utils/agents";
 import { getAllAgents, loadAgentsFile } from "../hooks/useAgents";
 import { SubagentMeta } from "../types/chat";
-import { getProjectDataDir, DOCS_DIR_NAME, DOCS_FOLDER_OVERRIDE } from "../utils/neuUtils";
+import { getProjectDataDir, DOCS_DIR_NAME, DOCS_FOLDER_OVERRIDE } from "../utils/platformUtils";
 
 export const EXECUTE_SUBAGENT_TOOL_NAME = "message";
 

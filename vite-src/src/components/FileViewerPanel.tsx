@@ -3,9 +3,9 @@ import { useSelectionBubble } from "../hooks/useSelectionBubble";
 import { X } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { filesystem, events } from "@neutralinojs/lib";
+import { filesystem } from "../utils/electronFs";
 import styles from "../components/FileViewerPanel.module.css";
-import { resolveTempFilePath, getProjectDataDir } from "../utils/neuUtils";
+import { resolveTempFilePath, getProjectDataDir } from "../utils/platformUtils";
 import { TempFileReservation } from "../types/chat";
 import { useEventBus } from "../contexts";
 import SelectionBubble from "./SelectionBubble";
@@ -85,10 +85,10 @@ export default function TempFileViewerPanel({
     loadFile();
   }, [uniqueName, projectId, loadFile, onClose]);
 
-  const watcherIdRef = useRef<number>(0);
+  const watcherKeyRef = useRef<string>("");
   const loadFileRef = useRef(loadFile);
   loadFileRef.current = loadFile;
-  
+
   useEffect(() => {
     if (!projectId || !reservedTempFiles.some((f) => f.uniqueName === uniqueName)) {
       return;
@@ -109,20 +109,20 @@ export default function TempFileViewerPanel({
         const dirPath = tempResult.tmpPath.substring(0, tempResult.tmpPath.lastIndexOf("/"));
         const normalizedDir = await filesystem.getNormalizedPath(dirPath);
         const watcherId = await filesystem.createWatcher(normalizedDir);
-        watcherIdRef.current = watcherId;
+        const watcherKey = watcherId.watcherId;
+        watcherKeyRef.current = watcherKey;
 
-        const handler = (ev: any) => {
-          const detail = ev?.detail as any;
-          if (detail && detail.id === watcherId && detail.filename === uniqueName) {
+        const handler = (_event: any, ev: any) => {
+          if (ev && ev.id === watcherKey && ev.filename === uniqueName) {
             loadFileRef.current();
           }
         };
 
-        events.on("watchFile", handler);
+        window.electronAPI.events.on("watch:change", handler);
 
         return () => {
-          events.off("watchFile", handler);
-          filesystem.removeWatcher(watcherId);
+          window.electronAPI.events.off("watch:change", handler);
+          filesystem.removeWatcher(watcherKey);
         };
       } catch (err) {
         console.error("Failed to create file watcher:", err);

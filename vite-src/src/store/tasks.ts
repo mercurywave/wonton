@@ -1,14 +1,14 @@
 import { Task } from "../types/chat";
 import {
   TASKS_DIR_NAME,
-  isNeutralinoConnected,
+  isBackendConnected,
   getProjectDataDir,
   generateGuid,
-} from "../utils/neuUtils";
-import { filesystem } from "@neutralinojs/lib";
+} from "../utils/platformUtils";
+import { filesystem } from "../utils/electronFs";
 
 async function listTasks(projectId: string): Promise<Task[]> {
-  if (!isNeutralinoConnected()) return [];
+  if (!isBackendConnected()) return [];
 
   const projectDir = await getProjectDataDir(projectId);
   const tasksDir = `${projectDir}/${TASKS_DIR_NAME}`;
@@ -36,7 +36,7 @@ async function listTasks(projectId: string): Promise<Task[]> {
 }
 
 async function ensureTasksDir(projectId: string): Promise<void> {
-  if (!isNeutralinoConnected()) return;
+  if (!isBackendConnected()) return;
 
   const projectDir = await getProjectDataDir(projectId);
   const tasksDir = `${projectDir}/${TASKS_DIR_NAME}`;
@@ -114,7 +114,7 @@ const taskStore: TasksStoreInternal = {
   },
 
   async createTask(projectId, text, priority) {
-    if (!isNeutralinoConnected()) {
+    if (!isBackendConnected()) {
       const task: Task = {
         id: generateGuid(),
         projectId,
@@ -170,7 +170,7 @@ const taskStore: TasksStoreInternal = {
     const existing = current.tasks[idx];
     const next = { ...existing, ...updates, updatedAt: Date.now() } as Task;
 
-    if (isNeutralinoConnected()) {
+    if (isBackendConnected()) {
       const projectDir = await getProjectDataDir(projectId);
       const tasksDir = `${projectDir}/${TASKS_DIR_NAME}`;
       try {
@@ -191,7 +191,7 @@ const taskStore: TasksStoreInternal = {
   },
 
   async deleteTask(projectId, taskId) {
-    if (isNeutralinoConnected()) {
+    if (isBackendConnected()) {
       const projectDir = await getProjectDataDir(projectId);
       const tasksDir = `${projectDir}/${TASKS_DIR_NAME}`;
       try {
@@ -220,7 +220,7 @@ const taskStore: TasksStoreInternal = {
 
     const next = { ...task, graduatedAt: Date.now(), chatId } as Task;
 
-    if (isNeutralinoConnected()) {
+    if (isBackendConnected()) {
       const projectDir = await getProjectDataDir(projectId);
       const tasksDir = `${projectDir}/${TASKS_DIR_NAME}`;
       try {

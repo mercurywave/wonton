@@ -5,17 +5,17 @@ import {
   MSGS_DIR_NAME,
   DOCS_DIR_NAME,
   TMP_DIR_NAME,
-  isNeutralinoConnected,
+  isBackendConnected,
   getProjectDataDir
-} from "../utils/neuUtils";
-import { filesystem } from "@neutralinojs/lib";
+} from "../utils/platformUtils";
+import { filesystem } from "../utils/electronFs";
 
 export async function getProjectDataDirPath(projectId: string): Promise<string> {
   return getProjectDataDir(projectId);
 }
 
 export async function ensureChatFolder(projectId: string): Promise<void> {
-  if (!isNeutralinoConnected()) return;
+  if (!isBackendConnected()) return;
 
   const projectDir = await getProjectDataDir(projectId);
 

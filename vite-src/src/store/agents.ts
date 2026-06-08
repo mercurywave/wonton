@@ -1,11 +1,11 @@
 import { Agent } from "../types/chat";
 import {
   AGENTS_FILE_NAME,
-  isNeutralinoConnected,
+  isBackendConnected,
   getRootDataDir,
-} from "../utils/neuUtils";
+} from "../utils/platformUtils";
 import { BUILTIN_AGENTS } from "../utils/agents";
-import { filesystem } from "@neutralinojs/lib";
+import { filesystem } from "../utils/electronFs";
 
 type Listener = () => void;
 
@@ -37,7 +37,7 @@ function dispatch() {
 }
 
 async function getFilePath(): Promise<string> {
-  if (!isNeutralinoConnected()) return "";
+  if (!isBackendConnected()) return "";
   const rootDir = await getRootDataDir();
   return `${rootDir}/${AGENTS_FILE_NAME}`;
 }
@@ -62,7 +62,7 @@ const agentStore: AgentStoreInternal = {
   async load() {
     if (state.isLoaded) return;
 
-    if (!isNeutralinoConnected()) {
+    if (!isBackendConnected()) {
       state.customAgents = [];
       state.isLoaded = true;
       return;

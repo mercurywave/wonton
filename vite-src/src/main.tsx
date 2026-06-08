@@ -4,9 +4,6 @@ import App from "./App.tsx";
 import { AppProviders } from "./contexts";
 import "./index.css";
 
-import { init } from "@neutralinojs/lib";
-init();
-
 createRoot(document.getElementById("root")!).render(
 	<StrictMode>
 		<AppProviders>

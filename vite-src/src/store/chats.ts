@@ -5,16 +5,16 @@ import {
   MSGS_DIR_NAME,
   TMP_DIR_NAME,
   PROJ_FILE_NAME,
-  isNeutralinoConnected,
+  isBackendConnected,
   getProjectDataDir,
   generateGuid,
-} from "../utils/neuUtils";
-import { filesystem } from "@neutralinojs/lib";
+} from "../utils/platformUtils";
+import { filesystem } from "../utils/electronFs";
 
 // --- persistence functions for chat metas ---
 
 async function listChatMeta(projectId: string): Promise<ChatMeta[]> {
-  if (!isNeutralinoConnected()) return [];
+  if (!isBackendConnected()) return [];
 
   const projectDir = await getProjectDataDir(projectId);
   const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
@@ -49,7 +49,7 @@ async function createChat(
   workflowId?: string,
   workflowStateKey?: string
 ): Promise<ChatMeta> {
-  if (!isNeutralinoConnected()) {
+  if (!isBackendConnected()) {
     const chatId = generateGuid();
     const logId = generateGuid();
     return {
@@ -97,7 +97,7 @@ async function createChat(
 }
 
 async function deleteChat(projectId: string, chatId: string): Promise<void> {
-  if (!isNeutralinoConnected()) return;
+  if (!isBackendConnected()) return;
 
   const projectDir = await getProjectDataDir(projectId);
   const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
@@ -151,7 +151,7 @@ async function updateChatMeta(
   chatId: string,
   updates: Partial<ChatMeta>,
 ): Promise<ChatMeta | null> {
-  if (!isNeutralinoConnected()) return null;
+  if (!isBackendConnected()) return null;
 
   const projectDir = await getProjectDataDir(projectId);
   const metaPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.json`;

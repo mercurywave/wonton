@@ -1,5 +1,5 @@
 import { Agent } from "../types/chat";
-import { DOCS_FOLDER_OVERRIDE } from "./neuUtils";
+import { DOCS_FOLDER_OVERRIDE } from "./platformUtils";
 
 export const DEFAULT_AGENT: Agent = {
   id: "builtin:default",

@@ -2,8 +2,7 @@ import { useState } from "react";
 import { GitBranch, RotateCw, FolderOpen, Loader2, Play } from "lucide-react";
 import styles from "../components/WorkflowsPage.module.css";
 import { useFlowsContext } from "../contexts/FlowsContext";
-import { isNeutralinoConnected, isWindows } from "../utils/neuUtils";
-import { os } from "@neutralinojs/lib";
+import { isBackendConnected, isWindows } from "../utils/platformUtils";
 
 function normalizePath(p: string): string {
   return p.replace(/\//g, "\\").replace(/\\/g, "\\");
@@ -21,9 +20,9 @@ export default function WorkflowsPage() {
   };
 
   const handleOpenFolder = async () => {
-    if (!isNeutralinoConnected() || !flowsPath) return;
+    if (!isBackendConnected() || !flowsPath) return;
     try {
-      await os.execCommand(`explorer "${normalizePath(flowsPath)}"`)
+      await window.electronAPI.os.execCommand(`explorer "${normalizePath(flowsPath)}"`)
     } catch (err) {
       console.error("handleOpenFolder: failed to open flows folder", err);
     }

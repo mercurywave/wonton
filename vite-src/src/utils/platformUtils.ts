@@ -1,5 +1,9 @@
-import { computer, filesystem, os } from "@neutralinojs/lib";
+import path from "path";
+import os from "os";
+import { filesystem } from "./electronFs";
 import { TempFileReservation } from "../types/chat";
+
+// Platform-neutral data directory resolution
 
 export const DATA_DIR_NAME = "wonton";
 export const PROJ_FILE_NAME = "proj.json";
@@ -14,45 +18,48 @@ export const FLOWS_DIR_NAME = "flows";
 export const TASKS_DIR_NAME = "tasks";
 export const DEFAULT_PROJECT_ID = "default";
 
-export function isNeutralinoConnected() {
-  return window.NL_MODE !== undefined;
+export function getPlatform(): string {
+  return process.platform;
+}
+
+export function isWindows(): boolean {
+  return process.platform === "win32";
+}
+
+export async function getRootDataDir(): Promise<string> {
+  let dataDir: string;
+
+  if (process.platform === "win32") {
+    const localAppData = process.env.LOCALAPPDATA || "";
+    dataDir = path.join(localAppData, DATA_DIR_NAME);
+  } else if (process.platform === "darwin") {
+    const home = os.homedir();
+    dataDir = path.join(home, "Library", "Application Support", DATA_DIR_NAME);
+  } else {
+    // Linux
+    const xdgDataHome = process.env.XDG_DATA_HOME;
+    if (xdgDataHome) {
+      dataDir = path.join(xdgDataHome, DATA_DIR_NAME);
+    } else {
+      const home = os.homedir();
+      dataDir = path.join(home, ".local", "share", DATA_DIR_NAME);
+    }
+  }
+
+  return dataDir;
+}
+
+export async function getProjectDataDir(projectId: string): Promise<string> {
+  const rootDir = await getRootDataDir();
+  return path.join(rootDir, projectId);
+}
+
+export function isBackendConnected(): boolean {
+  return typeof window !== "undefined" && "electronAPI" in window;
 }
 
 export function generateGuid(): string {
   return crypto.randomUUID();
-}
-
-export async function getProjectDataDir(projectId: string): Promise<string> {
-  if (!isNeutralinoConnected()) {
-    return "";
-  }
-  const platform = (await computer.getOSInfo()).name.toLowerCase();
-
-  let dataDir: string;
-  if (platform.includes("windows")) {
-    const local = await os.getEnv("LOCALAPPDATA");
-    dataDir = `${local}/${DATA_DIR_NAME}`;
-  } else if (platform.includes("mac")) {
-    const home = await os.getEnv("HOME");
-    dataDir = `${home}/Library/Application Support/${DATA_DIR_NAME}`;
-  } else {
-    const xdg = await os.getEnv("XDG_DATA_HOME");
-    if (xdg) {
-      dataDir = `${xdg}/${DATA_DIR_NAME}`;
-    } else {
-      const home = await os.getEnv("HOME");
-      dataDir = `${home}/.local/share/${DATA_DIR_NAME}`;
-    }
-  }
-  return `${dataDir}/${projectId}`;
-}
-
-export function isWindows(): boolean {
-  try {
-    return (window as any).NL_OS?.toLowerCase().includes("windows") ?? false;
-  } catch {
-    return false;
-  }
 }
 
 const WORDS = [
@@ -175,29 +182,4 @@ export async function resolveTempFilePath(
     tmpPath,
     virtualPath: fileName,
   };
-}
-
-export async function getRootDataDir(): Promise<string> {
-  if (!isNeutralinoConnected()) {
-    return "";
-  }
-  const platform = (await computer.getOSInfo()).name.toLowerCase();
-
-  let dataDir: string;
-  if (platform.includes("windows")) {
-    const local = await os.getEnv("LOCALAPPDATA");
-    dataDir = `${local}/${DATA_DIR_NAME}`;
-  } else if (platform.includes("mac")) {
-    const home = await os.getEnv("HOME");
-    dataDir = `${home}/Library/Application Support/${DATA_DIR_NAME}`;
-  } else {
-    const xdg = await os.getEnv("XDG_DATA_HOME");
-    if (xdg) {
-      dataDir = `${xdg}/${DATA_DIR_NAME}`;
-    } else {
-      const home = await os.getEnv("HOME");
-      dataDir = `${home}/.local/share/${DATA_DIR_NAME}`;
-    }
-  }
-  return dataDir;
 }
