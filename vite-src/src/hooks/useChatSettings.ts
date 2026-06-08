@@ -15,7 +15,7 @@ export interface ChatSettings {
 }
 
 const DEFAULT_SETTINGS: ChatSettings = {
-  serverUrl: "https://api.openai.com",
+  serverUrl: "https://localhost",
   apiKey: "",
   defaultModel: "",
   systemPrompt: "You are a helpful assistant.",

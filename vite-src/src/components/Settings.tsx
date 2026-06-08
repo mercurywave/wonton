@@ -60,7 +60,7 @@ export default function Settings() {
               className={styles.input}
               value={settings.serverUrl}
               onChange={(e) => onUpdate({ serverUrl: e.target.value })}
-              placeholder="https://api.openai.com"
+              placeholder="https://localhost"
             />
           </div>
 
