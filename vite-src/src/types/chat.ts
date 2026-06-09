@@ -93,6 +93,7 @@ export interface ChatMeta {
   workflowStateKey?: string;
   workflowData?: Record<string, unknown>;
   logId: string;
+  queriesLogId?: string;
   draft?: string;
   subagents?: SubagentMeta[];
   reservedTempFiles?: TempFileReservation[];

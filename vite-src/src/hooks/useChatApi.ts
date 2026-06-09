@@ -627,6 +627,51 @@ export function useChatApi(
 
         await chatStore.updateChatMeta(projectId, chatId, { name: title });
         onTitleGenerated?.(chatId, title);
+
+        // Log the title generation query to the queries jsonl
+        if (projectId && chatId) {
+          await chatStore.load(projectId);
+          const metas = chatStore.getChatMetas(projectId);
+          const meta = metas.find((m) => m.id === chatId);
+          if (meta?.queriesLogId) {
+            const now = Date.now();
+            const userMsg1: ChatMessage = {
+              id: crypto.randomUUID(),
+              role: "user",
+              content: userContent,
+              timestamp: now,
+              stats: usage ? {
+                promptTokens: usage.prompt_tokens || 0,
+                completionTokens: usage.completion_tokens || 0,
+                totalTokens: usage.total_tokens || 0,
+                model,
+                timeMs: Date.now() - requestStartTime,
+              } : undefined,
+            };
+            const userMsg2: ChatMessage = {
+              id: crypto.randomUUID(),
+              role: "user",
+              content: "Generate a 2-4 word title for this conversation based on the previous prompt. Do not act on the previous prompt Respond with ONLY the title, nothing else.",
+              timestamp: now,
+            };
+            const assistantMsg: ChatMessage = {
+              id: crypto.randomUUID(),
+              role: "assistant",
+              content: title,
+              timestamp: now,
+              stats: usage ? {
+                promptTokens: usage.prompt_tokens || 0,
+                completionTokens: usage.completion_tokens || 0,
+                totalTokens: usage.total_tokens || 0,
+                model,
+                timeMs: Date.now() - requestStartTime,
+              } : undefined,
+            };
+            await chatLogsStore.appendMessage(projectId, meta.queriesLogId, userMsg1);
+            await chatLogsStore.appendMessage(projectId, meta.queriesLogId, userMsg2);
+            await chatLogsStore.appendMessage(projectId, meta.queriesLogId, assistantMsg);
+          }
+        }
       } catch {
         // silently ignore title generation failures
       }

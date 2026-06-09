@@ -70,6 +70,7 @@ async function createChat(
 
   const chatId = generateGuid();
   const logId = generateGuid();
+  const queriesLogId = generateGuid();
   const now = Date.now();
 
   const chatMeta: ChatMeta = {
@@ -81,6 +82,7 @@ async function createChat(
     workflowId,
     workflowStateKey,
     logId: logId,
+    queriesLogId: queriesLogId,
   };
 
   try {
@@ -89,6 +91,7 @@ async function createChat(
       JSON.stringify(chatMeta, null, 2)
     );
     await filesystem.writeFile(`${msgsDir}/${logId}.jsonl`, "");
+    await chatLogsStore.reserveLog(projectId, queriesLogId);
   } catch (err) {
     console.error("createChat: failed to write chat files", err);
   }
@@ -140,6 +143,11 @@ async function deleteChat(projectId: string, chatId: string): Promise<void> {
           } catch { }
         }
       }
+    }
+    if (meta.queriesLogId) {
+      try {
+        await filesystem.remove(`${msgsDir}/${meta.queriesLogId}.jsonl`);
+      } catch { }
     }
   } catch (err) {
     console.error("deleteChat: failed to remove chat files", err);

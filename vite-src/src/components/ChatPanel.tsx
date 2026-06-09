@@ -323,7 +323,7 @@ export default function ChatPanel({
   const resolvedStateMessage = resolvedWorkflow?.states?.[currentChat?.workflowStateKey ?? ""]?.message;
   const resolvedActionButtons = resolvedWorkflow?.states?.[currentChat?.workflowStateKey ?? ""]?.actionButtons;
 
-  // Build log options: main log + subagents + version history
+  // Build log options: main log + subagents + version history + queries
   const logOptions = useMemo(() => {
     if (!currentChat) return [];
     const options: Array<{ id: string; label: string }> = [
@@ -348,17 +348,22 @@ export default function ChatPanel({
         label: `Version ${i + 1} (${creationTime})`,
       });
     }
+    if (currentChat.queriesLogId) {
+      options.push({
+        id: currentChat.queriesLogId,
+        label: "Queries",
+      });
+    }
     return options;
   }, [currentChat, allAgents]);
 
- 
-
   const effectiveLogId = logId || currentChat?.logId;
 
-  // Derive subtitle when a subagent log is selected
+  // Derive subtitle when a subagent or queries log is selected
   const logSubtitle = useMemo(() => {
     if (!logId || !currentChat) return null;
     if (logId === currentChat.logId) return null;
+    if (logId === currentChat.queriesLogId) return "Queries";
     const subagent = currentChat.subagents?.find((s) => s.logId === logId);
     if (!subagent) return null;
     const agent = allAgents.find((a) => a.id === subagent.agentId);
@@ -572,46 +577,46 @@ export default function ChatPanel({
                 const msg = messages[i];
 
                if (msg.toolCalls && msg.toolCalls.length > 0) {
-                 const toolResultMessages: ChatMessageType[] = [];
-                 for (let j = i + 1; j < messages.length; j++) {
-                   if (skip.has(j)) break;
-                   const next = messages[j];
-                   if (next.role === "tool" && next.toolCallId) {
-                     if (msg.toolCalls!.some((tc) => tc.id === next.toolCallId)) {
-                       toolResultMessages.push(next);
-                       skip.add(j);
-                     } else {
-                       break;
-                     }
-                   } else {
-                     break;
-                   }
-                 }
-                 elements.push(
-                   <div key={msg.id}>
-                     <MessageBubble message={msg} modelAliases={settings.modelAliases} toolResultMessages={toolResultMessages} />
-                   </div>
-                 );
-                 continue;
-               }
+                  const toolResultMessages: ChatMessageType[] = [];
+                  for (let j = i + 1; j < messages.length; j++) {
+                    if (skip.has(j)) break;
+                    const next = messages[j];
+                    if (next.role === "tool" && next.toolCallId) {
+                      if (msg.toolCalls!.some((tc) => tc.id === next.toolCallId)) {
+                        toolResultMessages.push(next);
+                        skip.add(j);
+                      } else {
+                        break;
+                      }
+                    } else {
+                      break;
+                    }
+                  }
+                  elements.push(
+                    <div key={msg.id}>
+                      <MessageBubble message={msg} modelAliases={settings.modelAliases} toolResultMessages={toolResultMessages} />
+                    </div>
+                  );
+                  continue;
+                }
 
-               elements.push(
-                 <div key={msg.id}>
-                   <MessageBubble message={msg} modelAliases={settings.modelAliases} />
-                 </div>
-               );
-             }
+                elements.push(
+                  <div key={msg.id}>
+                    <MessageBubble message={msg} modelAliases={settings.modelAliases} />
+                  </div>
+                );
+              }
 
-             return elements;
-           })()}
-          <div ref={messagesEndRef} />
-          {bubbleData && (
-            <SelectionBubble
-              position={bubbleData}
-              selectedText={bubbleData.text}
-              onComment={handleBubbleComment}
-            />
-          )}
+              return elements;
+            })()}
+           <div ref={messagesEndRef} />
+           {bubbleData && (
+             <SelectionBubble
+               position={bubbleData}
+               selectedText={bubbleData.text}
+               onComment={handleBubbleComment}
+             />
+           )}
         </div>
       </div>
 
