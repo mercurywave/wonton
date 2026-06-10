@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { Agent, ChatMessage, LLMStats, ToolCall, ToolDefinition } from "../types/chat";
+import { ChatMessage, LLMStats, ToolCall, ToolDefinition } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
 import { chatLogsStore } from "../store/chatLogs";
 import { statsStore } from "../store/stats";
@@ -9,17 +9,14 @@ import {
   parseSSEChunk,
   mergeStats,
 } from "../utils/llmApi";
+import { chatStore } from "../store/chats";
 
 export interface LLMQueryOptions {
   settings: ChatSettings;
-  projectId?: string;
-  chatId?: string;
-  queriesLogId?: string;
+  projectId: string;
+  chatId: string;
   systemPrompt?: string;
   model?: string;
-  agentId?: string;
-  agent?: Agent;
-  allAgents?: Agent[];
   tools?: ToolDefinition[];
   folderPath?: string;
 }
@@ -38,10 +35,8 @@ export async function runQuery(
     settings,
     projectId,
     chatId,
-    queriesLogId,
     systemPrompt,
     model,
-    agentId,
     tools,
     folderPath,
   } = options;
@@ -49,6 +44,12 @@ export async function runQuery(
   const allTools = folderPath ? [] : (tools || []);
   const resolvedTools = allTools.filter(() => true);
   const systemPromptOrDefault = systemPrompt || settings.systemPrompt;
+  
+  const chat = chatStore.getChat(projectId, chatId);
+  if(!chat){
+    throw new Error(`Chat not found ${chatId} in ${projectId}`);
+  }
+  const queriesLogId = chat.queriesLogId;
 
   const { messages: apiMessages } = buildApiMessages(messages, systemPromptOrDefault, resolvedTools);
 
@@ -153,7 +154,7 @@ export async function runQuery(
       chatId,
       queriesLogId,
       parsedStats.model,
-      agentId || "",
+      "",
       parsedStats.promptTokens,
       parsedStats.completionTokens,
       parsedStats.totalTokens,
