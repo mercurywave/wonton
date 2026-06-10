@@ -14,7 +14,6 @@ export interface LLMQueryOptions {
   settings: ChatSettings;
   projectId?: string;
   chatId?: string;
-  logId?: string;
   queriesLogId?: string;
   systemPrompt?: string;
   model?: string;
@@ -39,7 +38,6 @@ export async function runQuery(
     settings,
     projectId,
     chatId,
-    logId,
     queriesLogId,
     systemPrompt,
     model,
@@ -149,11 +147,11 @@ export async function runQuery(
   const allMessages = [...messages, assistantMessage];
 
   // Log stats
-  if (parsedStats && projectId && chatId && logId) {
+  if (parsedStats && projectId && chatId && queriesLogId) {
     statsStore.appendEntry(
       projectId,
       chatId,
-      logId,
+      queriesLogId,
       parsedStats.model,
       agentId || "",
       parsedStats.promptTokens,

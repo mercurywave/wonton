@@ -608,7 +608,6 @@ export function useChatApi(
           settings,
           projectId,
           chatId,
-          logId,
           queriesLogId: meta.queriesLogId,
           model,
         });
