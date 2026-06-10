@@ -158,6 +158,7 @@ async function updateChatMeta(
   projectId: string,
   chatId: string,
   updates: Partial<ChatMeta>,
+  silent?: boolean
 ): Promise<ChatMeta | null> {
   if (!isBackendConnected()) return null;
 
@@ -183,7 +184,7 @@ async function updateChatMeta(
         c.id === chatId ? next : c
       );
       state.set(projectId, { metas, isLoaded: true });
-      dispatch(projectId);
+      if(!silent) { dispatch(projectId); }
     }
     
     return next;
@@ -215,7 +216,7 @@ interface ChatsStore {
   ): Promise<ChatMeta>;
   deleteChat(projectId: string, chatId: string): Promise<void>;
   renameChat(projectId: string, chatId: string, name: string): Promise<void>;
-  setChatDraft(projectId: string, chatId: string, draft: string): Promise<void>;
+  setChatDraft(projectId: string, chatId: string, draft: string, silent?: boolean): Promise<void>;
   updateChatMeta(
     projectId: string,
     chatId: string,
@@ -292,8 +293,8 @@ const chatStore: ChatsStore = {
     await this.updateChatMeta(projectId, chatId, { name });
   },
 
-  async setChatDraft(projectId, chatId, draft) {
-    await updateChatMeta(projectId, chatId, { draft });
+  async setChatDraft(projectId, chatId, draft, silent?: boolean) {
+    await updateChatMeta(projectId, chatId, { draft }, silent);
   },
 
   async updateChatMeta(projectId, chatId, updates) {

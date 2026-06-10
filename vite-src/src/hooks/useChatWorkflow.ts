@@ -217,6 +217,13 @@ export function buildWon(
       });
       return result.finalMessage.content;
     },
+    getChatDraft(): string {
+      const meta = chatStore.getChat(projectId, chatId);
+      return meta?.draft ?? "";
+    },
+    async setChatDraft(draft: string) {
+      await chatStore.setChatDraft(projectId, chatId, draft);
+    },
   };
 }
 

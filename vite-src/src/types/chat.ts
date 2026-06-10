@@ -171,6 +171,8 @@ export interface Won {
     }
   ): Promise<ChatMeta>;
   runQuery(messages: string | ChatHistoryEntry[], options?: WonQueryOptions): Promise<string>;
+  getChatDraft(): string;
+  setChatDraft(draft: string): Promise<void>;
 }
 
 export interface StatsEntry {

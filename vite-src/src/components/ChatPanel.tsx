@@ -275,6 +275,18 @@ export default function ChatPanel({
     };
 
     loadDraft();
+
+    // Subscribe to chat metadata changes (e.g. from extensions calling won.setChatDraft())
+    const unsubscribe = chatStore.subscribe(activeProjectId, () => {
+      const chatMeta = chatStore.getChat(activeProjectId, selectedChatId);
+      if (chatMeta) {
+        setDraft(chatMeta.draft || "");
+        setWriteProjectId(chatMeta.projectId || activeProjectId);
+        setWriteChatId(selectedChatId);
+      }
+    });
+
+    return unsubscribe;
   }, [activeProjectId, selectedChatId]);
 
   // Debounced save to file on interval
@@ -286,7 +298,7 @@ export default function ChatPanel({
     }
 
     saveTimerRef.current = setTimeout(() => {
-      chatStore.setChatDraft(writeProjectId, writeChatId, draft);
+      chatStore.setChatDraft(writeProjectId, writeChatId, draft, true);
     }, 5000);
 
     return () => {
@@ -660,7 +672,7 @@ export default function ChatPanel({
             onKeyDown={handleKeyDown}
             onBlur={() => {
               if (writeProjectId && writeChatId) {
-                chatStore.setChatDraft(writeProjectId, writeChatId, draft);
+                chatStore.setChatDraft(writeProjectId, writeChatId, draft, true);
               }
             }}
             placeholder="Type a message..."
