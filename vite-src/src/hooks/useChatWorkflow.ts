@@ -1,11 +1,15 @@
 import { useRef, useCallback, useMemo } from "react";
 import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won } from "../types/chat";
+import { agentStore } from "../store/agents";
 import { generateUniqueFileName, getProjectDataDir } from "../utils/platformUtils";
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
 import { projectStore } from "../store/projects";
+import { projectMetaStore } from "../store/projectMeta";
 import { flowStore } from "../store/flows";
 import { useEventBus } from "../contexts";
+import { loadSettings } from "./useChatSettings";
+import { runQuery as runQueryImpl } from "./useLLMQuery";
 
 interface UseChatWorkflowOptions {
   workflowId?: string;
@@ -185,6 +189,33 @@ export function buildWon(
       emit?.("navigateToChat", { chatId: newChatId });
 
       return chatMeta;
+    },
+    async runQuery(messages: string | ChatHistoryEntry[], options) {
+      const messageArr: ChatHistoryEntry[] = (typeof messages === 'string') 
+        ? [{ content: messages, role: 'user' }]
+        : messages;
+      const settings = loadSettings();
+      const chat = chatStore.getChat(projectId, chatId);
+      const projectMeta = projectMetaStore.getProjectMeta(projectId);
+      const allAgents = agentStore.getAllAgents();
+      const agentId = chat?.activeAgentId;
+      const agent = agentId ? allAgents.find((a) => a.id === agentId) : undefined;
+      const resolvedSystemPrompt = options?.systemPrompt || agent?.systemPrompt || projectMeta?.systemPrompt || settings.systemPrompt;
+      const resolvedModel = options?.model || projectMeta?.defaultModel || settings.defaultModel || "";
+      const chatMessages: ChatMessage[] = messageArr.map((m) => ({
+        id: crypto.randomUUID(),
+        role: m.role,
+        content: m.content,
+        timestamp: Date.now(),
+      }));
+      const result = await runQueryImpl(chatMessages, {
+        settings,
+        projectId,
+        chatId,
+        systemPrompt: resolvedSystemPrompt,
+        model: resolvedModel,
+      });
+      return result.finalMessage.content;
     },
   };
 }

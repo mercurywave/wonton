@@ -146,6 +146,11 @@ export interface ChatHistoryEntry {
   content: string;
 }
 
+export interface WonQueryOptions {
+  systemPrompt?: string;
+  model?: string;
+}
+
 export interface Won {
   advance(nextStateKey: string): Promise<void>;
   setWorkflowData(partial: Partial<Record<string, unknown>>): Promise<void>;
@@ -165,6 +170,7 @@ export interface Won {
       initialPrompt?: string;
     }
   ): Promise<ChatMeta>;
+  runQuery(messages: string | ChatHistoryEntry[], options?: WonQueryOptions): Promise<string>;
 }
 
 export interface StatsEntry {

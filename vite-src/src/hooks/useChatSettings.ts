@@ -26,7 +26,7 @@ const DEFAULT_SETTINGS: ChatSettings = {
   lastProjectId: "default",
 };
 
-function loadSettings(): ChatSettings {
+export function loadSettings(): ChatSettings {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
