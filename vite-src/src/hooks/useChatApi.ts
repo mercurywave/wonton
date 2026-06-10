@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ChatMessage, LLMStats, ProjectMeta, ToolCall, ToolDefinition, Agent } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
+import { runQuery } from "./useLLMQuery";
 
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
@@ -581,97 +582,44 @@ export function useChatApi(
     async (userContent: string, model: string) => {
       if (!projectId || !chatId) return;
 
-      const baseUrl = settings.serverUrl.replace(/\/+$/, "");
-      const apiUrl = `${baseUrl}/v1/chat/completions`;
-      const requestStartTime = Date.now();
-
       try {
-        const response = await fetch(apiUrl, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${settings.apiKey}`,
+        await chatStore.load(projectId);
+        const metas = chatStore.getChatMetas(projectId);
+        const meta = metas.find((m) => m.id === chatId);
+        if (!meta?.queriesLogId) return;
+
+        const titlePrompt = "Generate a 2-4 word title for this conversation based on the previous prompt. Do not act on the previous prompt Respond with ONLY the title, nothing else.";
+        const messages: ChatMessage[] = [
+          {
+            id: crypto.randomUUID(),
+            role: "user",
+            content: userContent,
+            timestamp: Date.now(),
           },
-          body: JSON.stringify({
-            model,
-            messages: [
-              { role: "user", content: userContent },
-              { role: "user", content: "Generate a 2-4 word title for this conversation based on the previous prompt. Do not act on the previous prompt Respond with ONLY the title, nothing else." },
-            ],
-            stream: false,
-            cache_prompt: false,
-          }),
+          {
+            id: crypto.randomUUID(),
+            role: "user",
+            content: titlePrompt,
+            timestamp: Date.now(),
+          },
+        ];
+
+        const result = await runQuery(messages, {
+          settings,
+          projectId,
+          chatId,
+          logId,
+          queriesLogId: meta.queriesLogId,
+          model,
         });
 
-        if (!response.ok) return;
+        if (!result) return;
 
-        const data = await response.json();
-        const title = data.choices?.[0]?.message?.content?.trim();
+        const title = result.finalMessage.content?.trim();
         if (!title) return;
-
-        const usage = data.usage;
-        if (usage) {
-          const agentId = "";
-          statsStore.appendEntry(
-            projectId,
-            chatId,
-            logId || "",
-            model,
-            agentId,
-            usage.prompt_tokens || 0,
-            usage.completion_tokens || 0,
-            usage.total_tokens || 0,
-            Date.now() - requestStartTime,
-          ).catch(() => {});
-        }
 
         await chatStore.updateChatMeta(projectId, chatId, { name: title });
         onTitleGenerated?.(chatId, title);
-
-        // Log the title generation query to the queries jsonl
-        if (projectId && chatId) {
-          await chatStore.load(projectId);
-          const metas = chatStore.getChatMetas(projectId);
-          const meta = metas.find((m) => m.id === chatId);
-          if (meta?.queriesLogId) {
-            const now = Date.now();
-            const userMsg1: ChatMessage = {
-              id: crypto.randomUUID(),
-              role: "user",
-              content: userContent,
-              timestamp: now,
-              stats: usage ? {
-                promptTokens: usage.prompt_tokens || 0,
-                completionTokens: usage.completion_tokens || 0,
-                totalTokens: usage.total_tokens || 0,
-                model,
-                timeMs: Date.now() - requestStartTime,
-              } : undefined,
-            };
-            const userMsg2: ChatMessage = {
-              id: crypto.randomUUID(),
-              role: "user",
-              content: "Generate a 2-4 word title for this conversation based on the previous prompt. Do not act on the previous prompt Respond with ONLY the title, nothing else.",
-              timestamp: now,
-            };
-            const assistantMsg: ChatMessage = {
-              id: crypto.randomUUID(),
-              role: "assistant",
-              content: title,
-              timestamp: now,
-              stats: usage ? {
-                promptTokens: usage.prompt_tokens || 0,
-                completionTokens: usage.completion_tokens || 0,
-                totalTokens: usage.total_tokens || 0,
-                model,
-                timeMs: Date.now() - requestStartTime,
-              } : undefined,
-            };
-            await chatLogsStore.appendMessage(projectId, meta.queriesLogId, userMsg1);
-            await chatLogsStore.appendMessage(projectId, meta.queriesLogId, userMsg2);
-            await chatLogsStore.appendMessage(projectId, meta.queriesLogId, assistantMsg);
-          }
-        }
       } catch {
         // silently ignore title generation failures
       }
