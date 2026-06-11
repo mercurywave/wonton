@@ -169,8 +169,13 @@ const osHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ...args: a
     return shell.openPath(folderPath);
   },
 
-  async execCommand(_event, command) {
-    return execAsync(command);
+  async execCommand(_event, command, cwd) {
+    try {
+      const result = await execAsync(command, { cwd });
+      return { stdout: result.stdout, stderr: result.stderr, status: 0 };
+    } catch (err: any) {
+      return { stdout: err.stdout ?? "", stderr: err.stderr ?? "", status: (err.code || err.status) ?? 1, signal: err.signal, killed: err.killed };
+    }
   },
 };
 

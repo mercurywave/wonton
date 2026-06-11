@@ -19,7 +19,7 @@ interface ElectronAPI {
   os: {
     showFolderDialog: (title: string) => Promise<string>;
     open: (folderPath: string) => Promise<void>;
-    execCommand: (command: string) => Promise<void>;
+    execCommand: (command: string, cwd?: string) => Promise<{ stdout: string; stderr: string; status: number | null; signal?: string; killed?: boolean }>;
   };
   computer: {
     getOSInfo: () => Promise<{ name: string; arch: string; platform: string; version: string; type: string }>;

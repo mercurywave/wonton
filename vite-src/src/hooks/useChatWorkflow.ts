@@ -224,6 +224,11 @@ export function buildWon(
     async setChatDraft(draft: string) {
       await chatStore.setChatDraft(projectId, chatId, draft);
     },
+    async runCommand(command: string) {
+      const folderPath = projectStore.getProjectById(projectId)?.folderPath;
+      const result = await window.electronAPI.os.execCommand(command, folderPath);
+      return { stdout: result.stdout, stderr: result.stderr, code: result.status };
+    },
   };
 }
 

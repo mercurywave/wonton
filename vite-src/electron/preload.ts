@@ -23,7 +23,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   os: {
     showFolderDialog: (title: string) => ipcRenderer.invoke("os:showFolderDialog", title),
     open: (folderPath: string) => ipcRenderer.invoke("os:open", folderPath),
-    execCommand: (command: string) => ipcRenderer.invoke("os:execCommand", command),
+    execCommand: (command: string, cwd?: string) => ipcRenderer.invoke("os:execCommand", command, cwd) as Promise<{ stdout: string; stderr: string; status: number | null; signal?: string; killed?: boolean }>,
   },
 
   // computer module
