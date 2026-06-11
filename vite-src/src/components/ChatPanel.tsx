@@ -15,6 +15,7 @@ import ContextRing from "./ContextRing";
 import LogSelector from "./LogSelector";
 import FileSelector from "./FileSelector";
 import SelectionBubble from "./SelectionBubble";
+import FeedbackPopup from "./FeedbackPopup";
 import { getDisplayName } from "../utils/modelUtils";
 import { getAvailableTools } from "../tools";
 import ToolCallSection from "./ToolCallSection";
@@ -630,9 +631,11 @@ export default function ChatPanel({
              />
            )}
         </div>
-      </div>
+       </div>
 
-      {resolvedStateMessage && (
+       <FeedbackPopup />
+
+       {resolvedStateMessage && (
         <div className={styles.workflowStateMessageBar}>
           <div className={styles.workflowStateMessageInner}>
             <ReactMarkdown remarkPlugins={[remarkGfm]}>{resolvedStateMessage}</ReactMarkdown>

@@ -1,5 +1,6 @@
 import { useRef, useCallback, useMemo } from "react";
 import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won } from "../types/chat";
+import { FeedbackPayload } from "../contexts";
 import { agentStore } from "../store/agents";
 import { generateUniqueFileName, getProjectDataDir } from "../utils/platformUtils";
 import { chatStore } from "../store/chats";
@@ -17,6 +18,7 @@ interface UseChatWorkflowOptions {
   flows: Flow[];
   chatId?: string;
   projectId?: string;
+  showFeedback?: (payload: FeedbackPayload) => Promise<number | void>;
 }
 
 interface UseChatWorkflowReturn {
@@ -37,6 +39,7 @@ export function buildWon(
   chatId: string,
   logId?: string,
   emit?: (event: string, payload?: unknown) => void,
+  showFeedback?: (payload: FeedbackPayload) => Promise<number | void>,
 ): Won {
   async function reserveTempFile(baseName?: string): Promise<string> {
     const name = baseName ?? "temp.txt";
@@ -229,6 +232,21 @@ export function buildWon(
       const result = await window.electronAPI.os.execCommand(command, folderPath);
       return { stdout: result.stdout, stderr: result.stderr, code: result.status };
     },
+    async alert(message: string) {
+      if (!showFeedback) {
+        console.warn("alert() called but feedback not available");
+        return;
+      }
+      await showFeedback({ type: "alert", message });
+    },
+    async select(question: string, choices: string[]) {
+      if (!showFeedback) {
+        console.warn("select() called but feedback not available");
+        return -1;
+      }
+      const result = await showFeedback({ type: "select", question, choices });
+      return typeof result === "number" ? result : -1;
+    },
   };
 }
 
@@ -238,9 +256,10 @@ export async function executeCommand(
   chatId: string | undefined,
   projectId?: string,
   emit?: (event: string, payload?: unknown) => void,
+  showFeedback?: (payload: FeedbackPayload) => Promise<number | void>,
 ): Promise<void> {
   if (!chatId || !projectId) return;
-  const won = buildWon(projectId, chatId, undefined, emit);
+  const won = buildWon(projectId, chatId, undefined, emit, showFeedback);
   const hookFn = new Function("won", `return (async () => {${command}})();`) as unknown as (won: Won) => Promise<void>;
   try {
     await hookFn(won);
@@ -250,7 +269,7 @@ export async function executeCommand(
 }
 
 export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflowReturn {
-  const { workflowId, workflowStateKey, flows, chatId, projectId } = options;
+  const { workflowId, workflowStateKey, flows, chatId, projectId, showFeedback } = options;
   const { emit } = useEventBus();
 
   const currentFlow = useMemo(() => flows.find((f) => f.id === workflowId), [flows, workflowId]);
@@ -264,7 +283,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     const state = flow?.states?.[stateKey];
     if (!state?.onEnter || !chatId || !workflowId || !projectId) return;
 
-    const won = buildWon(projectId, chatId, undefined, emit);
+    const won = buildWon(projectId, chatId, undefined, emit, showFeedback);
     const hookFn = new Function("won", `return (async () => {${state.onEnter}})();`) as unknown as (won: Won) => Promise<void>;
 
     try {
@@ -287,7 +306,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
         return userContent;
       }
 
-      const won = buildWon(projectId, chatId, undefined, emit);
+      const won = buildWon(projectId, chatId, undefined, emit, showFeedback);
 
       const hookfn = new Function("won", "userContent", `return (async () => {${currentState.hookAdjustPrompt}})();`) as unknown as (won: Won, userContent: string) => Promise<string>;
       try{
@@ -308,7 +327,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     const state = flow?.states?.[workflowStateKey ?? ""];
     if (!state?.onSendPrompt || !chatId || !workflowId || !workflowStateKey || !projectId) return;
 
-    const won = buildWon(projectId, chatId, undefined, emit);
+    const won = buildWon(projectId, chatId, undefined, emit, showFeedback);
     const hookFn = new Function("won", `return (async () => {${state.onSendPrompt}})();`) as unknown as (won: Won) => Promise<void>;
 
     try {
@@ -323,7 +342,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     const state = flow?.states?.[workflowStateKey ?? ""];
     if (!state?.onChatResponse || !chatId || !workflowId || !workflowStateKey || !projectId) return;
 
-    const won = buildWon(projectId, chatId, undefined, emit);
+    const won = buildWon(projectId, chatId, undefined, emit, showFeedback);
     const hookFn = new Function("won", "response", `return (async () => {${state.onChatResponse}})();`) as unknown as (won: Won, response: ChatMessage) => Promise<void>;
 
     try {
@@ -338,7 +357,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     const state = flow?.states?.[workflowStateKey ?? ""];
     if (!state?.onActionButton || !chatId || !workflowId || !workflowStateKey || !projectId) return;
 
-    const won = buildWon(projectId, chatId, logId, emit);
+    const won = buildWon(projectId, chatId, logId, emit, showFeedback);
     const hookFn = new Function("won", "idx", `return (async () => {${state.onActionButton}})();`) as unknown as (won: Won, idx: number) => Promise<void>;
 
     try {

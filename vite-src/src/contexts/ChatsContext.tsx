@@ -17,6 +17,7 @@ import { useProjects } from "./ProjectsContext";
 import { useNav } from "./NavContext";
 import { useAgentsContext } from "./AgentsContext";
 import { useFlowsContext } from "./FlowsContext";
+import { useFeedback } from "./FeedbackContext";
 import { isBackendConnected } from "../utils/platformUtils";
 import { getAvailableTools } from "../tools";
 import { ChatMessage, ChatMeta, FlowActionButton, ToolDefinition } from "../types/chat";
@@ -57,6 +58,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const { flows } = useFlowsContext();
   const { emit: emitEvent } = useEventBus();
+  const { showFeedback: showFeedback } = useFeedback();
 
   const {
     chats,
@@ -168,6 +170,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     flows,
     chatId: selectedChatId || undefined,
     projectId: activeProjectId || undefined,
+    showFeedback: showFeedback,
   });
 
   const wrappedSendMessage = useCallback(
@@ -229,9 +232,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       const flow = flows.find((f) => f.id === flowId);
       if (!flow?.command) return;
       if (!selectedChatId || !activeProjectId) return;
-      await runExecuteCommand(flow.command, flowId, selectedChatId, activeProjectId, emitEvent);
+      await runExecuteCommand(flow.command, flowId, selectedChatId, activeProjectId, emitEvent, showFeedback);
     },
-    [flows, selectedChatId, activeProjectId, emitEvent]
+    [flows, selectedChatId, activeProjectId, emitEvent, showFeedback]
   );
 
   const getIsProcessing = useCallback((chatId: string) => {
@@ -273,7 +276,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       selectedChatId,
       setSelectedChatId,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance, showFeedback]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

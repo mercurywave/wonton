@@ -8,6 +8,7 @@ import { TasksProvider } from "./TasksContext";
 import { UIProvider } from "./UIContext";
 import { NavProvider } from "./NavContext";
 import { EventBusProvider } from "./EventBusContext";
+import { FeedbackProvider } from "./FeedbackContext";
 
 export { SettingsProvider, useSettings } from "./SettingsContext";
 export { ProjectsProvider, useProjects } from "./ProjectsContext";
@@ -18,6 +19,7 @@ export { TasksProvider, useTasks } from "./TasksContext";
 export { UIProvider, useUI } from "./UIContext";
 export { NavProvider, useNav } from "./NavContext";
 export { EventBusProvider, useEventBus } from "./EventBusContext";
+export { FeedbackProvider, useFeedback, type FeedbackPayload } from "./FeedbackContext";
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
@@ -27,13 +29,15 @@ export function AppProviders({ children }: { children: ReactNode }) {
           <NavProvider>
             <FlowsProvider>
               <EventBusProvider>
-                <ChatsProvider>
-                  <TasksProvider>
-                    <UIProvider>
-                      {children}
-                    </UIProvider>
-                  </TasksProvider>
-                </ChatsProvider>
+                <FeedbackProvider>
+                  <ChatsProvider>
+                    <TasksProvider>
+                      <UIProvider>
+                        {children}
+                      </UIProvider>
+                    </TasksProvider>
+                  </ChatsProvider>
+                </FeedbackProvider>
               </EventBusProvider>
             </FlowsProvider>
           </NavProvider>

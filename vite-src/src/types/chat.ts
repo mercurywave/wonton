@@ -174,6 +174,8 @@ export interface Won {
   runCommand(command: string): Promise<{ stdout: string; stderr: string; code: number | null }>;
   getChatDraft(): string;
   setChatDraft(draft: string): Promise<void>;
+  alert(message: string): Promise<void>;
+  select(question: string, choices: string[]): Promise<number>;
 }
 
 export interface StatsEntry {
