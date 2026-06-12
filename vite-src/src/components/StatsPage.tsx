@@ -328,13 +328,13 @@ export default function StatsPage() {
                   <tr>
                     <th className={styles.th}>Model</th>
                     <th className={styles.th}>Calls</th>
-                    <th className={styles.th}>Input Tokens</th>
-                    <th className={styles.th}>Output Tokens</th>
-                    <th className={styles.th}>Total Tokens</th>
-                    <th className={styles.th}>Avg Latency</th>
-                    <th className={styles.th}>Avg TPS</th>
+                    <th className={styles.th}>Input</th>
+                    <th className={styles.th}>Output</th>
+                    <th className={styles.th}>Total</th>
+                    <th className={styles.th}>Latency</th>
+                    <th className={styles.th}>TPS</th>
                     {modelStats.some((m) => m.cacheHits > 0) && (
-                      <th className={styles.th}>Cache Hits</th>
+                      <th className={styles.th}>Cache</th>
                     )}
                   </tr>
                 </thead>
@@ -364,14 +364,14 @@ export default function StatsPage() {
           <div className={styles.section}>
             <h3 className={styles.sectionTitle}>Project Breakdown</h3>
             <div className={styles.tableWrapper}>
-              <table className={styles.table}>
+              <table className={styles.table + " " + styles.projectTable}>
                 <thead>
                   <tr>
                     <th className={styles.th}>Project</th>
                     <th className={styles.th}>Calls</th>
-                    <th className={styles.th}>Input Tokens</th>
-                    <th className={styles.th}>Output Tokens</th>
-                    <th className={styles.th}>Total Tokens</th>
+                    <th className={styles.th}>Input</th>
+                    <th className={styles.th}>Output</th>
+                    <th className={styles.th}>Total</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -412,15 +412,15 @@ export default function StatsPage() {
             <div className={styles.section}>
               <h3 className={styles.sectionTitle}>Agent Breakdown</h3>
               <div className={styles.tableWrapper}>
-                <table className={styles.table}>
+                <table className={styles.table + " " + styles.agentTable}>
                   <thead>
                     <tr>
                       <th className={styles.th}>Agent</th>
                       <th className={styles.th}>Calls</th>
-                      <th className={styles.th}>Input Tokens</th>
-                      <th className={styles.th}>Output Tokens</th>
-                      <th className={styles.th}>Total Tokens</th>
-                      <th className={styles.th}>Avg Latency</th>
+                      <th className={styles.th}>Input</th>
+                      <th className={styles.th}>Output</th>
+                      <th className={styles.th}>Total</th>
+                      <th className={styles.th}>Latency</th>
                     </tr>
                   </thead>
                   <tbody>
