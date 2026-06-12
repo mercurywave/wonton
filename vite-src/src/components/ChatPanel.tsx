@@ -385,10 +385,15 @@ export default function ChatPanel({
     return `${agentName} ${index + 1}`;
   }, [logId, currentChat, allAgents]);
 
-  const availableTools = useMemo(
-    () => getAvailableTools(activeProject?.folderPath),
-    [activeProject?.folderPath]
-  );
+  const [availableTools, setAvailableTools] = useState<ToolDefinition[]>([]);
+
+  useEffect(() => {
+    const loadTools = async () => {
+      const tools = await getAvailableTools(activeProject?.folderPath);
+      setAvailableTools(tools);
+    };
+    loadTools();
+  }, [activeProject?.folderPath]);
   const { maxTokens } = useContextWindow(activeModel, settings);
 
   const usageTokens = useMemo(() => {

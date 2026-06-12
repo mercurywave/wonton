@@ -45,29 +45,37 @@ export async function executeToolCall(
   return handler.execute(args, context, toolCall);
 }
 
-export function getAvailableTools(folderPath?: string): ToolDefinition[] {
+export async function getAvailableTools(folderPath?: string): Promise<ToolDefinition[]> {
   if (!folderPath) {
     return [];
   }
-  return Object.values(toolHandlers).map((h) => h.definition);
+  return Promise.all(Object.values(toolHandlers).map(async (h) => {
+    if (h.name === "message") {
+      return h.definition;
+    }
+    if ("getDynamicDefinition" in h && typeof (h as any).getDynamicDefinition === "function") {
+      return (h as any).getDynamicDefinition();
+    }
+    return h.definition;
+  }));
 }
 
-export function getToolDefinitions(folderPath: string, agent?: Agent, allAgents?: Agent[]): ToolDefinition[] {
+export async function getToolDefinitions(folderPath: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition[]> {
   if (!folderPath) {
     return [];
   }
 
-  const allDefs = Object.values(toolHandlers).map((h) => h.definition);
-  const sendHandler = toolHandlers["send"] as ExecuteSubagentHandler | undefined;
+  const handlers = Object.values(toolHandlers);
+  const sendHandler = toolHandlers["message"] as ExecuteSubagentHandler | undefined;
+  const hasSend = sendHandler && agent && agent.defaultToolSet?.includes("send");
 
-  if (sendHandler && agent && agent.defaultToolSet?.includes("send")) {
-    return allDefs.map((def) => {
-      if (def.function.name === "send") {
-        return sendHandler.getDynamicDefinition(agent, allAgents);
-      }
-      return def;
-    });
-  }
-
-  return allDefs;
+  return Promise.all(handlers.map(async (h) => {
+    if (hasSend && h.name === "message") {
+      return sendHandler.getDynamicDefinition(agent, allAgents);
+    }
+    if ("getDynamicDefinition" in h && typeof (h as any).getDynamicDefinition === "function") {
+      return (h as any).getDynamicDefinition();
+    }
+    return h.definition;
+  }));
 }

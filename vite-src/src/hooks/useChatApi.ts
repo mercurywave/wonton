@@ -288,7 +288,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     onChatUpdated,
   } = options;
 
-  const allTools = folderPath ? getToolDefinitions(folderPath, agent, allAgents) : [];
+  const allTools = folderPath ? await getToolDefinitions(folderPath, agent, allAgents) : [];
   const tools = allTools.filter(t => toolNames.includes(t.function.name));
 
   const { messages: initialApiMessages } = buildApiMessages(initialMessages, systemPrompt, tools);

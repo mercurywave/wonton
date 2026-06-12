@@ -94,10 +94,15 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     [projectsCtx.projects, activeProjectId]
   );
 
-  const availableTools: ToolDefinition[] = useMemo(
-    () => getAvailableTools(activeProject?.folderPath),
-    [activeProject?.folderPath]
-  );
+  const [availableTools, setAvailableTools] = useState<ToolDefinition[]>([]);
+
+  useEffect(() => {
+    const loadTools = async () => {
+      const tools = await getAvailableTools(activeProject?.folderPath);
+      setAvailableTools(tools);
+    };
+    loadTools();
+  }, [activeProject?.folderPath]);
 
   // Derive logId from the selected chat's meta
   const selectedChatMeta = useMemo(() => {

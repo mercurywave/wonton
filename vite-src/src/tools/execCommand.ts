@@ -1,6 +1,7 @@
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
 import { truncateContent } from "./truncationTools";
+import { getPlatform } from "../utils/platformUtils";
 
 export const EXEC_COMMAND_TOOL_NAME = "exec";
 
@@ -39,6 +40,14 @@ export class ExecCommandHandler implements ToolHandler {
   };
 
   private constructor() {}
+
+  async getDynamicDefinition(): Promise<ToolDefinition> {
+    const platform = await getPlatform();
+    const platformName = platform === "win32" ? "Windows" : platform === "darwin" ? "macOS" : platform === "linux" ? "Linux" : platform;
+    const definition = JSON.parse(JSON.stringify(this.definition)) as ToolDefinition;
+    (definition.function as any).description = `Executes a shell command on the system within the project's folder (Running on ${platformName}). Returns stdout, stderr, exit status, and truncation info as JSON.`;
+    return definition;
+  }
 
   static getInstance(): ExecCommandHandler {
     if (!ExecCommandHandler.instance) {

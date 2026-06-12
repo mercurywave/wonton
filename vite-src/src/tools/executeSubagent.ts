@@ -50,33 +50,15 @@ export class ExecuteSubagentHandler implements ToolHandler {
       description = `Send a message to an agent to perform a complex focused task. Agents available: [${agentNames.map((n) => `"${n}"`).join(", ")}]`;
     }
 
-    const properties: Record<string, unknown> = {
-      agentName: {
-        type: "string",
-        description: "The ID of the agent to use for this subagent task",
-      },
-      query: {
-        type: "string",
-        description: "The specific task or question to give to the subagent",
-      },
-    };
+    const definition = JSON.parse(JSON.stringify(this.definition)) as ToolDefinition;
+    (definition.function as any).description = description;
 
     if (agentNames.length > 0) {
-      (properties.agentName as Record<string, unknown>).enum = agentNames;
+      const props = (definition.function as any).parameters.properties;
+      props.agentName.enum = agentNames;
     }
 
-    return {
-      type: "function",
-      function: {
-        name: EXECUTE_SUBAGENT_TOOL_NAME,
-        description,
-        parameters: {
-          type: "object",
-          properties,
-          required: ["agentName", "query"],
-        },
-      },
-    };
+    return definition;
   }
 
   private constructor() {}
