@@ -112,6 +112,27 @@
   gap: 12px;
 }
 
+.mainIcon {
+  color: #4a6cf7;
+  flex-shrink: 0;
+}
+
+.badgeGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.mainBadge {
+  font-size: 11px;
+  color: #4a6cf7;
+  background: rgba(74, 108, 247, 0.1);
+  padding: 3px 8px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
 .agentName {
   font-size: 14px;
   font-weight: 500;

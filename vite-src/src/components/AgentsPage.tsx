@@ -70,8 +70,12 @@ export default function AgentsPage() {
             {BUILTIN_AGENTS.map((agent) => (
               <div key={agent.id} className={`${styles.agentCard} ${styles.agentCardBuiltin}`}>
                 <div className={styles.agentCardHeader}>
+                  {agent.main && <CircleUser size={16} className={styles.mainIcon} />}
                   <span className={styles.agentName}>{agent.name}</span>
-                  <span className={styles.builtinBadge}>Built-in</span>
+                  <div className={styles.badgeGroup}>
+                    {agent.main && <span className={styles.mainBadge}>Main</span>}
+                    <span className={styles.builtinBadge}>Built-in</span>
+                  </div>
                 </div>
                 <div className={styles.agentPromptPreview}>
                   {agent.systemPrompt.length > 120
@@ -174,6 +178,7 @@ export default function AgentsPage() {
                   ) : (
                     <>
                       <div className={styles.agentCardHeader}>
+                        {agent.main && <CircleUser size={16} className={styles.mainIcon} />}
                         <span className={styles.agentName}>{agent.name}</span>
                         <div className={styles.agentActions}>
                           <button
