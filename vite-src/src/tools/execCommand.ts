@@ -32,10 +32,6 @@ export class ExecCommandHandler implements ToolHandler {
             type: "string",
             description: "The shell command to execute",
           },
-          cwd: {
-            type: "string",
-            description: "Working directory for the command (optional, defaults to project folder)",
-          },
         },
         required: ["command"],
       },
@@ -52,7 +48,7 @@ export class ExecCommandHandler implements ToolHandler {
   }
 
   async execute(args: object, context: ToolContext): Promise<ToolResult> {
-    const { command, cwd } = args as { command: string; cwd?: string };
+    const { command } = args as { command: string };
     const { folderPath } = context;
 
     if (!folderPath) {
@@ -71,12 +67,9 @@ export class ExecCommandHandler implements ToolHandler {
       };
     }
 
-    const effectiveCwd = cwd || folderPath;
-
-    let result: { stdout: string; stderr: string; status: number | null; signal?: string; killed?: boolean };
-
+   let result: { stdout: string; stderr: string; status: number | null; signal?: string; killed?: boolean };
     try {
-      result = await window.electronAPI.os.execCommand(command, effectiveCwd);
+      result = await window.electronAPI.os.execCommand(command, folderPath);
     } catch (err) {
       return {
         callId: "",
