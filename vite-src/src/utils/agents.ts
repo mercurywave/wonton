@@ -7,15 +7,15 @@ export const DEFAULT_AGENT: Agent = {
   systemPrompt: "You are a helpful assistant.",
   main: true,
   defaultToolSet: ["glob", "grep", "read", "write", "edit", "send"],
-  subagentAllowlist: ["builtin:subagent", "builtin:docs"],
+  subagentAllowlist: ["builtin:subagent", "builtin:explore", "builtin:docs"],
 };
 
-export const SUMMARIZE_AGENT: Agent = {
-  id: "builtin:summarize",
-  name: "Summarize",
+export const EXPLORE_AGENT: Agent = {
+  id: "builtin:explore",
+  name: "Explore",
   systemPrompt:
-    "You are a summarization assistant. Your job is to condense large inputs into concise, accurate summaries while preserving key information. Be thorough but brief, focusing on the most important points.",
-  main: true,
+    "Explore the project structure and code. Summarize key findings, architecture, and dependencies in concise executive summaries",
+  main: false,
   defaultToolSet: ["glob", "grep", "read"],
   subagentAllowlist: [],
 };
@@ -24,7 +24,7 @@ export const SUBAGENT_AGENT: Agent = {
   id: "builtin:subagent",
   name: "Subagent",
   systemPrompt:
-    "You are a specialized subagent. Your task is to complete the specific request given to you by the parent agent. Use the available tools to accomplish the task thoroughly and efficiently. Return a clear, complete result when finished.",
+    "You are a specialized subagent. Your task is to complete the specific request given to you by the main agent. Use the available tools to accomplish the task thoroughly and efficiently. Return a clear, complete result when finished.",
   main: false,
   defaultToolSet: ["glob", "grep", "read", "write", "edit"],
   subagentAllowlist: [],
@@ -34,14 +34,14 @@ export const DOCS_AGENT: Agent = {
   id: "builtin:docs",
   name: "Docs",
   systemPrompt:
-    "You are a documentation specialist. You have access to the project's docs folder in the appdata directory. Use glob, grep, read, write, and edit tools to search and manage documentation. When asked about frameworks, APIs, or reference material, check the docs folder for relevant files first.",
+    "You are a documentation specialist. You have access to the project's docs folder in the appdata directory. Use your tools to search and manage documentation. When asked about frameworks, APIs, or reference material, check the docs folder for relevant files first.",
   main: true,
   defaultToolSet: ["glob", "grep", "read", "write", "edit", "send"],
   folderOverride: DOCS_FOLDER_OVERRIDE,
-  subagentAllowlist: ["builtin:subagent", "builtin:docs"],
+  subagentAllowlist: [],
 };
 
-export const BUILTIN_AGENTS: Agent[] = [DEFAULT_AGENT, SUMMARIZE_AGENT, SUBAGENT_AGENT, DOCS_AGENT];
+export const BUILTIN_AGENTS: Agent[] = [DEFAULT_AGENT, EXPLORE_AGENT, SUBAGENT_AGENT, DOCS_AGENT];
 
 export function getAgentById(agents: Agent[], id: string): Agent | undefined {
   return agents.find((a) => a.id === id);
