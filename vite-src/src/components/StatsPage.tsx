@@ -51,20 +51,13 @@ function formatRate(tokens: number, ms: number): string {
   return `${rate} tok/s`;
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr + "T00:00:00").toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-  });
-}
-
 export default function StatsPage() {
   const { settings } = useSettings();
   const { getProjectById } = useProjects();
   const [entries, setEntries] = useState<StatsEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [browserMode, setBrowserMode] = useState(false);
-  const chartRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isBackendConnected()) {
@@ -89,8 +82,8 @@ export default function StatsPage() {
   }, []);
 
   useEffect(() => {
-    if (chartRef.current && entries.length > 0) {
-      chartRef.current.scrollLeft = chartRef.current.scrollWidth;
+    if (scrollContainerRef.current && entries.length > 0) {
+      scrollContainerRef.current.scrollLeft = scrollContainerRef.current.scrollWidth;
     }
   }, [entries]);
 
@@ -196,6 +189,27 @@ export default function StatsPage() {
     [dailyTokens]
   );
 
+  function formatChartLabel(day: DailyTokens, index: number, prevMonth?: string): string {
+    const d = new Date(day.date + "T00:00:00");
+    const month = d.toLocaleDateString("en-US", { month: "short" });
+    const monthKey = `${d.getFullYear()}-${d.getMonth()}`;
+    if (index === 0 || monthKey !== prevMonth) {
+      return `${month}`;
+    }
+    return `${d.getDate()}`;
+  }
+
+  const chartLabels = useMemo(() => {
+    const labels: string[] = [];
+    let prevMonth: string | undefined;
+    for (let i = 0; i < dailyTokens.length; i++) {
+      labels.push(formatChartLabel(dailyTokens[i], i, prevMonth));
+      const d = new Date(dailyTokens[i].date + "T00:00:00");
+      prevMonth = `${d.getFullYear()}-${d.getMonth()}`;
+    }
+    return labels;
+  }, [dailyTokens]);
+
   if (browserMode) {
     return (
       <div className={styles.container}>
@@ -270,24 +284,26 @@ export default function StatsPage() {
         {dailyTokens.length > 0 && (
           <div className={styles.section}>
             <h3 className={styles.sectionTitle}>Daily Token Usage (Last 30 Days)</h3>
-            <div className={styles.chartContainer} ref={chartRef}>
-              {dailyTokens.map((day) => (
-                <div key={day.date} className={styles.chartBarWrapper}>
-                  <div className={styles.chartBarGroup}>
-                    <div
-                      className={styles.chartBarPrompt}
-                      style={{ height: `${(day.promptTokens / maxDailyTokens) * 140}px` }}
-                      title={`Prompt: ${day.promptTokens.toLocaleString()}`}
-                    />
-                    <div
-                      className={styles.chartBarCompletion}
-                      style={{ height: `${(day.completionTokens / maxDailyTokens) * 140}px` }}
-                      title={`Completion: ${day.completionTokens.toLocaleString()}`}
-                    />
+            <div className={styles.chartScrollContainer} ref={scrollContainerRef}>
+              <div className={styles.chartContainer}>
+                {dailyTokens.map((day, i) => (
+                  <div key={day.date} className={styles.chartBarWrapper}>
+                    <div className={styles.chartBarGroup}>
+                      <div
+                        className={styles.chartBarPrompt}
+                        style={{ height: `${(day.promptTokens / maxDailyTokens) * 100}%` }}
+                        title={`Prompt: ${day.promptTokens.toLocaleString()}`}
+                      />
+                      <div
+                        className={styles.chartBarCompletion}
+                        style={{ height: `${(day.completionTokens / maxDailyTokens) * 100}%` }}
+                        title={`Completion: ${day.completionTokens.toLocaleString()}`}
+                      />
+                    </div>
+                    <div className={styles.chartLabel}>{chartLabels[i]}</div>
                   </div>
-                  <div className={styles.chartLabel}>{formatDate(day.date)}</div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
             <div className={styles.chartLegend}>
               <div className={styles.legendItem}>

@@ -106,6 +106,11 @@
 }
 
 /* Chart */
+.chartScrollContainer {
+  overflow-x: auto;
+  scroll-behavior: smooth;
+}
+
 .chartContainer {
   display: flex;
   align-items: flex-end;
@@ -113,13 +118,11 @@
   height: 160px;
   padding: 0 4px;
   border-bottom: 1px solid #1a1a2e;
-  overflow-x: auto;
-  scroll-behavior: smooth;
 }
 
 .chartBarWrapper {
-  min-width: 28px;
-  flex: none;
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -170,7 +173,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 60px;
+  max-width: 40px;
 }
 
 .chartLegend {
