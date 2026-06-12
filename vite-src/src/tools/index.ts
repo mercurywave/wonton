@@ -8,6 +8,7 @@ import { WriteFileHandler } from "./writeFile";
 import { EditFileHandler } from "./editFile";
 import { ExecuteSubagentHandler } from "./executeSubagent";
 import { Agent } from "../types/chat";
+import { ExecCommandHandler } from "./execCommand";
 
 const toolHandlers: Record<string, ToolHandler> = {};
 
@@ -21,6 +22,7 @@ registerTool(ReadFileHandler.getInstance());
 registerTool(WriteFileHandler.getInstance());
 registerTool(EditFileHandler.getInstance());
 registerTool(ExecuteSubagentHandler.getInstance());
+registerTool(ExecCommandHandler.getInstance());
 
 export function getToolHandler(toolName: string): ToolHandler | undefined {
   return toolHandlers[toolName];
