@@ -32,6 +32,9 @@ export type Action =
   // User selected a specific log within a chat
   | { type: "LOG_SELECT"; logId: string }
 
+  // User selected a chat with a specific log within it
+  | { type: "CHAT_SELECT_WITH_LOG"; chatId: string; logId: string }
+
   // Project was deleted; switch to another project
   | { type: "PROJECT_DELETED"; fallbackProjectId: string }
 
@@ -81,6 +84,14 @@ export function navReducer(state: NavState, action: Action): NavState {
       return {
         ...state,
         logId: action.logId,
+      };
+
+    case "CHAT_SELECT_WITH_LOG":
+      return {
+        ...state,
+        chatId: action.chatId,
+        logId: action.logId,
+        page: "chat" as Page,
       };
 
     case "PAGE_SET":

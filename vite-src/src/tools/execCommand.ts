@@ -1,5 +1,6 @@
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
+import { FeedbackPayload } from "../contexts";
 import { truncateContent } from "./truncationTools";
 import { getPlatform } from "../utils/platformUtils";
 
@@ -56,9 +57,9 @@ export class ExecCommandHandler implements ToolHandler {
     return ExecCommandHandler.instance;
   }
 
-  async execute(args: object, context: ToolContext): Promise<ToolResult> {
+  async execute(args: object, context: ToolContext, toolCall: any): Promise<ToolResult> {
     const { command } = args as { command: string };
-    const { folderPath } = context;
+    const { folderPath, onValidate, navigateToChatWithLog, chatId } = context;
 
     if (!folderPath) {
       return {
@@ -76,9 +77,30 @@ export class ExecCommandHandler implements ToolHandler {
       };
     }
 
-   let result: { stdout: string; stderr: string; status: number | null; signal?: string; killed?: boolean };
+    if (onValidate) {
+      navigateToChatWithLog?.(chatId || "", toolCall?.logId || "");
+      const result: ToolResult = { callId: "", content: "", isError: false };
+      try {
+        const choice = await onValidate({
+          type: "select",
+          question: `The agent wants to run:\n\`\`\`\n${command}\n\`\`\`\n\nAllow this command to run?`,
+          choices: ["Allow", "Deny"],
+        } as FeedbackPayload);
+        if (typeof choice === "number" && choice !== 0) {
+          result.content = "Command denied by user";
+          result.isError = true;
+          return result;
+        }
+      } catch {
+        result.content = "Command execution interrupted: another approval is pending";
+        result.isError = true;
+        return result;
+      }
+    }
+
+   let execResult: { stdout: string; stderr: string; status: number | null; signal?: string; killed?: boolean };
     try {
-      result = await window.electronAPI.os.execCommand(command, folderPath);
+      execResult = await window.electronAPI.os.execCommand(command, folderPath);
     } catch (err) {
       return {
         callId: "",
@@ -87,13 +109,13 @@ export class ExecCommandHandler implements ToolHandler {
       };
     }
 
-    const stdoutTruncated = truncateContent(result.stdout, MAX_LINES, MAX_BYTES);
-    const stderrTruncated = truncateContent(result.stderr, MAX_LINES, MAX_BYTES);
+    const stdoutTruncated = truncateContent(execResult.stdout, MAX_LINES, MAX_BYTES);
+    const stderrTruncated = truncateContent(execResult.stderr, MAX_LINES, MAX_BYTES);
 
     const output: ExecResult = {
       stdout: stdoutTruncated.content,
       stderr: stderrTruncated.content,
-      status: result.status,
+      status: execResult.status,
       truncated: stdoutTruncated.wasTruncated || stderrTruncated.wasTruncated,
     };
 

@@ -8,6 +8,7 @@ import { chatLogsStore } from "../store/chatLogs";
 import { statsStore } from "../store/stats";
 import { executeToolCall, getToolDefinitions } from "../tools";
 import { EXECUTE_SUBAGENT_TOOL_NAME } from "../tools/executeSubagent";
+import { FeedbackPayload } from "../contexts";
 
 interface SSEDelta {
   content?: string;
@@ -260,6 +261,8 @@ interface ToolCallLoopOptions {
   allAgents?: Agent[];
   onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string) => void;
   onChatUpdated?: () => void;
+  onValidate?: (payload: FeedbackPayload) => Promise<number | void>;
+  navigateToChatWithLog?: (chatId: string, logId: string) => void;
 }
 
 interface ToolCallLoopResult {
@@ -286,6 +289,8 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     allAgents,
     onUpdateMessage,
     onChatUpdated,
+    onValidate,
+    navigateToChatWithLog,
   } = options;
 
   const allTools = folderPath ? await getToolDefinitions(folderPath, agent, allAgents) : [];
@@ -473,6 +478,8 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
           chatId,
           settings,
           onChatUpdated,
+          onValidate,
+          navigateToChatWithLog,
         });
 
         // Update the tool result message with actual content
@@ -539,6 +546,8 @@ export function useChatApi(
   agentId?: string,
   agent?: Agent,
   allAgents?: Agent[],
+  onValidate?: (payload: import("../contexts").FeedbackPayload) => Promise<number | void>,
+  navigateToChatWithLog?: (chatId: string, logId: string) => void,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -698,6 +707,8 @@ export function useChatApi(
             }
           },
           onChatUpdated,
+          onValidate,
+          navigateToChatWithLog,
         });
 
         // Run onChatResponse hook on the final assistant message
@@ -725,7 +736,7 @@ export function useChatApi(
         }
       }
     },
-    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, onSendPrompt, onChatResponse, agentId]
+    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, onSendPrompt, onChatResponse, agentId, onValidate, navigateToChatWithLog]
   );
 
   const stopGeneration = useCallback(() => {

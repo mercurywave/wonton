@@ -19,6 +19,7 @@ export interface NavContextValue {
   logId: string | null;
   navigateToProject: (projectId: string) => void;
   navigateToChat: (chatId: string) => void;
+  navigateToChatWithLog: (chatId: string, logId: string) => void;
   navigateToLog: (logId: string) => void;
   navigateToNewChat: () => Promise<void>;
   navigateToDeleteChat: (chatId: string) => Promise<void>;
@@ -87,6 +88,13 @@ export function NavProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const navigateToChatWithLog = useCallback(
+    (chatId: string, logId: string) => {
+      dispatch({ type: "CHAT_SELECT_WITH_LOG", chatId, logId });
+    },
+    []
+  );
+
   const navigateToLog = useCallback(
     (logId: string) => {
       dispatch({ type: "LOG_SELECT", logId });
@@ -126,6 +134,7 @@ export function NavProvider({ children }: { children: ReactNode }) {
       logId: state.logId,
       navigateToProject,
       navigateToChat,
+      navigateToChatWithLog,
       navigateToLog,
       navigateToNewChat,
       navigateToDeleteChat,
@@ -133,7 +142,7 @@ export function NavProvider({ children }: { children: ReactNode }) {
       navigateToPage,
       dispatch,
     }),
-    [state, navigateToProject, navigateToChat, navigateToLog, navigateToNewChat, navigateToDeleteChat, navigateToRenameChat, navigateToPage, dispatch]
+    [state, navigateToProject, navigateToChat, navigateToChatWithLog, navigateToLog, navigateToNewChat, navigateToDeleteChat, navigateToRenameChat, navigateToPage, dispatch]
   );
 
   return <NavContext.Provider value={value}>{children}</NavContext.Provider>;

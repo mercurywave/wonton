@@ -52,7 +52,7 @@ const ChatsContext = createContext<ChatsContextValue | null>(null);
 
 export function ChatsProvider({ children }: { children: ReactNode }) {
   const projectsCtx = useProjects();
-  const { activeProjectId, logId: navLogId } = useNav();
+  const { activeProjectId, logId: navLogId, dispatch } = useNav();
   const { settings } = useSettings();
   const { allAgents } = useAgentsContext();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
@@ -155,6 +155,8 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     selectedChatMeta?.activeAgentId,
     activeAgent,
     allAgents,
+    showFeedback,
+    (chatId: string, logId: string) => dispatch({ type: "CHAT_SELECT_WITH_LOG", chatId, logId }),
   );
 
   // Workflow execution for the selected chat

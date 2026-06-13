@@ -152,26 +152,28 @@ export class ExecuteSubagentHandler implements ToolHandler {
     // Resolve model for subagent
     const subagentModel = settings.defaultModel || agentId;
 
-     // Run the subagent tool-call loop
-    const result = await runToolCallLoop({
-      settings,
-      systemPrompt: agent.systemPrompt,
-      model: subagentModel,
-      toolNames: agent.defaultToolSet || [],
-      folderPath: subagentFolderPath,
-      initialMessages: [subagentUserMessage],
-      signal: undefined,
-      projectId,
-      chatId: chatId,
-      logId: subagentLogId,
-      isSubagent: true,
-      agentId: agent.id,
-      agent,
-      onUpdateMessage: () => {
-        // No UI update needed for subagent — it's a background tool call
-      },
-      onChatUpdated,
-    });
+   // Run the subagent tool-call loop
+     const result = await runToolCallLoop({
+       settings,
+       systemPrompt: agent.systemPrompt,
+       model: subagentModel,
+       toolNames: agent.defaultToolSet || [],
+       folderPath: subagentFolderPath,
+       initialMessages: [subagentUserMessage],
+       signal: undefined,
+       projectId,
+       chatId: chatId,
+       logId: subagentLogId,
+       isSubagent: true,
+       agentId: agent.id,
+       agent,
+       onUpdateMessage: () => {
+         // No UI update needed for subagent — it's a background tool call
+       },
+       onChatUpdated,
+       onValidate: context.onValidate,
+       navigateToChatWithLog: context.navigateToChatWithLog,
+     });
 
     // Update subagent meta to completed
     subagentMeta.status = "completed";

@@ -1,5 +1,6 @@
 import { ToolCall, ToolResult } from "../types/chat";
 import { ChatSettings } from "../hooks/useChatSettings";
+import { FeedbackPayload } from "../contexts";
 
 export interface ToolContext {
   folderPath?: string;
@@ -8,6 +9,8 @@ export interface ToolContext {
   settings?: ChatSettings;
   onChatUpdated?: () => void;
   folderOverride?: string;
+  onValidate?: (payload: FeedbackPayload) => Promise<number | void>;
+  navigateToChatWithLog?: (chatId: string, logId: string) => void;
 }
 
 export interface ToolDefinition {
