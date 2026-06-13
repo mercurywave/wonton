@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Hammer, FileText, ChevronDown, ChevronRight, ArrowUpRight } from "lucide-react";
+import { Hammer, FileText, ChevronDown, ChevronRight, ArrowUpRight, Terminal } from "lucide-react";
 import styles from "../components/ToolCallSection.module.css";
 import { ToolCall } from "../types/chat";
 import { READ_FILE_TOOL_NAME } from "../tools/readFile";
@@ -7,6 +7,7 @@ import { SEARCH_FILES_TOOL_NAME } from "../tools/searchFiles";
 import { SEARCH_CONTENTS_TOOL_NAME } from "../tools/searchContents";
 import { WRITE_FILE_TOOL_NAME } from "../tools/writeFile";
 import { EXECUTE_SUBAGENT_TOOL_NAME } from "../tools/executeSubagent";
+import { EXEC_COMMAND_TOOL_NAME } from "../tools/execCommand";
 import { useNav } from "../contexts/NavContext";
 
 function parseArgs(toolCall: ToolCall): object | null {
@@ -126,6 +127,66 @@ function SubagentSection({ toolCall, result }: { toolCall: ToolCall; result?: st
   );
 }
 
+function ExecSection({ toolCall, result }: { toolCall: ToolCall; result?: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const parsedArgs = useMemo(() => parseArgs(toolCall), [toolCall]);
+  const parsedResult = useMemo(() => parseResult(result), [result]);
+
+  const command = extractArgString(parsedArgs, "command");
+
+  function renderExecContent() {
+    if (!parsedResult.isJson || !parsedResult.parsed) {
+      return parsedResult.formatted ? <pre className={styles.toolCallContent}>{parsedResult.formatted}</pre> : null;
+    }
+
+    const obj = parsedResult.parsed as Record<string, unknown>;
+    const stdout = typeof obj.stdout === "string" ? obj.stdout : "";
+    const stderr = typeof obj.stderr === "string" ? obj.stderr : "";
+    const status = obj.status;
+    const truncated = obj.truncated === true;
+
+    const statusParts: string[] = [];
+    if (status !== null && status !== undefined) {
+      statusParts.push(`Exit code: ${status}`);
+    }
+    if (truncated) {
+      statusParts.push("(truncated)");
+    }
+    const statusText = statusParts.join(" ");
+
+    return (
+      <div>
+        {stdout && <pre className={styles.toolCallContent}>{stdout}</pre>}
+        {stderr && (
+          <pre className={styles.toolCallContent} style={{ borderTopColor: "#5a3e00", marginTop: stdout ? "8px" : "0" }}>
+            {stderr}
+          </pre>
+        )}
+        {statusText && (
+          <div className={styles.toolCallSectionLabel} style={{ marginTop: "4px", display: "flex", gap: "12px" }}>
+            <span>{statusText}</span>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.toolCallSection}>
+      <button className={styles.toolCallHeader} onClick={() => setIsExpanded((prev) => !prev)}>
+        <ToolHeader icon={<Terminal className={styles.toolCallIcon} size={14} />} name="Exec" pathLabel={command ? `"${command}"` : null} />
+        {isExpanded ? <ChevronDown className={styles.toolCallArrow} size={12} /> : <ChevronRight className={styles.toolCallArrow} size={12} />}
+      </button>
+      {isExpanded && (
+        <div className={styles.toolCallBody}>
+          {renderExecContent()}
+          <DebugSection args={parsedArgs} formatted={parsedResult.formatted} />
+        </div>
+      )}
+    </div>
+  );
+}
+
 interface ToolConfig {
   header: (parsedArgs: object | null) => React.ReactNode;
   content: (parsedArgs: object | null, parsedResult: { formatted: string; isJson: boolean; parsed: Record<string, unknown> | null }) => React.ReactNode;
@@ -198,6 +259,13 @@ const toolConfigs: Record<string, ToolConfig> = {
       }
       return result ? <pre className={styles.toolCallContent}>{result}</pre> : null;
     },
+  },
+  [EXEC_COMMAND_TOOL_NAME]: {
+    header: (parsedArgs) => {
+      const command = extractArgString(parsedArgs, "command");
+      return <ToolHeader icon={<Terminal className={styles.toolCallIcon} size={14} />} name="Exec" pathLabel={command ? `"${command}"` : null} />;
+    },
+    content: () => null,
   },
 };
 
@@ -278,6 +346,9 @@ function ResultsTable({ results, truncated }: { results: Array<Record<string, un
 export default function ToolCallSection({ toolCall, result }: { toolCall: ToolCall; result?: string }) {
   if (toolCall.name === EXECUTE_SUBAGENT_TOOL_NAME) {
     return <SubagentSection toolCall={toolCall} result={result} />;
+  }
+  if (toolCall.name === EXEC_COMMAND_TOOL_NAME) {
+    return <ExecSection toolCall={toolCall} result={result} />;
   }
 
   const [isExpanded, setIsExpanded] = useState(false);
