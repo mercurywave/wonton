@@ -1,4 +1,5 @@
 import { ChatMeta, ChatMessage, SubagentMeta, TempFileReservation } from "../types/chat";
+import { FeedbackPayload } from "../contexts";
 import { chatLogsStore } from "./chatLogs";
 import {
   CHATS_DIR_NAME,
@@ -10,6 +11,33 @@ import {
   generateGuid,
 } from "../utils/platformUtils";
 import { filesystem } from "../utils/electronFs";
+
+// --- approval queue (runtime-only, not persisted) ---
+
+export interface ApprovalRequest {
+  requestId: string;
+  chatId: string;
+  logId: string;
+  payload: FeedbackPayload;
+  resolve: (choice: number | void) => void;
+  reject: (reason: unknown) => void;
+}
+
+interface ProjectApprovalQueue {
+  [chatId: string]: ApprovalRequest[];
+}
+
+const approvalQueues = new Map<string, ProjectApprovalQueue>();
+
+function dispatchApprovalListeners(projectId: string) {
+  const set = approvalListeners.get(projectId);
+  if (!set) return;
+  for (const listener of set) {
+    listener();
+  }
+}
+
+const approvalListeners = new Map<string, Set<Listener>>();
 
 // --- persistence functions for chat metas ---
 
@@ -366,3 +394,88 @@ const chatStore: ChatsStore = {
 };
 
 export { chatStore };
+
+// --- approval queue functions ---
+
+function queueApproval(projectId: string, request: ApprovalRequest): void {
+  let projectQueue = approvalQueues.get(projectId);
+  if (!projectQueue) {
+    projectQueue = {};
+    approvalQueues.set(projectId, projectQueue);
+  }
+  const chatQueue = projectQueue[request.chatId] || [];
+  chatQueue.push(request);
+  projectQueue[request.chatId] = chatQueue;
+  dispatchApprovalListeners(projectId);
+}
+
+function dequeueApproval(projectId: string, chatId: string, choice: number | void): void {
+  const projectQueue = approvalQueues.get(projectId);
+  if (!projectQueue) return;
+  const chatQueue = projectQueue[chatId];
+  if (!chatQueue || chatQueue.length === 0) return;
+  const request = chatQueue.shift()!;
+  request.resolve(choice);
+  if (chatQueue.length === 0) {
+    delete projectQueue[chatId];
+  }
+  dispatchApprovalListeners(projectId);
+}
+
+function rejectPendingApproval(projectId: string, chatId: string, reason: unknown): void {
+  const projectQueue = approvalQueues.get(projectId);
+  if (!projectQueue) return;
+  const chatQueue = projectQueue[chatId];
+  if (!chatQueue) return;
+  for (const request of chatQueue) {
+    request.reject(reason);
+  }
+  delete projectQueue[chatId];
+  dispatchApprovalListeners(projectId);
+}
+
+function getPendingApprovalCount(projectId: string, chatId: string): number {
+  const projectQueue = approvalQueues.get(projectId);
+  if (!projectQueue) return 0;
+  return (projectQueue[chatId] || []).length;
+}
+
+function getFirstPendingApproval(projectId: string, chatId: string): ApprovalRequest | undefined {
+  const projectQueue = approvalQueues.get(projectId);
+  if (!projectQueue) return undefined;
+  const chatQueue = projectQueue[chatId];
+  if (!chatQueue || chatQueue.length === 0) return undefined;
+  return chatQueue[0];
+}
+
+function getFirstPendingApprovalAcrossAllChats(projectId: string): ApprovalRequest | undefined {
+  const projectQueue = approvalQueues.get(projectId);
+  if (!projectQueue) return undefined;
+  for (const chatId of Object.keys(projectQueue)) {
+    const chatQueue = projectQueue[chatId];
+    if (chatQueue && chatQueue.length > 0) {
+      return chatQueue[0];
+    }
+  }
+  return undefined;
+}
+
+function subscribeApproval(projectId: string, listener: Listener): () => void {
+  if (!approvalListeners.has(projectId)) {
+    approvalListeners.set(projectId, new Set<Listener>());
+  }
+  approvalListeners.get(projectId)!.add(listener);
+  return () => {
+    approvalListeners.get(projectId)?.delete(listener);
+  };
+}
+
+export {
+  queueApproval,
+  dequeueApproval,
+  rejectPendingApproval,
+  getPendingApprovalCount,
+  getFirstPendingApproval,
+  getFirstPendingApprovalAcrossAllChats,
+  subscribeApproval,
+};

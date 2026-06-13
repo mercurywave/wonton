@@ -18,7 +18,7 @@ interface UseChatWorkflowOptions {
   flows: Flow[];
   chatId?: string;
   projectId?: string;
-  showFeedback?: (payload: FeedbackPayload) => Promise<number | void>;
+  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>;
 }
 
 interface UseChatWorkflowReturn {
@@ -37,9 +37,9 @@ interface UseChatWorkflowReturn {
 export function buildWon(
   projectId: string,
   chatId: string,
-  logId?: string,
+  logId: string | undefined,
   emit?: (event: string, payload?: unknown) => void,
-  showFeedback?: (payload: FeedbackPayload) => Promise<number | void>,
+  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>,
 ): Won {
   async function reserveTempFile(baseName?: string): Promise<string> {
     const name = baseName ?? "temp.txt";
@@ -233,18 +233,18 @@ export function buildWon(
       return { stdout: result.stdout, stderr: result.stderr, code: result.status };
     },
     async alert(message: string) {
-      if (!showFeedback) {
+      if (!showFeedback || !logId) {
         console.warn("alert() called but feedback not available");
         return;
       }
-      await showFeedback({ type: "alert", message });
+      await showFeedback(projectId, chatId, logId, { type: "alert", message });
     },
     async select(question: string, choices: string[]) {
-      if (!showFeedback) {
+      if (!showFeedback || !logId) {
         console.warn("select() called but feedback not available");
         return -1;
       }
-      const result = await showFeedback({ type: "select", question, choices });
+      const result = await showFeedback(projectId, chatId, logId, { type: "select", question, choices });
       return typeof result === "number" ? result : -1;
     },
   };
@@ -256,7 +256,7 @@ export async function executeCommand(
   chatId: string | undefined,
   projectId?: string,
   emit?: (event: string, payload?: unknown) => void,
-  showFeedback?: (payload: FeedbackPayload) => Promise<number | void>,
+  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>,
 ): Promise<void> {
   if (!chatId || !projectId) return;
   const won = buildWon(projectId, chatId, undefined, emit, showFeedback);

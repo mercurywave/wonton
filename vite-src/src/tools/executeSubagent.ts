@@ -171,9 +171,8 @@ export class ExecuteSubagentHandler implements ToolHandler {
          // No UI update needed for subagent — it's a background tool call
        },
        onChatUpdated,
-       onValidate: context.onValidate,
-       navigateToChatWithLog: context.navigateToChatWithLog,
-     });
+        onValidate: context.showFeedback,
+      });
 
     // Update subagent meta to completed
     subagentMeta.status = "completed";

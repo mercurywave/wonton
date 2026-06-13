@@ -5,16 +5,16 @@ import styles from "./FeedbackPopup.module.css";
 import { useFeedback } from "../contexts";
 
 export default function FeedbackPopup() {
-  const { pendingFeedback, dismiss } = useFeedback();
+  const { currentRequest, currentPayload, dismiss } = useFeedback();
   const popupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!pendingFeedback) return;
-    const feedback = pendingFeedback;
+    if (!currentRequest) return;
+    const request = currentRequest;
 
     function handleClickOutside(event: MouseEvent) {
       if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
-        if (feedback.payload.type === "alert") {
+        if (request.payload.type === "alert") {
           dismiss();
         }
       }
@@ -22,11 +22,11 @@ export default function FeedbackPopup() {
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [pendingFeedback, dismiss]);
+  }, [currentRequest, dismiss]);
 
-  if (!pendingFeedback) return null;
+  if (!currentRequest || !currentPayload) return null;
 
-  const { payload, resolve } = pendingFeedback;
+  const { payload, resolve } = currentRequest;
 
   if (payload.type === "alert") {
     return (
@@ -62,7 +62,7 @@ export default function FeedbackPopup() {
             {payload.question}
           </ReactMarkdown>
           <div className={styles.choices}>
-            {payload.choices.map((choice, idx) => (
+            {payload.choices.map((choice: string, idx: number) => (
               <button
                 key={idx}
                 className={styles.choiceButton}

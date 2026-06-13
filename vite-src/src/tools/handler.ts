@@ -6,11 +6,11 @@ export interface ToolContext {
   folderPath?: string;
   projectId?: string;
   chatId?: string;
+  logId?: string;
   settings?: ChatSettings;
   onChatUpdated?: () => void;
   folderOverride?: string;
-  onValidate?: (payload: FeedbackPayload) => Promise<number | void>;
-  navigateToChatWithLog?: (chatId: string, logId: string) => void;
+  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>;
 }
 
 export interface ToolDefinition {

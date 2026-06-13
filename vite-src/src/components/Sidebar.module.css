@@ -321,6 +321,12 @@
   opacity: 0.6;
 }
 
+.approvalIcon {
+  flex-shrink: 0;
+  opacity: 0.8;
+  color: #f0c040;
+}
+
 .spinner {
   animation: spin 1s linear infinite;
 }

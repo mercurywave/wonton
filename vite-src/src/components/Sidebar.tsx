@@ -18,6 +18,7 @@ import {
   X,
   Book,
   CircleUser,
+  Bell,
 } from "lucide-react";
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
@@ -25,6 +26,7 @@ import { useUI, useProjects, useChats, useTasks } from "../contexts";
 import { useNav } from "../contexts";
 import ProjectSelector from "../components/ProjectSelector";
 import { PRIORITY_COLORS } from "../utils/taskUtils";
+import { getPendingApprovalCount, subscribeApproval } from "../store/chats";
 
 interface SidebarProps {
   onNewChat: () => void;
@@ -49,6 +51,17 @@ export default function Sidebar({
   const { state: nav, activeProjectId, navigateToPage, navigateToChat } = useNav();
   const { getSortedActiveTasks, createChatAndGraduateWithId, createTask } = useTasks();
 
+  // Re-render when approval queue changes
+  const [approvalTick, setApprovalTick] = useState(0);
+  useEffect(() => {
+    if (!activeProjectId) return;
+    const unsub = () => {
+      setApprovalTick((t) => t + 1);
+    };
+    const unsub2 = subscribeApproval(activeProjectId, unsub);
+    return unsub2;
+  }, [activeProjectId]);
+
   const [windowHeight, setWindowHeight] = useState(window.innerHeight);
 
   useEffect(() => {
@@ -60,12 +73,15 @@ export default function Sidebar({
   }, []);
 
   const chatLimit = (windowHeight < 640) ? (windowHeight < 540 ? 0 : 3) : 5;
+  // Trigger re-render when approval queue changes
+  void approvalTick;
   const displayChats = chats.slice(0, chatLimit).map((c) => ({
     id: c.id,
     name: c.name,
     updatedAt: c.updatedAt,
     draft: c.draft,
     isProcessing: getIsProcessing(c.id),
+    pendingApprovalCount: activeProjectId ? getPendingApprovalCount(activeProjectId, c.id) : 0,
   }));
 
   const sortedActiveTasks = getSortedActiveTasks();
@@ -290,6 +306,9 @@ export default function Sidebar({
                     <>
                       {chat.isProcessing && (
                         <Loader2 size={14} className={`${styles.chatIcon} ${styles.spinner}`} />
+                      )}
+                      {chat.pendingApprovalCount > 0 && (
+                        <Bell size={14} className={styles.approvalIcon} />
                       )}
                       <span className={styles.chatName}>{chat.name}</span>
                       {chat.draft ? (

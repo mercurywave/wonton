@@ -57,9 +57,9 @@ export class ExecCommandHandler implements ToolHandler {
     return ExecCommandHandler.instance;
   }
 
-  async execute(args: object, context: ToolContext, toolCall: any): Promise<ToolResult> {
+  async execute(args: object, context: ToolContext, _toolCall: any): Promise<ToolResult> {
     const { command } = args as { command: string };
-    const { folderPath, onValidate, navigateToChatWithLog, chatId } = context;
+    const { folderPath, showFeedback, projectId, chatId, logId } = context;
 
     if (!folderPath) {
       return {
@@ -77,15 +77,19 @@ export class ExecCommandHandler implements ToolHandler {
       };
     }
 
-    if (onValidate) {
-      navigateToChatWithLog?.(chatId || "", toolCall?.logId || "");
+    if (showFeedback && projectId && chatId && logId) {
       const result: ToolResult = { callId: "", content: "", isError: false };
       try {
-        const choice = await onValidate({
-          type: "select",
-          question: `The agent wants to run:\n\`\`\`\n${command}\n\`\`\`\n\nAllow this command to run?`,
-          choices: ["Allow", "Deny"],
-        } as FeedbackPayload);
+        const choice = await showFeedback(
+          projectId,
+          chatId,
+          logId,
+          {
+            type: "select",
+            question: `The agent wants to run:\n\`\`\`\n${command}\n\`\`\`\n\nAllow this command to run?`,
+            choices: ["Allow", "Deny"],
+          } as FeedbackPayload
+        );
         if (typeof choice === "number" && choice !== 0) {
           result.content = "Command denied by user";
           result.isError = true;

@@ -1,12 +1,17 @@
 import {
   createContext,
   useContext,
-  useRef,
   useCallback,
   useMemo,
   ReactNode,
   useState,
 } from "react";
+import {
+  queueApproval,
+  dequeueApproval,
+  getFirstPendingApprovalAcrossAllChats,
+  ApprovalRequest,
+} from "../store/chats";
 
 export type FeedbackType = "alert" | "select";
 
@@ -23,15 +28,10 @@ export interface SelectPayload {
 
 export type FeedbackPayload = AlertPayload | SelectPayload;
 
-interface PendingFeedback {
-  resolve: (value: number | void) => void;
-  reject: (reason?: unknown) => void;
-  payload: FeedbackPayload;
-}
-
 interface ExtensionFeedbackValue {
-  showFeedback: (payload: FeedbackPayload) => Promise<number | void>;
-  pendingFeedback: PendingFeedback | null;
+  showFeedback: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>;
+  currentRequest: ApprovalRequest | null;
+  currentPayload: FeedbackPayload | null;
   dismiss: () => void;
   selectChoice: (index: number) => void;
 }
@@ -39,41 +39,62 @@ interface ExtensionFeedbackValue {
 const ExtensionFeedback = createContext<ExtensionFeedbackValue | null>(null);
 
 export function FeedbackProvider({ children }: { children: ReactNode }) {
-  const pendingRef = useRef<PendingFeedback | null>(null);
-  const [pendingFeedback, setPendingFeedback] = useState<PendingFeedback | null>(null);
+  const [currentRequest, setCurrentRequest] = useState<ApprovalRequest | null>(null);
+  const [projectId, setProjectId] = useState<string | null>(null);
 
-  const showFeedback = useCallback((payload: FeedbackPayload): Promise<number | void> => {
-    return new Promise<number | void>((resolve, reject) => {
-      pendingRef.current = { resolve, reject, payload };
-      setPendingFeedback(pendingRef.current);
-    });
-  }, []);
+  const showFeedback = useCallback(
+    (projectId: string, chatId: string, logId: string, payload: FeedbackPayload): Promise<number | void> => {
+      setProjectId(projectId);
+      return new Promise<number | void>((resolve, reject) => {
+        const requestId = crypto.randomUUID();
+        const request: ApprovalRequest = {
+          requestId,
+          chatId,
+          logId,
+          payload,
+          resolve,
+          reject,
+        };
+        queueApproval(projectId, request);
+        // If there's no current request being handled, show this one immediately
+        setCurrentRequest((prev) => {
+          if (prev) return prev; // already showing something
+          return request;
+        });
+      });
+    },
+    []
+  );
 
   const dismiss = useCallback(() => {
-    if (pendingRef.current) {
-      const { resolve, payload } = pendingRef.current;
-      if (payload.type === "alert") {
-        resolve(undefined);
+    if (!currentRequest || !projectId) return;
+    dequeueApproval(projectId, currentRequest.chatId, undefined);
+    setCurrentRequest(null);
+    // Pick up next from store queue after state settles
+    setTimeout(() => {
+      const next = getFirstPendingApprovalAcrossAllChats(projectId);
+      if (next) {
+        setCurrentRequest(next);
       }
-      pendingRef.current = null;
-      setPendingFeedback(null);
-    }
-  }, []);
+    }, 0);
+  }, [currentRequest, projectId]);
 
   const selectChoice = useCallback((index: number) => {
-    if (pendingRef.current) {
-      const { resolve, payload } = pendingRef.current;
-      if (payload.type === "select") {
-        resolve(index);
+    if (!currentRequest || !projectId) return;
+    dequeueApproval(projectId, currentRequest.chatId, index);
+    setCurrentRequest(null);
+    // Pick up next from store queue after state settles
+    setTimeout(() => {
+      const next = getFirstPendingApprovalAcrossAllChats(projectId);
+      if (next) {
+        setCurrentRequest(next);
       }
-      pendingRef.current = null;
-      setPendingFeedback(null);
-    }
-  }, []);
+    }, 0);
+  }, [currentRequest, projectId]);
 
   const value = useMemo(
-    () => ({ showFeedback, pendingFeedback, dismiss, selectChoice }),
-    [showFeedback, pendingFeedback, dismiss, selectChoice]
+    () => ({ showFeedback, currentRequest, currentPayload: currentRequest?.payload ?? null, dismiss, selectChoice }),
+    [showFeedback, currentRequest, dismiss, selectChoice]
   );
 
   return (
@@ -86,7 +107,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
 export function useFeedback(): ExtensionFeedbackValue {
   const ctx = useContext(ExtensionFeedback);
   if (!ctx) {
-    throw new Error("useExtensionFeedback must be used within an ExtensionFeedbackProvider");
+    throw new Error("useFeedback must be used within an FeedbackProvider");
   }
   return ctx;
 }
