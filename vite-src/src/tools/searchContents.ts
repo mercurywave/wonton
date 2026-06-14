@@ -42,6 +42,10 @@ export class SearchContentsHandler implements ToolHandler {
       },
     },
   };
+  
+  isAvailable?(folderPath?: string): boolean{
+    return !!folderPath;
+  }
 
   private constructor() {}
 

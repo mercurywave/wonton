@@ -26,5 +26,6 @@ export interface ToolHandler {
   readonly name: string;
   readonly definition: ToolDefinition;
   execute(args: object, context: ToolContext, toolCall: ToolCall): Promise<ToolResult>;
-  getToolDefinitions?(folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition>
+  getToolDefinitions?(folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition>;
+  isAvailable?(folderPath?: string, agent?: Agent, allAgents?: Agent[]): boolean;
 }

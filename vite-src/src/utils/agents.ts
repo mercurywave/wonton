@@ -6,7 +6,7 @@ export const DEFAULT_AGENT: Agent = {
   name: "Default",
   systemPrompt: "You are a helpful assistant.",
   main: true,
-  defaultToolSet: ["glob", "grep", "read", "write", "edit", "send"],
+  defaultToolSet: ["glob", "grep", "read", "write", "edit", "message"],
   subagentAllowlist: ["builtin:subagent", "builtin:explore", "builtin:docs"],
 };
 
@@ -36,7 +36,7 @@ export const DOCS_AGENT: Agent = {
   systemPrompt:
     "You are a documentation specialist. You have access to the project's docs folder in the appdata directory. Use your tools to search and manage documentation. When asked about frameworks, APIs, or reference material, check the docs folder for relevant files first.",
   main: true,
-  defaultToolSet: ["glob", "grep", "read", "write", "edit", "send"],
+  defaultToolSet: ["glob", "grep", "read", "write", "edit", "message"],
   folderOverride: DOCS_FOLDER_OVERRIDE,
   subagentAllowlist: [],
 };
@@ -46,7 +46,7 @@ export const BASH_AGENT: Agent = {
   name: "Bash",
   systemPrompt: "You are a helpful assistant.",
   main: true,
-  defaultToolSet: ["glob", "grep", "read", "write", "edit", "send", "exec"],
+  defaultToolSet: ["glob", "grep", "read", "write", "edit", "message", "exec"],
   subagentAllowlist: ["builtin:subagent", "builtin:explore", "builtin:docs"],
 };
 

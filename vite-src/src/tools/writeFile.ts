@@ -34,6 +34,10 @@ export class WriteFileHandler implements ToolHandler {
       },
     },
   };
+  
+  isAvailable?(folderPath?: string): boolean{
+    return !!folderPath;
+  }
 
   private constructor() {}
 

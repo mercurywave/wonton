@@ -43,6 +43,10 @@ export class ReadFileHandler implements ToolHandler {
     },
   };
 
+  isAvailable?(folderPath?: string): boolean{
+    return !!folderPath;
+  }
+
   private constructor() {}
 
   static getInstance(): ReadFileHandler {

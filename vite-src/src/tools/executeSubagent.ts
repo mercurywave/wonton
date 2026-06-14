@@ -38,6 +38,10 @@ export class ExecuteSubagentHandler implements ToolHandler {
     },
   };
 
+  isAvailable?(_folderPath?: string, _agent?: Agent, allAgents?: Agent[]): boolean{
+    return !!allAgents && allAgents.length > 0;
+  }
+
   async getToolDefinitions(_folderPath?: string, _agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition> {
     const agents = allAgents ?? getAllAgents([]);
     const agentNames = agents.map((a) => a.name);
@@ -151,27 +155,27 @@ export class ExecuteSubagentHandler implements ToolHandler {
     // Resolve model for subagent
     const subagentModel = settings.defaultModel || agentId;
 
-   // Run the subagent tool-call loop
-     const result = await runToolCallLoop({
-       settings,
-       systemPrompt: agent.systemPrompt,
-       model: subagentModel,
-       toolNames: agent.defaultToolSet || [],
-       folderPath: subagentFolderPath,
-       initialMessages: [subagentUserMessage],
-       signal: undefined,
-       projectId,
-       chatId: chatId,
-       logId: subagentLogId,
-       isSubagent: true,
-       agentId: agent.id,
-       agent,
-       onUpdateMessage: () => {
-         // No UI update needed for subagent — it's a background tool call
-       },
-       onChatUpdated,
-        onValidate: context.showFeedback,
-      });
+    // Run the subagent tool-call loop
+    const result = await runToolCallLoop({
+      settings,
+      systemPrompt: agent.systemPrompt,
+      model: subagentModel,
+      toolNames: agent.defaultToolSet || [],
+      folderPath: subagentFolderPath,
+      initialMessages: [subagentUserMessage],
+      signal: undefined,
+      projectId,
+      chatId: chatId,
+      logId: subagentLogId,
+      isSubagent: true,
+      agentId: agent.id,
+      agent,
+      onUpdateMessage: () => {
+        // No UI update needed for subagent — it's a background tool call
+      },
+      onChatUpdated,
+      onValidate: context.showFeedback,
+    });
 
     // Update subagent meta to completed
     subagentMeta.status = "completed";

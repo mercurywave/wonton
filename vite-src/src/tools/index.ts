@@ -46,14 +46,23 @@ export async function executeToolCall(
 }
 
 export async function getAvailableTools(folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition[]> {
-  if (!folderPath) {
-    return [];
-  }
   const availableAgents = (allAgents && agent && agent.subagentAllowlist) 
     ? allAgents.filter(a => agent.subagentAllowlist?.includes(a.id))
     : allAgents;
 
-  return Promise.all(Object.values(toolHandlers).map(async (h) => {
+  const allTools = Object.values(toolHandlers);
+  const allowedTools = agent?.defaultToolSet
+    ? allTools.filter(t => agent.defaultToolSet!.includes(t.name))
+    : allTools;
+
+  const filtered = allowedTools.filter((h) => {
+    if(h.isAvailable){
+      return h.isAvailable(folderPath, agent, availableAgents);
+    }
+    return true;
+  });
+
+  return await Promise.all(filtered.map(async (h) => {
     if(h.getToolDefinitions){
       return h.getToolDefinitions(folderPath, agent, availableAgents);
     }
