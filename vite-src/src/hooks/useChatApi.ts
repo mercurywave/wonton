@@ -6,7 +6,7 @@ import { runQuery } from "./useLLMQuery";
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
 import { statsStore } from "../store/stats";
-import { executeToolCall, getAvailableTools } from "../tools";
+import { executeToolCall, filterToAvailableTools, getAvailableTools } from "../tools";
 import { EXECUTE_SUBAGENT_TOOL_NAME } from "../tools/executeSubagent";
 import { FeedbackPayload } from "../contexts";
 
@@ -291,8 +291,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     onValidate,
   } = options;
 
-  const allTools = await getAvailableTools(folderPath, agent, allAgents);
-  const tools = allTools.filter(t => toolNames.includes(t.function.name));
+  const tools = await filterToAvailableTools(toolNames, folderPath, agent, allAgents);
 
   const { messages: initialApiMessages } = buildApiMessages(initialMessages, systemPrompt, tools);
 
@@ -535,14 +534,12 @@ export function useChatApi(
   projectMeta?: ProjectMeta,
   agentSystemPrompt?: string,
   onTitleGenerated?: (chatId: string, name: string) => void,
-  tools?: ToolDefinition[],
   folderPath?: string,
   logId?: string,
   onChatUpdated?: () => void,
   onSendPrompt?: () => Promise<void>,
   onChatResponse?: (response: ChatMessage) => Promise<void>,
   agentId?: string,
-  agent?: Agent,
   allAgents?: Agent[],
   onValidate?: (projectId: string, chatId: string, logId: string, payload: import("../contexts").FeedbackPayload) => Promise<number | void>,
 ) {
@@ -656,6 +653,9 @@ export function useChatApi(
       }
 
       try {
+        const resolvedAgentId = agentId || "builtin:default";
+        const agent = allAgents?.find((a) => a.id === resolvedAgentId);
+
         abortRef.current?.abort();
         const controller = new AbortController();
         abortRef.current = controller;
@@ -672,7 +672,7 @@ export function useChatApi(
         // Include userMessage since setMessages is async and messages state is stale
         const allMessagesForApi = [...messagesRef.current, userMessage];
 
-        const resolvedTools = tools || [];
+        const resolvedTools = await getAvailableTools(folderPath, agent, allAgents);
 
         await onSendPrompt?.();
 
@@ -687,7 +687,7 @@ export function useChatApi(
           projectId,
           chatId,
           logId,
-          agentId,
+          agentId: resolvedAgentId,
           agent,
           allAgents,
           onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId) => {
@@ -732,7 +732,7 @@ export function useChatApi(
         }
       }
     },
-    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, tools, folderPath, onSendPrompt, onChatResponse, agentId, onValidate]
+    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, folderPath, onSendPrompt, onChatResponse, agentId, onValidate]
   );
 
   const stopGeneration = useCallback(() => {

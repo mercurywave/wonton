@@ -45,12 +45,24 @@ export async function executeToolCall(
   return handler.execute(args, context, toolCall);
 }
 
+export async function filterToAvailableTools(toolNames: string[], folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition[]> {
+  return await filterAndCleanTools(
+    Object.values(toolHandlers).filter(h => toolNames.includes(h.name)), 
+    folderPath,
+    agent,
+    allAgents
+  );
+}
+
 export async function getAvailableTools(folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition[]> {
+  return await filterAndCleanTools(Object.values(toolHandlers), folderPath, agent, allAgents);
+}
+
+async function filterAndCleanTools(allTools: ToolHandler[], folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition[]> {
   const availableAgents = (allAgents && agent && agent.subagentAllowlist) 
     ? allAgents.filter(a => agent.subagentAllowlist?.includes(a.id))
     : allAgents;
 
-  const allTools = Object.values(toolHandlers);
   const allowedTools = agent?.defaultToolSet
     ? allTools.filter(t => agent.defaultToolSet!.includes(t.name))
     : allTools;

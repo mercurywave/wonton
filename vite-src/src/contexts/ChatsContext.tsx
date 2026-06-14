@@ -19,8 +19,7 @@ import { useAgentsContext } from "./AgentsContext";
 import { useFlowsContext } from "./FlowsContext";
 import { FeedbackPayload, useFeedback } from "./FeedbackContext";
 import { isBackendConnected } from "../utils/platformUtils";
-import { getAvailableTools } from "../tools";
-import { ChatMessage, ChatMeta, FlowActionButton, ToolDefinition } from "../types/chat";
+import { ChatMessage, ChatMeta, FlowActionButton } from "../types/chat";
 import { chatLogsStore } from "../store/chatLogs";
 
 interface ChatsContextValue {
@@ -101,17 +100,6 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     [projectsCtx.projects, activeProjectId]
   );
 
-  const [availableTools, setAvailableTools] = useState<ToolDefinition[]>([]);
-
-  useEffect(() => {
-    const loadTools = async () => {
-      const agent = allAgents.find(a => a.id === selectedChatMeta?.activeAgentId);
-      const tools = await getAvailableTools(activeProject?.folderPath, agent, allAgents);
-      setAvailableTools(tools);
-    };
-    loadTools();
-  }, [activeProject?.folderPath, selectedChatMeta , allAgents]);
-
   // Active logId: navLogId if set (explicit log selection), otherwise fall back to chat's main log
   const activeLogId = useMemo(() => {
     if (navLogId) return navLogId;
@@ -125,13 +113,6 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     if (!chat?.activeAgentId) return undefined;
     const agent = allAgents.find((a) => a.id === chat.activeAgentId);
     return agent?.systemPrompt;
-  }, [chats, selectedChatId, allAgents]);
-
-  const activeAgent = useMemo(() => {
-    if (!selectedChatId) return undefined;
-    const chat = chats.find((c) => c.id === selectedChatId);
-    if (!chat?.activeAgentId) return undefined;
-    return allAgents.find((a) => a.id === chat.activeAgentId);
   }, [chats, selectedChatId, allAgents]);
 
   const refreshAndNotify = useCallback(async () => {
@@ -157,14 +138,12 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     async (chatId: string, name: string) => {
       projectChatsUpdateChatMeta(chatId, { name });
     },
-    availableTools,
     activeProject?.folderPath,
     activeLogId,
     refreshAndNotify,
     () => workflowExecuteOnSendPrompt(),
     (response: ChatMessage) => workflowExecuteOnChatResponse(response),
     selectedChatMeta?.activeAgentId,
-    activeAgent,
     allAgents,
     wrappedShowFeedback,
   );
