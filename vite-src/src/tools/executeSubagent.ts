@@ -3,7 +3,7 @@ import { ToolResult, ChatMessage, ToolCall, Agent } from "../types/chat";
 import { runToolCallLoop } from "../hooks/useChatApi";
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
-import { getAgentByName, getAvailableSubagents } from "../utils/agents";
+import { getAgentByName } from "../utils/agents";
 import { getAllAgents, loadAgentsFile } from "../hooks/useAgents";
 import { SubagentMeta } from "../types/chat";
 import { getProjectDataDir, DOCS_DIR_NAME, DOCS_FOLDER_OVERRIDE } from "../utils/platformUtils";
@@ -38,10 +38,9 @@ export class ExecuteSubagentHandler implements ToolHandler {
     },
   };
 
-  getDynamicDefinition(agent: Agent, allAgents?: Agent[]): ToolDefinition {
+  async getToolDefinitions(_folderPath?: string, _agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition> {
     const agents = allAgents ?? getAllAgents([]);
-    const availableSubagents = getAvailableSubagents(agent, agents);
-    const agentNames = availableSubagents.map((a) => a.name);
+    const agentNames = agents.map((a) => a.name);
 
     let description: string;
     if (agentNames.length === 0) {

@@ -86,6 +86,13 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     setSelectedChatId(mostRecent.id);
   }, [selectedChatId, chats]);
 
+  // Derive logId from the selected chat's meta
+  const selectedChatMeta = useMemo(() => {
+    if (!selectedChatId) return undefined;
+    const chat = chats.find((c) => c.id === selectedChatId);
+    return chat;
+  }, [chats, selectedChatId]);
+
   const chatsRef = useRef(chats);
   chatsRef.current = chats;
 
@@ -98,18 +105,12 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const loadTools = async () => {
-      const tools = await getAvailableTools(activeProject?.folderPath);
+      const agent = allAgents.find(a => a.id === selectedChatMeta?.activeAgentId);
+      const tools = await getAvailableTools(activeProject?.folderPath, agent, allAgents);
       setAvailableTools(tools);
     };
     loadTools();
-  }, [activeProject?.folderPath]);
-
-  // Derive logId from the selected chat's meta
-  const selectedChatMeta = useMemo(() => {
-    if (!selectedChatId) return undefined;
-    const chat = chats.find((c) => c.id === selectedChatId);
-    return chat;
-  }, [chats, selectedChatId]);
+  }, [activeProject?.folderPath, selectedChatMeta , allAgents]);
 
   // Active logId: navLogId if set (explicit log selection), otherwise fall back to chat's main log
   const activeLogId = useMemo(() => {

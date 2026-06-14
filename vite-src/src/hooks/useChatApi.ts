@@ -6,7 +6,7 @@ import { runQuery } from "./useLLMQuery";
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
 import { statsStore } from "../store/stats";
-import { executeToolCall, getToolDefinitions } from "../tools";
+import { executeToolCall, getAvailableTools } from "../tools";
 import { EXECUTE_SUBAGENT_TOOL_NAME } from "../tools/executeSubagent";
 import { FeedbackPayload } from "../contexts";
 
@@ -291,7 +291,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     onValidate,
   } = options;
 
-  const allTools = folderPath ? await getToolDefinitions(folderPath, agent, allAgents) : [];
+  const allTools = await getAvailableTools(folderPath, agent, allAgents);
   const tools = allTools.filter(t => toolNames.includes(t.function.name));
 
   const { messages: initialApiMessages } = buildApiMessages(initialMessages, systemPrompt, tools);

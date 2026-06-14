@@ -42,7 +42,7 @@ export class ExecCommandHandler implements ToolHandler {
 
   private constructor() {}
 
-  async getDynamicDefinition(): Promise<ToolDefinition> {
+  async getToolDefinitions?(): Promise<ToolDefinition>{
     const platform = await getPlatform();
     const platformName = platform === "win32" ? "Windows" : platform === "darwin" ? "macOS" : platform === "linux" ? "Linux" : platform;
     const definition = JSON.parse(JSON.stringify(this.definition)) as ToolDefinition;

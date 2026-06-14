@@ -1,4 +1,4 @@
-import { ToolCall, ToolResult } from "../types/chat";
+import { Agent, ToolCall, ToolResult } from "../types/chat";
 import { ChatSettings } from "../hooks/useChatSettings";
 import { FeedbackPayload } from "../contexts";
 
@@ -26,4 +26,5 @@ export interface ToolHandler {
   readonly name: string;
   readonly definition: ToolDefinition;
   execute(args: object, context: ToolContext, toolCall: ToolCall): Promise<ToolResult>;
+  getToolDefinitions?(folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition>
 }

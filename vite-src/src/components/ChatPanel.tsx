@@ -243,10 +243,15 @@ export default function ChatPanel({
 }: ChatPanelProps) {
   const { visibleModels, settings } = useSettings();
   const { mainAgents, allAgents } = useAgentsContext();
-  const { setSelectedChatWorkflowId } = useChats();
   const { projects } = useProjects();
   const { activeProjectId, logId, navigateToLog } = useNav();
-  const { chats, selectedChatId, onActionButtonClick, executeCommand: runCommand } = useChats();
+  const { 
+    chats,
+    selectedChatId,
+    onActionButtonClick,
+    executeCommand: runCommand,
+    setSelectedChatWorkflowId 
+  } = useChats();
 
   // Chat draft state (migrated from useChatDraft hook)
   const [draft, setDraft] = useState("");
@@ -389,11 +394,12 @@ export default function ChatPanel({
 
   useEffect(() => {
     const loadTools = async () => {
-      const tools = await getAvailableTools(activeProject?.folderPath);
+      let agent = allAgents.find((a) => a.id === activeAgentId);
+      const tools = await getAvailableTools(activeProject?.folderPath, agent, allAgents);
       setAvailableTools(tools);
     };
     loadTools();
-  }, [activeProject?.folderPath]);
+  }, [activeProject?.folderPath, activeAgentId, allAgents]);
   const { maxTokens } = useContextWindow(activeModel, settings);
 
   const usageTokens = useMemo(() => {
