@@ -172,7 +172,7 @@ interface ApiRequestBody {
   stream: boolean;
   tools?: ToolDefinition[];
   tool_choice?: string;
-  chat_template_kwargs?: { enable_thinking: boolean };
+  chat_template_kwargs?: { };
 }
 
 export async function makeApiCall(
@@ -205,7 +205,7 @@ export async function makeApiCall(
   }
 
   if (isSubagent) {
-    body.chat_template_kwargs = { enable_thinking: true };
+    body.chat_template_kwargs = { };
   }
 
   const response = await fetch(apiUrl, {
