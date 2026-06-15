@@ -45,6 +45,10 @@ interface ChatsContextValue {
   executeCommand: (flowId: string) => Promise<void>;
   selectedChatId: string | null;
   setSelectedChatId: (id: string | null) => void;
+  activeAgentId: string;
+  activeModel: string;
+  onAgentChange: (agentId: string) => Promise<void>;
+  onModelChange: (modelId: string) => Promise<void>;
 }
 
 const ChatsContext = createContext<ChatsContextValue | null>(null);
@@ -100,6 +104,44 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     [projectsCtx.projects, activeProjectId]
   );
 
+  // Resolve the effective active agent ID (chat override or builtin default)
+  const activeAgentId = useMemo(() => {
+    if (!selectedChatMeta) return "builtin:default";
+    return selectedChatMeta.activeAgentId || "builtin:default";
+  }, [selectedChatMeta]);
+
+  // Resolve the effective active model (chat override or settings default)
+  const activeModel = useMemo(() => {
+    if (!selectedChatMeta) return settings.defaultModel;
+    return selectedChatMeta.activeModel ?? settings.defaultModel;
+  }, [selectedChatMeta, settings.defaultModel]);
+
+  // Callback to change the active agent for the selected chat
+  const onAgentChange = useCallback(
+    async (agentId: string) => {
+      if (!selectedChatId || !activeProjectId) return;
+      if (agentId !== "builtin:default") {
+        await projectChatsUpdateChatMeta(selectedChatId, { activeAgentId: agentId });
+      } else {
+        await projectChatsUpdateChatMeta(selectedChatId, { activeAgentId: undefined });
+      }
+    },
+    [selectedChatId, activeProjectId]
+  );
+
+  // Callback to change the active model for the selected chat
+  const onModelChange = useCallback(
+    async (modelId: string) => {
+      if (!selectedChatId || !activeProjectId) return;
+      if (modelId !== settings.defaultModel) {
+        await projectChatsUpdateChatMeta(selectedChatId, { activeModel: modelId });
+      } else {
+        await projectChatsUpdateChatMeta(selectedChatId, { activeModel: undefined });
+      }
+    },
+    [selectedChatId, activeProjectId, settings.defaultModel]
+  );
+
   // Active logId: navLogId if set (explicit log selection), otherwise fall back to chat's main log
   const activeLogId = useMemo(() => {
     if (navLogId) return navLogId;
@@ -108,12 +150,10 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   // Resolve the selected agent's system prompt and full agent object
   const activeAgentSystemPrompt = useMemo(() => {
-    if (!selectedChatId) return undefined;
-    const chat = chats.find((c) => c.id === selectedChatId);
-    if (!chat?.activeAgentId) return undefined;
-    const agent = allAgents.find((a) => a.id === chat.activeAgentId);
+    if (!selectedChatMeta?.activeAgentId) return undefined;
+    const agent = allAgents.find((a) => a.id === selectedChatMeta.activeAgentId);
     return agent?.systemPrompt;
-  }, [chats, selectedChatId, allAgents]);
+  }, [selectedChatMeta, allAgents]);
 
   const refreshAndNotify = useCallback(async () => {
     await refreshChats();
@@ -149,10 +189,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   );
 
   // Workflow execution for the selected chat
-  const selectedChatForWorkflow = useMemo(() => {
-    if (!selectedChatId) return undefined;
-    return chats.find((c) => c.id === selectedChatId);
-  }, [chats, selectedChatId]);
+  const selectedChatForWorkflow = selectedChatMeta;
 
   const {
     executeAdjustPrompt: workflowExecuteAdjustPrompt,
@@ -271,8 +308,12 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       executeCommand: wrappedExecuteCommand,
       selectedChatId,
       setSelectedChatId,
+      activeAgentId,
+      activeModel,
+      onAgentChange,
+      onModelChange,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

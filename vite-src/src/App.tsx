@@ -1,7 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { Page } from "./types/chat";
 import { isBackendConnected } from "./utils/platformUtils";
-import { useSettings } from "./contexts";
 import { useProjects } from "./contexts";
 import { useChats } from "./contexts";
 import { useUI } from "./contexts";
@@ -23,7 +22,6 @@ import "./App.css";
 import FileViewerPanel from "./components/FileViewerPanel";
 
 function App() {
-  const { settings } = useSettings();
   const {
     projects,
     createProject,
@@ -33,7 +31,7 @@ function App() {
     deleteProject,
     getProjectById,
   } = useProjects();
-  const { messages, isLoading, getIsProcessing, sendMessage, stopGeneration, updateChatMeta, setSelectedChatId, createChat, deleteChat, renameChat, chats, selectedChatId } = useChats();
+  const { messages, isLoading, getIsProcessing, sendMessage, stopGeneration, setSelectedChatId, createChat, deleteChat, renameChat, chats, selectedChatId } = useChats();
   const { sidebarOpen, isMobile } = useUI();
   const { on: onEvent } = useEventBus();
   const {
@@ -106,8 +104,6 @@ function App() {
   }, [nav.chatId, setSelectedChatId]);
 
   const selectedChat = chats.find((c) => c.id === selectedChatId);
-  const activeAgentId = selectedChat?.activeAgentId || "builtin:default";
-  const activeModel = selectedChat?.activeModel ?? settings.defaultModel;
   const settingsProject = projectSettingsId ? getProjectById(projectSettingsId) : undefined;
 
   const handleNewProject = useCallback(async () => {
@@ -203,25 +199,6 @@ function App() {
     isProcessing: selectedChatId ? getIsProcessing(selectedChatId) : false,
     onSend: sendMessage,
     onStop: stopGeneration,
-    activeModel,
-    onModelChange: async (modelId: string) => {
-      if (!selectedChatId || !activeProjectId) return;
-      if (modelId !== settings.defaultModel) {
-        await updateChatMeta(activeProjectId, selectedChatId, { activeModel: modelId });
-      } else {
-        await updateChatMeta(activeProjectId, selectedChatId, { activeModel: undefined });
-      }
-    },
-    activeAgentId,
-    onAgentChange: async (agentId: string) => {
-      if (!selectedChatId || !activeProjectId) return;
-      if (agentId !== "builtin:default") {
-        await updateChatMeta(activeProjectId, selectedChatId, { activeAgentId: agentId });
-      } else {
-        await updateChatMeta(activeProjectId, selectedChatId, { activeAgentId: undefined });
-      }
-    },
-    chatName: selectedChat?.name,
     onFileSelect: (uniqueName: string) => {
       setSelectedTempFile(uniqueName);
     },

@@ -2,20 +2,18 @@ import { useState, useRef, useEffect } from "react";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import { Agent } from "../types/chat";
 import styles from "../components/AgentPicker.module.css";
+import { useChats } from "../contexts";
 
 interface AgentPickerProps {
   agents: Agent[];
-  activeAgentId: string;
-  onAgentChange: (agentId: string) => void;
 }
 
 export default function AgentPicker({
   agents,
-  activeAgentId,
-  onAgentChange,
 }: AgentPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { activeAgentId, onAgentChange } =  useChats();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

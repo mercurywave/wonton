@@ -26,11 +26,6 @@ interface ChatPanelProps {
   isProcessing: boolean;
   onSend: (content: string, modelId: string) => Promise<void>;
   onStop: () => void;
-  activeModel: string;
-  onModelChange: (modelId: string) => void;
-  activeAgentId: string;
-  onAgentChange: (agentId: string) => void;
-  chatName?: string;
   onFileSelect?: (uniqueName: string) => void;
   tempFileOptions?: Array<{ baseName: string; uniqueName: string }>;
   activeTempFileUniqueName?: string | null;
@@ -258,11 +253,6 @@ export default function ChatPanel({
   isProcessing,
   onSend,
   onStop,
-  activeModel,
-  onModelChange,
-  activeAgentId,
-  onAgentChange,
-  chatName,
   onFileSelect,
   activeTempFileUniqueName: activeFileUniqueName
 }: ChatPanelProps) {
@@ -273,6 +263,8 @@ export default function ChatPanel({
   const { 
     chats,
     selectedChatId,
+    activeAgentId,
+    activeModel,
     onActionButtonClick,
     executeCommand: runCommand,
     setSelectedChatWorkflowId 
@@ -365,6 +357,7 @@ export default function ChatPanel({
   const resolvedWorkflow = flows.find((f) => f.id === currentChat?.workflowId);
   const resolvedStateMessage = resolvedWorkflow?.states?.[currentChat?.workflowStateKey ?? ""]?.message;
   const resolvedActionButtons = resolvedWorkflow?.states?.[currentChat?.workflowStateKey ?? ""]?.actionButtons;
+  const chatName = currentChat?.name;
 
   // Build log options: main log + subagents + version history + queries
   const logOptions = useMemo(() => {
@@ -744,14 +737,10 @@ export default function ChatPanel({
           <div className={styles.footerSelectors}>
             <ModelPicker
               models={visibleModels}
-              activeModel={activeModel}
-              onModelChange={onModelChange}
               modelAliases={settings.modelAliases}
             />
             <AgentPicker
               agents={mainAgents}
-              activeAgentId={activeAgentId}
-              onAgentChange={onAgentChange}
             />
           </div>
           <div className={styles.footerRight}>

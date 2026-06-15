@@ -3,22 +3,20 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { ServerModel } from "../types/chat";
 import { getDisplayName } from "../utils/modelUtils";
 import styles from "../components/ModelPicker.module.css";
+import { useChats } from "../contexts";
 
 interface ModelPickerProps {
   models: ServerModel[];
-  activeModel: string;
-  onModelChange: (modelId: string) => void;
   modelAliases: Record<string, string>;
 }
 
 export default function ModelPicker({
   models,
-  activeModel,
-  onModelChange,
   modelAliases,
 }: ModelPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const { activeModel, onModelChange } =  useChats();
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
