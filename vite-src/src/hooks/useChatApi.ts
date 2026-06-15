@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { ChatMessage, LLMStats, ProjectMeta, ToolCall, Agent } from "../types/chat";
+import { ChatMessage, LLMStats, ProjectMeta, ToolCall, Agent, ReasoningEffort } from "../types/chat";
 import { ChatSettings } from "./useChatSettings";
 import { runQuery } from "./useLLMQuery";
 import { buildApiMessages, makeApiCall, mergeStats, parseSSEChunk } from "../utils/llmApi";
@@ -30,6 +30,7 @@ interface ToolCallLoopOptions {
   agentId?: string;
   agent?: Agent;
   allAgents?: Agent[];
+  reasoningEffort?: ReasoningEffort;
   onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string, reasoningContent?: string) => void;
   onChatUpdated?: () => void;
   onValidate?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>;
@@ -57,6 +58,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     agentId,
     agent,
     allAgents,
+    reasoningEffort,
     onUpdateMessage,
     onChatUpdated,
     onValidate,
@@ -88,7 +90,8 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
       model,
       tools,
       signal,
-      isSubagent
+      isSubagent,
+      reasoningEffort
     );
 
     const assistantId = crypto.randomUUID();
@@ -323,6 +326,7 @@ export function useChatApi(
   agentId?: string,
   allAgents?: Agent[],
   onValidate?: (projectId: string, chatId: string, logId: string, payload: import("../contexts").FeedbackPayload) => Promise<number | void>,
+  reasoningEffort?: ReasoningEffort,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -471,6 +475,7 @@ export function useChatApi(
           agentId: resolvedAgentId,
           agent,
           allAgents,
+          reasoningEffort,
           onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId, messageReasoningContent) => {
             if (logId) {
               const pending = chatLogsStore.getPendingMessage(projectId!, logId);

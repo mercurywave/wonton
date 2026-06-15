@@ -1,4 +1,4 @@
-import { ChatMessage, LLMStats, ToolDefinition } from "../types/chat";
+import { ChatMessage, LLMStats, ReasoningEffort, ToolDefinition } from "../types/chat";
 import { ChatSettings } from "../hooks/useChatSettings";
 
 interface SSEDelta {
@@ -179,7 +179,11 @@ interface ApiRequestBody {
   stream: boolean;
   tools?: ToolDefinition[];
   tool_choice?: string;
-  chat_template_kwargs?: { };
+  chat_template_kwargs?: {
+    enable_thinking?: boolean
+  };
+  reasoning_effort?: string;
+  thinking_budget_tokens?: number;
 }
 
 export async function makeApiCall(
@@ -188,7 +192,8 @@ export async function makeApiCall(
   model: string,
   tools?: ToolDefinition[],
   signal?: AbortSignal,
-  isSubagent?: boolean
+  isSubagent?: boolean,
+  reasoningEffort?: ReasoningEffort
 ): Promise<{ body: ApiRequestBody; stream: ReadableStreamDefaultReader<Uint8Array> }> {
   const baseUrl = settings.serverUrl.replace(/\/+$/, "");
   const apiUrl = `${baseUrl}/v1/chat/completions`;
@@ -211,9 +216,18 @@ export async function makeApiCall(
     body.tool_choice = "auto";
   }
 
-  if (isSubagent) {
-    body.chat_template_kwargs = { };
-  }
+  reasoningEffort ??= isSubagent ? 'medium' : 'none';
+  body.reasoning_effort = reasoningEffort;
+  body.thinking_budget_tokens = {
+    none: 0,
+    low: 128,
+    medium: 512,
+    high: 1024,
+  }[reasoningEffort];
+  
+  body.chat_template_kwargs = { 
+    enable_thinking: reasoningEffort !== 'none',
+  };
 
   const response = await fetch(apiUrl, {
     method: "POST",

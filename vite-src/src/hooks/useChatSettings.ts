@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { ReasoningEffort } from "../types/chat";
 
 const STORAGE_KEY = "wonton_settings";
 
@@ -12,6 +13,7 @@ export interface ChatSettings {
   contextWindows: Record<string, number>;
   modelAliases: Record<string, string>;
   lastProjectId: string;
+  reasoningEffort: ReasoningEffort;
 }
 
 const DEFAULT_SETTINGS: ChatSettings = {
@@ -24,6 +26,7 @@ const DEFAULT_SETTINGS: ChatSettings = {
   contextWindows: {},
   modelAliases: {},
   lastProjectId: "default",
+  reasoningEffort: "none",
 };
 
 export function loadSettings(): ChatSettings {

@@ -64,6 +64,28 @@
   color: #555;
 }
 
+.select {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  color: #e0e0e0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.select:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.select option {
+  background: #16162a;
+  color: #e0e0e0;
+}
+
 .textarea {
   background: #16162a;
   border: 1px solid #2a2a4a;

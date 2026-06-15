@@ -19,7 +19,7 @@ import { useAgentsContext } from "./AgentsContext";
 import { useFlowsContext } from "./FlowsContext";
 import { FeedbackPayload, useFeedback } from "./FeedbackContext";
 import { isBackendConnected } from "../utils/platformUtils";
-import { ChatMessage, ChatMeta, FlowActionButton } from "../types/chat";
+import { ChatMessage, ChatMeta, FlowActionButton, ReasoningEffort } from "../types/chat";
 import { chatLogsStore } from "../store/chatLogs";
 
 interface ChatsContextValue {
@@ -49,6 +49,8 @@ interface ChatsContextValue {
   activeModel: string;
   onAgentChange: (agentId: string) => Promise<void>;
   onModelChange: (modelId: string) => Promise<void>;
+  activeReasoningEffort: ReasoningEffort;
+  onReasoningEffortChange: (effort: ReasoningEffort) => Promise<void>;
 }
 
 const ChatsContext = createContext<ChatsContextValue | null>(null);
@@ -142,6 +144,25 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     [selectedChatId, activeProjectId, settings.defaultModel]
   );
 
+  // Resolve the effective active reasoning effort (chat override or settings default)
+  const activeReasoningEffort = useMemo(() => {
+    if (!selectedChatMeta) return settings.reasoningEffort;
+    return selectedChatMeta.reasoningEffort ?? settings.reasoningEffort;
+  }, [selectedChatMeta, settings.reasoningEffort]);
+
+  // Callback to change the active reasoning effort for the selected chat
+  const onReasoningEffortChange = useCallback(
+    async (effort: ReasoningEffort) => {
+      if (!selectedChatId || !activeProjectId) return;
+      if (effort !== settings.reasoningEffort) {
+        await projectChatsUpdateChatMeta(selectedChatId, { reasoningEffort: effort });
+      } else {
+        await projectChatsUpdateChatMeta(selectedChatId, { reasoningEffort: undefined });
+      }
+    },
+    [selectedChatId, activeProjectId, settings.reasoningEffort]
+  );
+
   // Active logId: navLogId if set (explicit log selection), otherwise fall back to chat's main log
   const activeLogId = useMemo(() => {
     if (navLogId) return navLogId;
@@ -186,6 +207,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     selectedChatMeta?.activeAgentId,
     allAgents,
     wrappedShowFeedback,
+    activeReasoningEffort,
   );
 
   // Workflow execution for the selected chat
@@ -312,8 +334,10 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       activeModel,
       onAgentChange,
       onModelChange,
+      activeReasoningEffort,
+      onReasoningEffortChange,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

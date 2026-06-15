@@ -102,6 +102,21 @@ export default function Settings() {
             />
           </div>
 
+          <div className={styles.field}>
+            <label htmlFor="reasoningEffort">Default Reasoning Effort</label>
+            <select
+              id="reasoningEffort"
+              className={styles.select}
+              value={settings.reasoningEffort}
+              onChange={(e) => onUpdate({ reasoningEffort: e.target.value as "none" | "low" | "medium" | "high" })}
+            >
+              <option value="none">None</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+
           <div className={styles.modelsSection}>
             <label>Models</label>
 

@@ -90,6 +90,7 @@ export interface ChatMeta {
   updatedAt: number;
   activeModel?: string;
   activeAgentId?: string;
+  reasoningEffort?: ReasoningEffort;
   workflowId?: string;
   workflowStateKey?: string;
   workflowData?: Record<string, unknown>;
@@ -223,3 +224,5 @@ export interface ServerModel {
   created?: number;
   owned_by?: string;
 }
+
+export type ReasoningEffort = "none" | "low" | "medium" | "high";

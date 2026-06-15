@@ -11,6 +11,7 @@ import { chatStore } from "../store/chats";
 import { isBackendConnected } from "../utils/platformUtils";
 import ModelPicker from "./ModelPicker";
 import AgentPicker from "./AgentPicker";
+import ThinkingPicker from "./ThinkingPicker";
 import ContextRing from "./ContextRing";
 import LogSelector from "./LogSelector";
 import FileSelector from "./FileSelector";
@@ -742,6 +743,7 @@ export default function ChatPanel({
             <AgentPicker
               agents={mainAgents}
             />
+            <ThinkingPicker />
           </div>
           <div className={styles.footerRight}>
             <button
