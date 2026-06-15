@@ -43,6 +43,16 @@ function formatTokensPerSecond(completionTokens: number, timeMs: number): string
   return `${tps} tok/s`;
 }
 
+function formatDuration(ms: number): string {
+  const totalSeconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
+}
+
 function MessageStats({ stats, modelAliases }: { stats: LLMStats; modelAliases: Record<string, string> }) {
   const seconds = stats.timeMs / 1000;
   const displayTps = formatTokensPerSecond(stats.completionTokens, stats.timeMs);
@@ -60,6 +70,7 @@ function MessageStats({ stats, modelAliases }: { stats: LLMStats; modelAliases: 
 
   return (
     <div className={styles.bubbleStats}>
+      <span className={styles.duration}>{formatDuration(stats.timeMs)}</span>
       <span className={styles.tps}>{displayTps}</span>
       <span className={styles.model}>{getDisplayName(stats.model, modelAliases)}</span>
       {hasTimings && (
