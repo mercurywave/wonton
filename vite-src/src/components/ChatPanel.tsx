@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
-import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play } from "lucide-react";
+import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play, Brain } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
@@ -154,6 +154,7 @@ function MessageBubble({ message, modelAliases, toolResultMessages }: { message:
   const hasStats = message.role !== "user" && message.stats;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
   const hasAdjusted = isUser && message.originalContent && message.originalContent !== message.content;
+  const hasReasoning = message.role === "assistant" && message.reasoningContent && message.reasoningContent.trim();
 
   const [showAdjusted, setShowAdjusted] = useState(false);
 
@@ -206,6 +207,19 @@ function MessageBubble({ message, modelAliases, toolResultMessages }: { message:
 
   return (
     <div className={`${styles.message} ${isUser ? styles.user : styles.assistant}`}>
+      {hasReasoning && (
+        <div className={`${styles.message} ${styles.reasoningSection} ${styles.content}`}>
+          <details>
+            <summary>
+              <Brain size={12} />
+              Reasoning
+            </summary>
+            <div className={styles.reasoningContent}>
+              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.reasoningContent}</ReactMarkdown>
+            </div>
+          </details>
+        </div>
+      )}
       <div className={styles.bubbleWrapper}>
         <div className={`${styles.bubble} ${!showContent ? styles.noContent : ""}`}>
           {showContent && (

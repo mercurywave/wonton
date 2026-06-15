@@ -33,6 +33,7 @@ export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system" | "tool";
   content: string;
+  reasoningContent?: string;
   timestamp: number;
   stats?: LLMStats;
   toolCalls?: ToolCall[];

@@ -30,7 +30,7 @@ interface ToolCallLoopOptions {
   agentId?: string;
   agent?: Agent;
   allAgents?: Agent[];
-  onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string) => void;
+  onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string, reasoningContent?: string) => void;
   onChatUpdated?: () => void;
   onValidate?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>;
 }
@@ -93,6 +93,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
 
     const assistantId = crypto.randomUUID();
     const accumulated: string[] = [];
+    const accumulatedReasoning: string[] = [];
     let parsedStats: LLMStats | null = null;
     const toolCallsMap = new Map<number, { id: string; name: string; args: string }>();
 
@@ -116,11 +117,16 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
 
         if (result.text) {
           accumulated.push(result.text);
-          onUpdateMessage?.(assistantId, accumulated.join(""), Array.from(toolCallsMap.entries())
-            .filter(([, call]) => call.id && call.name)
-            .map(([, call]) => ({ id: call.id, name: call.name, arguments: call.args })),
-            "assistant");
         }
+        if (result.reasoningText) {
+          accumulatedReasoning.push(result.reasoningText);
+        }
+        onUpdateMessage?.(assistantId, accumulated.join(""), Array.from(toolCallsMap.entries())
+          .filter(([, call]) => call.id && call.name)
+          .map(([, call]) => ({ id: call.id, name: call.name, arguments: call.args })),
+          "assistant",
+          undefined,
+          accumulatedReasoning.join(""));
         parsedStats = mergeStats(parsedStats, result.stats);
 
         for (const call of result.toolCalls) {
@@ -142,6 +148,9 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
 
       if (result.text) {
         accumulated.push(result.text);
+      }
+      if (result.reasoningText) {
+        accumulatedReasoning.push(result.reasoningText);
       }
       parsedStats = mergeStats(parsedStats, result.stats);
 
@@ -170,6 +179,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
       id: assistantId,
       role: "assistant",
       content: accumulated.join(""),
+      reasoningContent: accumulatedReasoning.join("") || undefined,
       timestamp: Date.now(),
     };
 
@@ -461,13 +471,14 @@ export function useChatApi(
           agentId: resolvedAgentId,
           agent,
           allAgents,
-          onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId) => {
+          onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId, messageReasoningContent) => {
             if (logId) {
               const pending = chatLogsStore.getPendingMessage(projectId!, logId);
               const baseMsg = (pending?.id === messageId) ? pending : { id: messageId, timestamp: Date.now() };
               chatLogsStore.updatePendingMessage(projectId!, logId, {
                 ...baseMsg,
                 content: messageContent,
+                reasoningContent: messageReasoningContent,
                 toolCalls: messageToolCalls || [],
                 role: (messageRole || "assistant") as ChatMessage["role"],
                 toolCallId: messageToolCallId,

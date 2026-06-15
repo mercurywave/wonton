@@ -3,6 +3,7 @@ import { ChatSettings } from "../hooks/useChatSettings";
 
 interface SSEDelta {
   content?: string;
+  reasoning_content?: string;
   tool_calls?: Array<{
     index?: number;
     id?: string;
@@ -12,12 +13,14 @@ interface SSEDelta {
 
 interface SSEChunkResult {
   text: string;
+  reasoningText: string;
   stats: LLMStats | null;
   toolCalls: Array<{ index: number; id: string; name: string; args: string }>;
 }
 
 export function parseSSEChunk(chunk: string): SSEChunkResult {
   let text = "";
+  let reasoningText = "";
   let stats: LLMStats | null = null;
   const toolCallsMap = new Map<number, { id: string; name: string; args: string }>();
 
@@ -33,6 +36,10 @@ export function parseSSEChunk(chunk: string): SSEChunkResult {
 
         if (delta.content) {
           text += delta.content;
+        }
+
+        if (delta.reasoning_content) {
+          reasoningText += delta.reasoning_content;
         }
 
         const usageData = parsed.usage;
@@ -93,7 +100,7 @@ export function parseSSEChunk(chunk: string): SSEChunkResult {
   const toolCalls = Array.from(toolCallsMap.entries())
     .map(([index, call]) => ({ index, ...call }));
 
-  return { text, stats, toolCalls };
+  return { text, reasoningText, stats, toolCalls };
 }
 
 export function mergeStats(existing: LLMStats | null, incoming: LLMStats | null): LLMStats | null {

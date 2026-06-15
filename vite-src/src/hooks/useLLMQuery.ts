@@ -66,6 +66,7 @@ export async function runQuery(
 
   const assistantId = crypto.randomUUID();
   const accumulated: string[] = [];
+  const accumulatedReasoning: string[] = [];
   let parsedStats: LLMStats | null = null;
   const toolCallsMap = new Map<number, { id: string; name: string; args: string }>();
 
@@ -87,6 +88,9 @@ export async function runQuery(
       if (result.text) {
         accumulated.push(result.text);
       }
+      if (result.reasoningText) {
+        accumulatedReasoning.push(result.reasoningText);
+      }
       parsedStats = mergeStats(parsedStats, result.stats);
 
       for (const call of result.toolCalls) {
@@ -107,6 +111,9 @@ export async function runQuery(
 
     if (result.text) {
       accumulated.push(result.text);
+    }
+    if (result.reasoningText) {
+      accumulatedReasoning.push(result.reasoningText);
     }
     parsedStats = mergeStats(parsedStats, result.stats);
 
@@ -134,6 +141,7 @@ export async function runQuery(
     id: assistantId,
     role: "assistant",
     content: accumulated.join(""),
+    reasoningContent: accumulatedReasoning.join("") || undefined,
     timestamp: Date.now(),
   };
 
