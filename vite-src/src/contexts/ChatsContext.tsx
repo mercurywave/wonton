@@ -21,6 +21,7 @@ import { FeedbackPayload, useFeedback } from "./FeedbackContext";
 import { isBackendConnected } from "../utils/platformUtils";
 import { ChatMessage, ChatMeta, FlowActionButton, ReasoningEffort } from "../types/chat";
 import { chatLogsStore } from "../store/chatLogs";
+import { chatStore } from "../store/chats";
 
 interface ChatsContextValue {
   chats: ChatMeta[];
@@ -43,6 +44,7 @@ interface ChatsContextValue {
   executeAdjustPrompt: (content: string) => Promise<string>;
   onActionButtonClick: (button: FlowActionButton, logId?: string) => Promise<void>;
   executeCommand: (flowId: string) => Promise<void>;
+  onUserMessageAction: (params: { chatId: string; messageId: string; action: 'copy' | 'rollback' }) => Promise<void>;
   selectedChatId: string | null;
   setSelectedChatId: (id: string | null) => void;
   activeAgentId: string;
@@ -299,6 +301,49 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     return chatLogsStore.getPendingMessage(activeProjectId, chat.logId) !== undefined;
   }, [activeProjectId, chats]);
 
+  const onUserMessageAction = useCallback(async (params: { chatId: string; messageId: string; action: 'copy' | 'rollback' }) => {
+    const { chatId: actionChatId, messageId, action } = params;
+
+    if (action === 'copy') {
+      const chat = chats.find((c) => c.id === actionChatId);
+      if (!chat?.logId || !activeProjectId) return;
+      const messages = chatLogsStore.getLog(activeProjectId, chat.logId);
+      const msg = messages?.find(m => m.id === messageId);
+      if (msg) {
+        await navigator.clipboard.writeText(msg.content);
+      }
+      return;
+    }
+
+    if (action === 'rollback') {
+      if (!activeProjectId) return;
+      const chat = chats.find((c) => c.id === actionChatId);
+      if (!chat?.logId) return;
+
+      const messages = chatLogsStore.getLog(activeProjectId, chat.logId);
+      if (!messages) return;
+
+      const msgIndex = messages.findIndex(m => m.id === messageId);
+      if (msgIndex === -1) return;
+
+      const rollbackMessage = messages[msgIndex];
+      if (rollbackMessage.role !== 'user') return;
+
+      // Truncate messages to before the selected message
+      const truncatedMessages = messages.slice(0, msgIndex);
+
+      // Create new version log
+      const newLogId = await chatStore.createNewVersionLog(activeProjectId, actionChatId);
+      if (!newLogId) return;
+
+      // Write truncated messages to the new log
+      await chatLogsStore.replaceLog(activeProjectId, newLogId, truncatedMessages);
+
+      // Set draft to the rollback message content for editing
+      await projectChatsUpdateChatMeta(actionChatId, { draft: rollbackMessage.content });
+    }
+  }, [chats, activeProjectId, projectChatsUpdateChatMeta]);
+
   // Fire onEnter for the initial state when a workflow is linked
   useEffect(() => {
     if (selectedChatForWorkflow?.workflowId && selectedChatForWorkflow?.workflowStateKey) {
@@ -328,6 +373,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       executeAdjustPrompt: workflowExecuteAdjustPrompt,
       onActionButtonClick: workflowOnActionButtonClick,
       executeCommand: wrappedExecuteCommand,
+      onUserMessageAction,
       selectedChatId,
       setSelectedChatId,
       activeAgentId,
@@ -337,7 +383,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       activeReasoningEffort,
       onReasoningEffortChange,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

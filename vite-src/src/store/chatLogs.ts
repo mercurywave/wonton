@@ -64,6 +64,17 @@ async function _deleteLog(projectId: string, logId: string): Promise<void> {
   }
 }
 
+async function _replaceLog(projectId: string, logId: string, messages: ChatMessage[]): Promise<void> {
+  if (!isBackendConnected()) return;
+
+  const projectDir = await getProjectDataDir(projectId);
+  const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
+  const jsonlPath = `${msgsDir}/${logId}.jsonl`;
+
+  const content = messages.map(m => JSON.stringify(m)).join("\n") + (messages.length > 0 ? "\n" : "");
+  await filesystem.writeFile(jsonlPath, content);
+}
+
 // --- store ---
 
 type Listener = () => void;
@@ -81,6 +92,7 @@ interface ChatLogsStore {
   createLog(projectId: string): Promise<string>;
   reserveLog(projectId: string, logId: string): Promise<void>;
   deleteLog(projectId: string, logId: string): Promise<void>;
+  replaceLog(projectId: string, logId: string, messages: ChatMessage[]): Promise<void>;
   subscribe(projectId: string, logId: string, listener: Listener): () => void;
   setPendingMessage(projectId: string, logId: string, message: ChatMessage): void;
   updatePendingMessage(projectId: string, logId: string, message: ChatMessage): void;
@@ -200,6 +212,20 @@ const chatLogsStore: ChatLogsStore = {
       state.set(projectId, { logs, pendingMessages, isLoaded: true });
     }
     listeners.get(projectId)?.delete(logId);
+  },
+
+  async replaceLog(projectId: string, logId: string, messages: ChatMessage[]) {
+    await _replaceLog(projectId, logId, messages);
+
+    const projectState = state.get(projectId);
+    if (projectState) {
+      const logs = new Map(projectState.logs);
+      const pendingMessages = new Map(projectState.pendingMessages);
+      pendingMessages.delete(logId);
+      logs.set(logId, messages);
+      state.set(projectId, { logs, pendingMessages, isLoaded: true });
+      dispatch(projectId, logId);
+    }
   },
 
   subscribe(projectId: string, logId: string, listener: Listener) {

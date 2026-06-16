@@ -267,6 +267,8 @@
 
 .message.user {
   justify-content: flex-end;
+  flex-direction: column;
+  align-items: flex-end;
 }
 
 .message.assistant {
@@ -291,6 +293,44 @@
 
 .bubble:hover .bubbleStats {
   opacity: 1;
+}
+
+.messageUserActions {
+  display: flex;
+  gap: 4px;
+  justify-content: flex-end;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  user-select: none;
+  margin-top: 2px;
+}
+
+.message.user:hover .messageUserActions {
+  opacity: 1;
+}
+
+.message.user .messageUserActions {
+  max-width: 70%;
+  margin-left: auto;
+}
+
+.userActionButton {
+  background: rgba(74, 108, 247, 0.15);
+  border: 1px solid transparent;
+  border-radius: 4px;
+  padding: 3px 5px;
+  cursor: pointer;
+  color: #6880d0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.userActionButton:hover {
+  background: rgba(74, 108, 247, 0.35);
+  border-color: #4a6cf7;
+  color: #a0b4f7;
 }
 
 .bubbleStats:hover .bubbleStatsTooltip {

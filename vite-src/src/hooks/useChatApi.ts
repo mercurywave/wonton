@@ -424,7 +424,7 @@ export function useChatApi(
         originalContent: originalContent || undefined,
       };
 
-      if(projectId && chatId) await chatStore.setChatDraft(projectId, chatId, "", true);
+      if(projectId && chatId) await chatStore.setChatDraft(projectId, chatId, "");
 
       setIsLoading(true);
 

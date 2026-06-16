@@ -1,5 +1,5 @@
 import { useRef, useEffect, useCallback, useMemo, useState } from "react";
-import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play, Brain } from "lucide-react";
+import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play, Brain, Copy, Undo2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
@@ -156,7 +156,7 @@ function WorkflowSelector({ workflows, onSelect, selectedWorkflowId }: { workflo
   );
 }
 
-function MessageBubble({ message, modelAliases, toolResultMessages }: { message: ChatMessageType; modelAliases: Record<string, string>; toolResultMessages?: ChatMessageType[] }) {
+function MessageBubble({ message, modelAliases, toolResultMessages, chatId, onUserMessageAction }: { message: ChatMessageType; modelAliases: Record<string, string>; toolResultMessages?: ChatMessageType[]; chatId?: string; onUserMessageAction?: (params: { chatId: string; messageId: string; action: 'copy' | 'rollback' }) => Promise<void> }) {
   const isUser = message.role === "user";
   const hasStats = message.role !== "user" && message.stats;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
@@ -201,6 +201,24 @@ function MessageBubble({ message, modelAliases, toolResultMessages }: { message:
             {hasStats && <MessageStats stats={message.stats!} modelAliases={modelAliases} />}
           </div>
         </div>
+        {isUser && chatId && onUserMessageAction && (
+          <div className={styles.messageUserActions}>
+            <button
+              className={styles.userActionButton}
+              onClick={() => onUserMessageAction({ chatId, messageId: message.id, action: 'copy' })}
+              title="Copy message"
+            >
+              <Copy size={12} />
+            </button>
+            <button
+              className={styles.userActionButton}
+              onClick={() => onUserMessageAction({ chatId, messageId: message.id, action: 'rollback' })}
+              title="Roll back to here"
+            >
+              <Undo2 size={12} />
+            </button>
+          </div>
+        )}
         {hasToolCalls && (
           <div className={styles.toolCallContainer}>
             {message.toolCalls!.map((tc) => (
@@ -237,6 +255,24 @@ function MessageBubble({ message, modelAliases, toolResultMessages }: { message:
           {hasStats && <MessageStats stats={message.stats!} modelAliases={modelAliases} />}
         </div>
       </div>
+      {isUser && chatId && onUserMessageAction && (
+        <div className={styles.messageUserActions}>
+          <button
+            className={styles.userActionButton}
+            onClick={() => onUserMessageAction({ chatId, messageId: message.id, action: 'copy' })}
+            title="Copy message"
+          >
+            <Copy size={12} />
+          </button>
+          <button
+            className={styles.userActionButton}
+            onClick={() => onUserMessageAction({ chatId, messageId: message.id, action: 'rollback' })}
+            title="Roll back to here"
+          >
+            <Undo2 size={12} />
+          </button>
+        </div>
+      )}
       {hasToolCalls && (
         <div className={styles.toolCallContainer}>
           {message.toolCalls!.map((tc) => (
@@ -268,7 +304,8 @@ export default function ChatPanel({
     activeModel,
     onActionButtonClick,
     executeCommand: runCommand,
-    setSelectedChatWorkflowId 
+    setSelectedChatWorkflowId,
+    onUserMessageAction,
   } = useChats();
 
   // Chat draft state (migrated from useChatDraft hook)
@@ -637,7 +674,7 @@ export default function ChatPanel({
                   }
                   elements.push(
                     <div key={msg.id}>
-                      <MessageBubble message={msg} modelAliases={settings.modelAliases} toolResultMessages={toolResultMessages} />
+                      <MessageBubble message={msg} modelAliases={settings.modelAliases} toolResultMessages={toolResultMessages} chatId={selectedChatId ?? undefined} onUserMessageAction={onUserMessageAction} />
                     </div>
                   );
                   continue;
@@ -645,7 +682,7 @@ export default function ChatPanel({
 
                 elements.push(
                   <div key={msg.id}>
-                    <MessageBubble message={msg} modelAliases={settings.modelAliases} />
+                    <MessageBubble message={msg} modelAliases={settings.modelAliases} chatId={selectedChatId ?? undefined} onUserMessageAction={onUserMessageAction} />
                   </div>
                 );
               }
