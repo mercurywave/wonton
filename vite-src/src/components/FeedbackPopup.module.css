@@ -13,7 +13,7 @@
   border-radius: 12px 12px 0 0;
   box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.4);
   max-width: 700px;
-  width: 100%;
+  width: calc(100% - 60px);
   margin: 0 20px;
   z-index: 501;
   pointer-events: auto;
