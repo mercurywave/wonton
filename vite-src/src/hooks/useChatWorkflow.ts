@@ -233,26 +233,29 @@ export function buildWon(
       return { stdout: result.stdout, stderr: result.stderr, code: result.status };
     },
     async alert(message: string) {
-      if (!showFeedback || !logId) {
+      if (!showFeedback) {
         console.warn("alert() called but feedback not available");
         return;
       }
-      await showFeedback(projectId, chatId, logId, { type: "alert", message });
+      const logIdToUse = logId ?? chatStore.getLogId(projectId, chatId);
+      await showFeedback(projectId, chatId, logIdToUse, { type: "alert", message });
     },
     async select(question: string, choices: string[]) {
-      if (!showFeedback || !logId) {
+      if (!showFeedback) {
         console.warn("select() called but feedback not available");
         return -1;
       }
-      const result = await showFeedback(projectId, chatId, logId, { type: "select", question, choices });
+      const logIdToUse = logId ?? chatStore.getLogId(projectId, chatId);
+      const result = await showFeedback(projectId, chatId, logIdToUse, { type: "select", question, choices });
       return typeof result === "number" ? result : -1;
     },
     async prompt(question: string, options) {
-      if (!showFeedback || !logId) {
+      if (!showFeedback) {
         console.warn("prompt() called but feedback not available");
         return undefined;
       }
-      const result = await showFeedback(projectId, chatId, logId, { type: "text", question, placeholder: options?.placeholder });
+      const logIdToUse = logId ?? chatStore.getLogId(projectId, chatId);
+      const result = await showFeedback(projectId, chatId, logIdToUse, { type: "text", question, placeholder: options?.placeholder });
       return typeof result === "string" ? result : undefined;
     },
   };
