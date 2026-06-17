@@ -18,7 +18,7 @@ interface UseChatWorkflowOptions {
   flows: Flow[];
   chatId?: string;
   projectId?: string;
-  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>;
+  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
 }
 
 interface UseChatWorkflowReturn {
@@ -39,7 +39,7 @@ export function buildWon(
   chatId: string,
   logId: string | undefined,
   emit?: (event: string, payload?: unknown) => void,
-  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>,
+  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>,
 ): Won {
   async function reserveTempFile(baseName?: string): Promise<string> {
     const name = baseName ?? "temp.txt";
@@ -256,7 +256,7 @@ export async function executeCommand(
   chatId: string | undefined,
   projectId?: string,
   emit?: (event: string, payload?: unknown) => void,
-  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>,
+  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>,
 ): Promise<void> {
   if (!chatId || !projectId) return;
   const won = buildWon(projectId, chatId, undefined, emit, showFeedback);

@@ -19,7 +19,7 @@ export interface ApprovalRequest {
   chatId: string;
   logId: string;
   payload: FeedbackPayload;
-  resolve: (choice: number | void) => void;
+  resolve: (choice: number | string | void) => void;
   reject: (reason: unknown) => void;
 }
 
@@ -409,7 +409,7 @@ function queueApproval(projectId: string, request: ApprovalRequest): void {
   dispatchApprovalListeners(projectId);
 }
 
-function dequeueApproval(projectId: string, chatId: string, choice: number | void): void {
+function dequeueApproval(projectId: string, chatId: string, choice: number | string | void): void {
   const projectQueue = approvalQueues.get(projectId);
   if (!projectQueue) return;
   const chatQueue = projectQueue[chatId];

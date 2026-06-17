@@ -87,13 +87,37 @@ export class ExecCommandHandler implements ToolHandler {
           {
             type: "select",
             question: `The agent wants to run:\n\`\`\`\n${command}\n\`\`\`\n\nAllow this command to run?`,
-            choices: ["Allow", "Deny"],
+            choices: ["Allow", "Deny", "Reject with Instructions"],
           } as FeedbackPayload
         );
-        if (typeof choice === "number" && choice !== 0) {
-          result.content = "Command denied by user";
-          result.isError = true;
-          return result;
+        if (typeof choice === "number") {
+          if (choice === 0) {
+            // Allow - proceed with command
+          } else if (choice === 1) {
+            // Deny without instructions
+            result.content = "Command denied by user";
+            result.isError = true;
+            return result;
+          } else if (choice === 2) {
+            // Reject with instructions
+            const instructions = await showFeedback(
+              projectId,
+              chatId,
+              logId,
+              {
+                type: "text",
+                question: "Please provide instructions for rejecting this command:",
+                placeholder: "e.g., Use a different approach, modify the command, etc.",
+              } as FeedbackPayload
+            );
+            if (typeof instructions === "string" && instructions.trim()) {
+              result.content = `Command denied by user: ${instructions}`;
+            } else {
+              result.content = "Command denied by user";
+            }
+            result.isError = true;
+            return result;
+          }
         }
       } catch {
         result.content = "Command execution interrupted: another approval is pending";

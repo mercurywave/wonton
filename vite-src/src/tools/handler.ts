@@ -10,7 +10,7 @@ export interface ToolContext {
   settings?: ChatSettings;
   onChatUpdated?: () => void;
   folderOverride?: string;
-  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>;
+  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
 }
 
 export interface ToolDefinition {

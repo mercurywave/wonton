@@ -13,7 +13,7 @@ import {
   ApprovalRequest,
 } from "../store/chats";
 
-export type FeedbackType = "alert" | "select";
+export type FeedbackType = "alert" | "select" | "text";
 
 export interface AlertPayload {
   type: "alert";
@@ -26,10 +26,16 @@ export interface SelectPayload {
   choices: string[];
 }
 
-export type FeedbackPayload = AlertPayload | SelectPayload;
+export interface TextPayload {
+  type: "text";
+  question: string;
+  placeholder?: string;
+}
+
+export type FeedbackPayload = AlertPayload | SelectPayload | TextPayload;
 
 interface ExtensionFeedbackValue {
-  showFeedback: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>;
+  showFeedback: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
   currentRequest: ApprovalRequest | null;
   currentPayload: FeedbackPayload | null;
   dismiss: () => void;
@@ -43,9 +49,9 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [projectId, setProjectId] = useState<string | null>(null);
 
   const showFeedback = useCallback(
-    (projectId: string, chatId: string, logId: string, payload: FeedbackPayload): Promise<number | void> => {
+    (projectId: string, chatId: string, logId: string, payload: FeedbackPayload): Promise<number | string | void> => {
       setProjectId(projectId);
-      return new Promise<number | void>((resolve, reject) => {
+      return new Promise<number | string | void>((resolve, reject) => {
         const requestId = crypto.randomUUID();
         const request: ApprovalRequest = {
           requestId,
