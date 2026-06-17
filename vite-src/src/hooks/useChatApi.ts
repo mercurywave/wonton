@@ -33,7 +33,7 @@ interface ToolCallLoopOptions {
   reasoningEffort?: ReasoningEffort;
   onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string, reasoningContent?: string) => void;
   onChatUpdated?: () => void;
-  onValidate?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | void>;
+  onValidate?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
 }
 
 interface ToolCallLoopResult {
@@ -325,7 +325,7 @@ export function useChatApi(
   onChatResponse?: (response: ChatMessage) => Promise<void>,
   agentId?: string,
   allAgents?: Agent[],
-  onValidate?: (projectId: string, chatId: string, logId: string, payload: import("../contexts").FeedbackPayload) => Promise<number | void>,
+  onValidate?: (projectId: string, chatId: string, logId: string, payload: import("../contexts").FeedbackPayload) => Promise<number | string | void>,
   reasoningEffort?: ReasoningEffort,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
