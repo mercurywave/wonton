@@ -247,6 +247,14 @@ export function buildWon(
       const result = await showFeedback(projectId, chatId, logId, { type: "select", question, choices });
       return typeof result === "number" ? result : -1;
     },
+    async prompt(question: string, options) {
+      if (!showFeedback || !logId) {
+        console.warn("prompt() called but feedback not available");
+        return undefined;
+      }
+      const result = await showFeedback(projectId, chatId, logId, { type: "text", question, placeholder: options?.placeholder });
+      return typeof result === "string" ? result : undefined;
+    },
   };
 }
 

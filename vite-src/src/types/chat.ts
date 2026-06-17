@@ -178,6 +178,7 @@ export interface Won {
   setChatDraft(draft: string): Promise<void>;
   alert(message: string): Promise<void>;
   select(question: string, choices: string[]): Promise<number>;
+  prompt(question: string, options?: { placeholder?: string }): Promise<string | undefined>;
 }
 
 export interface StatsEntry {
