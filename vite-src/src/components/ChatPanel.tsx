@@ -308,6 +308,8 @@ export default function ChatPanel({
     onUserMessageAction,
   } = useChats();
 
+  const [extensionStatus, setExtensionStatus] = useState<string | null>(null);
+
   // Chat draft state (migrated from useChatDraft hook)
   const [draft, setDraft] = useState("");
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -546,6 +548,13 @@ export default function ChatPanel({
   }, [draft, onEvent, setDraft]);
 
   useEffect(() => {
+    const handleExtensionStatus = (payload: unknown) => {
+      setExtensionStatus(payload as string ?? null);
+    };
+    return onEvent("setExtensionStatus", handleExtensionStatus);
+  }, [onEvent]);
+
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
         setShowCommandsPopup(false);
@@ -701,6 +710,22 @@ export default function ChatPanel({
        </div>
 
        <FeedbackPopup />
+
+       {extensionStatus && (
+         <div className={styles.extensionStatusBar}>
+           <div className={styles.extensionStatusInner}>
+             <span className={styles.extensionStatusText}>{extensionStatus}</span>
+             <button
+               className={styles.workflowStateMessageRemove}
+               onClick={() => setExtensionStatus(null)}
+               type="button"
+               title="Dismiss status"
+             >
+               <X size={14} />
+             </button>
+           </div>
+         </div>
+       )}
 
        {resolvedStateMessage && (
         <div className={styles.workflowStateMessageBar}>

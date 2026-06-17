@@ -258,6 +258,9 @@ export function buildWon(
       const result = await showFeedback(projectId, chatId, logIdToUse, { type: "text", question, placeholder: options?.placeholder });
       return typeof result === "string" ? result : undefined;
     },
+    setStatus: (message?: string) => {
+      emit?.("setExtensionStatus", message);
+    },
   };
 }
 

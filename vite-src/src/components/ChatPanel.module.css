@@ -157,6 +157,35 @@
   margin: 0;
 }
 
+.extensionStatusBar {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+}
+
+.extensionStatusInner {
+  background: #9898a8;
+  border: 1px solid #111;
+  border-bottom: none;
+  max-width: 720px;
+  width: 100%;
+  padding: 10px 10px;
+  margin: 0 40px;
+  font-size: 13px;
+  color: #111;
+  line-height: 1.5;
+  white-space: normal;
+  overflow-wrap: break-word;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.extensionStatusText {
+  flex: 1;
+}
+
 .workflowStateMessageBar {
   flex-shrink: 0;
   display: flex;
