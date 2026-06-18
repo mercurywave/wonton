@@ -11,7 +11,6 @@ import {
 import { useProjectChats } from "../hooks/useProjectChats";
 import { useChatApi } from "../hooks/useChatApi";
 import { useChatWorkflow, executeCommand as runExecuteCommand } from "../hooks/useChatWorkflow";
-import { useEventBus } from "./EventBusContext";
 import { useSettings } from "./SettingsContext";
 import { useProjects } from "./ProjectsContext";
 import { useNav } from "./NavContext";
@@ -65,7 +64,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const { allAgents } = useAgentsContext();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const { flows } = useFlowsContext();
-  const { emit: emitEvent } = useEventBus();
+ 
   const { showFeedback: showFeedbackBase } = useFeedback();
   const { showNotification } = useNotificationsContext();
 
@@ -309,9 +308,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       const flow = flows.find((f) => f.id === flowId);
       if (!flow?.command) return;
       if (!selectedChatId || !activeProjectId) return;
-      await runExecuteCommand(flow.command, flowId, selectedChatId, activeProjectId, emitEvent, wrappedShowFeedback);
+      await runExecuteCommand(flow.command, flowId, selectedChatId, activeProjectId, wrappedShowFeedback);
     },
-    [flows, selectedChatId, activeProjectId, emitEvent, wrappedShowFeedback]
+    [flows, selectedChatId, activeProjectId, wrappedShowFeedback]
   );
 
   const getIsProcessing = useCallback((chatId: string) => {
