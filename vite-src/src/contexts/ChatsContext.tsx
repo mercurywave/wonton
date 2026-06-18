@@ -18,6 +18,7 @@ import { useNav } from "./NavContext";
 import { useAgentsContext } from "./AgentsContext";
 import { useFlowsContext } from "./FlowsContext";
 import { FeedbackPayload, useFeedback } from "./FeedbackContext";
+import { useNotificationsContext } from "./NotificationsContext";
 import { isBackendConnected } from "../utils/platformUtils";
 import { ChatMessage, ChatMeta, FlowActionButton, ReasoningEffort } from "../types/chat";
 import { chatLogsStore } from "../store/chatLogs";
@@ -66,6 +67,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const { flows } = useFlowsContext();
   const { emit: emitEvent } = useEventBus();
   const { showFeedback: showFeedbackBase } = useFeedback();
+  const { showNotification } = useNotificationsContext();
 
   const {
     chats,
@@ -211,6 +213,24 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     wrappedShowFeedback,
     activeReasoningEffort,
   );
+
+  // Track previous isLoading to detect completion of user-initiated chats
+  const prevIsLoadingRef = useRef(isLoading);
+
+  // Trigger notification when user-initiated chat completes
+  useEffect(() => {
+    const prevIsLoading = prevIsLoadingRef.current;
+    prevIsLoadingRef.current = isLoading;
+
+    if (prevIsLoading && !isLoading && selectedChatId) {
+      const currentChats = chatsRef.current;
+      const chat = currentChats.find((c) => c.id === selectedChatId);
+      const chatName = chat?.name || "Chat";
+      const projectName = projectsCtx.projects.find((p) => p.id === activeProjectId)?.name || "";
+      const title = projectName ? `${projectName} - ${chatName}` : chatName;
+      showNotification("Response complete", title, settings.notificationBehavior);
+    }
+  }, [isLoading, settings.notificationBehavior, showNotification, selectedChatId, activeProjectId, projectsCtx.projects]);
 
   // Workflow execution for the selected chat
   const selectedChatForWorkflow = selectedChatMeta;

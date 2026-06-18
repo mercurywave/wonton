@@ -38,6 +38,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     getPlatform: () => ipcRenderer.invoke("dataDir:getPlatform"),
   },
 
+  // notifications module
+  notification: {
+    show: (title: string, body: string, behavior: string) => ipcRenderer.invoke("notification:show", title, body, behavior),
+  },
+
   // events module
   events: {
     on: (eventName: string, callback: (event: any, ...args: any[]) => void) => {

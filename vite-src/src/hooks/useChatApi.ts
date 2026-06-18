@@ -34,6 +34,7 @@ interface ToolCallLoopOptions {
   onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string, reasoningContent?: string) => void;
   onChatUpdated?: () => void;
   onValidate?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
+  onFinish?: () => void;
 }
 
 interface ToolCallLoopResult {
@@ -62,6 +63,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     onUpdateMessage,
     onChatUpdated,
     onValidate,
+    onFinish,
   } = options;
 
   const tools = await filterToAvailableTools(toolNames, folderPath, agent, allAgents);
@@ -307,6 +309,8 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
       // tool result messages are appended after each assistant round
     }
   }
+
+  onFinish?.();
 
   return { finalMessage: finalAssistantMessage, allMessages, stats: finalAssistantMessage.stats || null };
 }

@@ -9,6 +9,7 @@ import { UIProvider } from "./UIContext";
 import { NavProvider } from "./NavContext";
 import { EventBusProvider } from "./EventBusContext";
 import { FeedbackProvider } from "./FeedbackContext";
+import { NotificationsProvider } from "./NotificationsContext";
 
 export { SettingsProvider, useSettings } from "./SettingsContext";
 export { ProjectsProvider, useProjects } from "./ProjectsContext";
@@ -20,29 +21,32 @@ export { UIProvider, useUI } from "./UIContext";
 export { NavProvider, useNav } from "./NavContext";
 export { EventBusProvider, useEventBus } from "./EventBusContext";
 export { FeedbackProvider, useFeedback, type FeedbackPayload } from "./FeedbackContext";
+export { NotificationsProvider, useNotificationsContext } from "./NotificationsContext";
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
-    <SettingsProvider>
-      <ProjectsProvider>
-        <AgentsProvider>
-          <NavProvider>
-            <FlowsProvider>
-              <EventBusProvider>
-                <FeedbackProvider>
-                  <ChatsProvider>
-                    <TasksProvider>
-                      <UIProvider>
-                        {children}
-                      </UIProvider>
-                    </TasksProvider>
-                  </ChatsProvider>
-                </FeedbackProvider>
-              </EventBusProvider>
-            </FlowsProvider>
-          </NavProvider>
-        </AgentsProvider>
-      </ProjectsProvider>
-    </SettingsProvider>
+    <NotificationsProvider>
+      <SettingsProvider>
+        <ProjectsProvider>
+          <AgentsProvider>
+            <NavProvider>
+              <FlowsProvider>
+                <EventBusProvider>
+                  <FeedbackProvider>
+                    <ChatsProvider>
+                      <TasksProvider>
+                        <UIProvider>
+                          {children}
+                        </UIProvider>
+                      </TasksProvider>
+                    </ChatsProvider>
+                  </FeedbackProvider>
+                </EventBusProvider>
+              </FlowsProvider>
+            </NavProvider>
+          </AgentsProvider>
+        </ProjectsProvider>
+      </SettingsProvider>
+    </NotificationsProvider>
   );
 }

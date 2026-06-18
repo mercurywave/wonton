@@ -33,6 +33,9 @@ interface ElectronAPI {
     on: (eventName: string, callback: (event: any, ...args: any[]) => void) => () => void;
     off: (eventName: string, callback: (event: any, ...args: any[]) => void) => void;
   };
+  notification: {
+    show: (title: string, body: string, behavior: string) => Promise<void>;
+  };
 }
 
 interface Window {

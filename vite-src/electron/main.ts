@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, dialog, shell } from "electron";
+import { app, BrowserWindow, ipcMain, dialog, shell, Notification } from "electron";
 import path from "path";
 import { promises as fs } from "fs";
 import { exec } from "child_process";
@@ -37,13 +37,15 @@ function createWindow() {
   return win;
 }
 
+let mainWindow: BrowserWindow;
+
 // Wait for app to be ready
 app.whenReady().then(() => {
-  const win = createWindow();
+  mainWindow = createWindow();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      mainWindow = createWindow();
     }
   });
 });
@@ -221,6 +223,27 @@ const dataDirHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ...ar
 for (const [method, handler] of Object.entries(dataDirHandlers)) {
   ipcMain.handle(`dataDir:${method}`, handler);
 }
+
+// notifications module
+const notificationIcon = path.resolve(__dirname, "../../public/takeout.png");
+
+ipcMain.handle("notification:show", async (_event, title, body, behavior) => {
+  if(!Notification.isSupported()) {
+    console.error("notifications not supported on platform");
+    return; 
+  }
+  let notify = new Notification({
+    title,
+    body,
+    icon: notificationIcon,
+  });
+  notify.on('click', () => {
+    mainWindow.moveTop();
+    mainWindow.focus();
+    notify.close();
+  });
+  notify.show();
+});
 
 // events module - file watching
 // The renderer will request a file watch via 'watch:start', and the main process

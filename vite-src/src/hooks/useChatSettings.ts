@@ -14,6 +14,7 @@ export interface ChatSettings {
   modelAliases: Record<string, string>;
   lastProjectId: string;
   reasoningEffort: ReasoningEffort;
+  notificationBehavior: "always" | "unfocused" | "never";
 }
 
 const DEFAULT_SETTINGS: ChatSettings = {
@@ -27,6 +28,7 @@ const DEFAULT_SETTINGS: ChatSettings = {
   modelAliases: {},
   lastProjectId: "default",
   reasoningEffort: "none",
+  notificationBehavior: "unfocused",
 };
 
 export function loadSettings(): ChatSettings {

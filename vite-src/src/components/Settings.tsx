@@ -117,6 +117,20 @@ export default function Settings() {
             </select>
           </div>
 
+          <div className={styles.field}>
+            <label htmlFor="notificationBehavior">Notification Behavior</label>
+            <select
+              id="notificationBehavior"
+              className={styles.select}
+              value={settings.notificationBehavior}
+              onChange={(e) => onUpdate({ notificationBehavior: e.target.value as "always" | "unfocused" | "never" })}
+            >
+              <option value="always">Always notify</option>
+              <option value="unfocused">Only when app is unfocused</option>
+              <option value="never">Never</option>
+            </select>
+          </div>
+
           <div className={styles.modelsSection}>
             <label>Models</label>
 
