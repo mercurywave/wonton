@@ -227,9 +227,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       const chatName = chat?.name || "Chat";
       const projectName = projectsCtx.projects.find((p) => p.id === activeProjectId)?.name || "";
       const title = projectName ? `${projectName} - ${chatName}` : chatName;
-      showNotification("Response complete", title, settings.notificationBehavior);
+      showNotification("Response complete", title);
     }
-  }, [isLoading, settings.notificationBehavior, showNotification, selectedChatId, activeProjectId, projectsCtx.projects]);
+  }, [isLoading, showNotification, selectedChatId, activeProjectId, projectsCtx.projects]);
 
   // Workflow execution for the selected chat
   const selectedChatForWorkflow = selectedChatMeta;

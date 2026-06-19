@@ -1,9 +1,11 @@
 import { useState, useCallback, useEffect } from "react";
+import { useSettings } from "../contexts/SettingsContext";
 
 export type NotificationBehavior = "always" | "unfocused" | "never";
 
 export function useNotifications() {
   const [appHasFocus, setAppHasFocus] = useState(true);
+  const { settings } = useSettings();
 
   useEffect(() => {
     const onFocus = () => setAppHasFocus(true);
@@ -19,7 +21,8 @@ export function useNotifications() {
   }, []);
 
   const showNotification = useCallback(
-    async (title: string, body: string, behavior: NotificationBehavior) => {
+    async (title: string, body: string) => {
+      const behavior = settings.notificationBehavior;
       if (behavior === "never") return;
       if (behavior === "unfocused" && appHasFocus) return;
 
@@ -29,7 +32,7 @@ export function useNotifications() {
         // silently ignore notification errors
       }
     },
-    [appHasFocus]
+    [appHasFocus, settings.notificationBehavior]
   );
 
   return { showNotification, appHasFocus };

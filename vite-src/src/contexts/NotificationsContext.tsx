@@ -1,9 +1,8 @@
 import { createContext, useContext, ReactNode } from "react";
 import { useNotifications } from "../hooks/useNotifications";
-import { NotificationBehavior } from "../hooks/useNotifications";
 
 interface NotificationsContextValue {
-  showNotification: (title: string, body: string, behavior: NotificationBehavior) => void;
+  showNotification: (title: string, body: string) => void;
   appHasFocus: boolean;
 }
 

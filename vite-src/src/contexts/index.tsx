@@ -25,8 +25,8 @@ export { NotificationsProvider, useNotificationsContext } from "./NotificationsC
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
-    <NotificationsProvider>
-      <SettingsProvider>
+    <SettingsProvider>
+      <NotificationsProvider>
         <ProjectsProvider>
           <AgentsProvider>
             <NavProvider>
@@ -46,7 +46,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
             </NavProvider>
           </AgentsProvider>
         </ProjectsProvider>
-      </SettingsProvider>
-    </NotificationsProvider>
+      </NotificationsProvider>
+    </SettingsProvider>
   );
 }

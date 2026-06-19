@@ -1,6 +1,6 @@
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
-import { FeedbackPayload } from "../contexts";
+import { FeedbackPayload, emit } from "../contexts";
 import { truncateContent } from "./truncationTools";
 import { getPlatform } from "../utils/platformUtils";
 
@@ -78,6 +78,7 @@ export class ExecCommandHandler implements ToolHandler {
     }
 
     if (showFeedback && projectId && chatId && logId) {
+      emit("commandWaitingApproval", { command });
       const result: ToolResult = { callId: "", content: "", isError: false };
       try {
         const choice = await showFeedback(
