@@ -1,5 +1,5 @@
 import { useRef, useCallback, useMemo } from "react";
-import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won } from "../types/chat";
+import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won, SubagentMeta, SubagentOptions } from "../types/chat";
 import { FeedbackPayload } from "../contexts";
 import { agentStore } from "../store/agents";
 import { generateUniqueFileName, getProjectDataDir } from "../utils/platformUtils";
@@ -11,6 +11,8 @@ import { flowStore } from "../store/flows";
 import { emit } from "../contexts";
 import { loadSettings } from "./useChatSettings";
 import { runQuery as runQueryImpl } from "./useLLMQuery";
+import { runToolCallLoop } from "./useChatApi";
+import { getAgentByName, resolveAgentFolderPath } from "../utils/agents";
 
 interface UseChatWorkflowOptions {
   workflowId?: string;
@@ -259,6 +261,98 @@ export function buildWon(
     },
     setStatus: (message?: string) => {
       emit("setExtensionStatus", message);
+    },
+    createSubagent: async (options?: SubagentOptions): Promise<string> => {
+      await agentStore.load();
+      const allAgents = agentStore.getAllAgents();
+      
+      const agentName = options?.agent || allAgents[0]?.name;
+      const agent = agentName ? getAgentByName(allAgents, agentName) : allAgents[0];
+      
+      if (!agent) {
+        throw new Error("No agents available for subagent");
+      }
+      
+      // Create subagent log
+      const subagentLogId = crypto.randomUUID();
+      await chatLogsStore.reserveLog(projectId, subagentLogId);
+      
+      // Create and save subagent meta
+      const subagentId = crypto.randomUUID();
+      const subagentMeta: SubagentMeta = {
+        id: subagentId,
+        agentId: agent.id,
+        toolSet: agent.defaultToolSet || [],
+        query: "",
+        status: "running",
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        logId: subagentLogId,
+      };
+      await chatStore.saveSubagentMeta(projectId, chatId, subagentMeta);
+      
+      return subagentLogId;
+    },
+    runAgent: async (logId: string, userMessage: string): Promise<string> => {
+      // Load settings
+      const settings = loadSettings();
+      
+      // Find the subagent meta to get agent info
+      const meta = chatStore.getChat(projectId, chatId);
+      const subagentMeta = meta?.subagents?.find((s) => s.logId === logId);
+      
+      if (!subagentMeta) {
+        throw new Error(`Subagent with logId "${logId}" not found`);
+      }
+      
+      // Load agents and resolve the agent
+      await agentStore.load();
+      const allAgents = agentStore.getAllAgents();
+      const agent = allAgents.find((a) => a.id === subagentMeta.agentId);
+      
+      if (!agent) {
+        throw new Error(`Agent "${subagentMeta.agentId}" not found`);
+      }
+      
+      // Resolve folder path
+      const folderPath = await resolveAgentFolderPath(agent, projectStore.getProjectById(projectId)?.folderPath, projectId);
+      
+      // Build user message
+      const chatMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: userMessage.trim(),
+        timestamp: Date.now(),
+      };
+      
+      // Run the subagent tool-call loop
+      const result = await runToolCallLoop({
+        settings,
+        systemPrompt: agent.systemPrompt,
+        model: settings.defaultModel,
+        toolNames: subagentMeta.toolSet || [],
+        folderPath,
+        initialMessages: [chatMessage],
+        signal: undefined,
+        projectId,
+        chatId,
+        logId,
+        isSubagent: true,
+        agentId: agent.id,
+        agent,
+        allAgents,
+        reasoningEffort: "none",
+        onUpdateMessage: () => {},
+        onChatUpdated: () => {},
+        onValidate: showFeedback,
+      });
+      
+      // Update subagent meta to completed
+      subagentMeta.status = "completed";
+      subagentMeta.updatedAt = Date.now();
+      await chatStore.saveSubagentMeta(projectId, chatId, subagentMeta);
+      
+      return result.finalMessage.content;
     },
   };
 }

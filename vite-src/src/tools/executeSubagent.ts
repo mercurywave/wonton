@@ -3,10 +3,9 @@ import { ToolResult, ChatMessage, ToolCall, Agent } from "../types/chat";
 import { runToolCallLoop } from "../hooks/useChatApi";
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
-import { getAgentByName } from "../utils/agents";
+import { getAgentByName, resolveAgentFolderPath } from "../utils/agents";
 import { getAllAgents, loadAgentsFile } from "../hooks/useAgents";
 import { SubagentMeta } from "../types/chat";
-import { getProjectDataDir, DOCS_DIR_NAME, DOCS_FOLDER_OVERRIDE } from "../utils/platformUtils";
 
 export const EXECUTE_SUBAGENT_TOOL_NAME = "message";
 
@@ -115,13 +114,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
     }
 
     // Resolve the working directory for agents with folderOverride
-    let subagentFolderPath = folderPath;
-    if (agent.folderOverride === DOCS_FOLDER_OVERRIDE) {
-      const projectDir = await getProjectDataDir(projectId);
-      if (projectDir) {
-        subagentFolderPath = `${projectDir}/${DOCS_DIR_NAME}`;
-      }
-    }
+    const subagentFolderPath = await resolveAgentFolderPath(agent, folderPath, projectId);
     
     // Create subagent log
     const agentId = agent.id;

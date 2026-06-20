@@ -153,6 +153,12 @@ export interface WonQueryOptions {
   model?: string;
 }
 
+export interface SubagentOptions {
+  agent?: string;
+  model?: string;
+  thinking?: boolean | "low" | "medium" | "high";
+}
+
 export interface Won {
   advance(nextStateKey: string): Promise<void>;
   setWorkflowData(partial: Partial<Record<string, unknown>>): Promise<void>;
@@ -180,6 +186,8 @@ export interface Won {
   select(question: string, choices: string[]): Promise<number>;
   prompt(question: string, options?: { placeholder?: string }): Promise<string | undefined>;
   setStatus(message?: string): void;
+  createSubagent(options?: SubagentOptions): Promise<string>;
+  runAgent(logId: string, userMessage: string): Promise<string>;
 }
 
 export interface StatsEntry {

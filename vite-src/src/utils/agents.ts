@@ -1,5 +1,5 @@
 import { Agent } from "../types/chat";
-import { DOCS_FOLDER_OVERRIDE } from "./platformUtils";
+import { DOCS_FOLDER_OVERRIDE, DOCS_DIR_NAME, getProjectDataDir } from "./platformUtils";
 
 export const DEFAULT_AGENT: Agent = {
   id: "builtin:default",
@@ -73,4 +73,14 @@ export function getAvailableSubagents(agent: Agent, allAgents: Agent[]): Agent[]
   }
 
   return candidates;
+}
+
+export async function resolveAgentFolderPath(agent: Agent, baseFolderPath: string | undefined, projectId: string): Promise<string | undefined> {
+  if (agent.folderOverride === DOCS_FOLDER_OVERRIDE) {
+    const projectDir = await getProjectDataDir(projectId);
+    if (projectDir) {
+      return `${projectDir}/${DOCS_DIR_NAME}`;
+    }
+  }
+  return baseFolderPath;
 }
