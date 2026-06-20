@@ -41,6 +41,7 @@ export type Action =
   // Status transitions
   | { type: "LOADING" }
   | { type: "READY" }
+  | { type: "LOADING_READY" }
   | { type: "SET_ERROR"; error: string }
   | { type: "CLEAR_ERROR" }
 
@@ -117,6 +118,9 @@ export function navReducer(state: NavState, action: Action): NavState {
       return { ...state, status: "loading", error: null };
 
     case "READY":
+      return { ...state, status: "ready" };
+
+    case "LOADING_READY":
       return { ...state, status: "ready" };
 
     case "SET_ERROR":

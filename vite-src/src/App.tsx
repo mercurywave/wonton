@@ -21,6 +21,7 @@ import AgentsPage from "./components/AgentsPage";
 import SplitPanel from "./components/SplitPanel";
 import "./App.css";
 import FileViewerPanel from "./components/FileViewerPanel";
+import LoadingScreen from "./components/LoadingScreen";
 
 function App() {
   const {
@@ -39,6 +40,7 @@ function App() {
   const {
     state: nav,
     activeProjectId,
+    isLoading: navIsLoading,
     navigateToProject,
     navigateToChat,
     navigateToNewChat,
@@ -217,6 +219,10 @@ function App() {
     tempFileOptions: selectedChat?.reservedTempFiles,
     activeTempFileUniqueName: selectedTempFile,
   };
+
+  if (navIsLoading) {
+    return <LoadingScreen />;
+  }
 
   return (
     <div className="app">

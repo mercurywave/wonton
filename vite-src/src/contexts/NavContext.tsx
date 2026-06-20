@@ -7,6 +7,7 @@ import {
   useRef,
   ReactNode,
   useMemo,
+  useState,
 } from "react";
 import { Page } from "../types/chat";
 import { navReducer, NavState, Action } from "./navReducer";
@@ -17,6 +18,7 @@ export interface NavContextValue {
   state: NavState;
   activeProjectId: string | null;
   logId: string | null;
+  isLoading: boolean;
   navigateToProject: (projectId: string) => void;
   navigateToChat: (chatId: string) => void;
   navigateToChatWithLog: (chatId: string, logId: string) => void;
@@ -45,6 +47,7 @@ export function NavProvider({ children }: { children: ReactNode }) {
 
   const [state, dispatch] = useReducer(navReducer, initialState);
   const initializedRef = useRef(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   // ── Side effect: when projects are loaded, restore last project ──────────
   useEffect(() => {
@@ -63,6 +66,8 @@ export function NavProvider({ children }: { children: ReactNode }) {
     } else if (hasDefault) {
       dispatch({ type: "PROJECT_SWITCH", projectId: "default" });
     }
+
+    dispatch({ type: "READY" });
   }, [projects, initialized, settings.lastProjectId]);
 
   // ── Persist lastProjectId whenever it changes ───────────────────────────
@@ -71,6 +76,13 @@ export function NavProvider({ children }: { children: ReactNode }) {
       updateSettings({ lastProjectId: state.projectId });
     }
   }, [state.projectId, updateSettings]);
+
+  // ── Clear loading state when nav is ready and a chat is selected ────────
+  useEffect(() => {
+    if (state.status === "ready" && state.chatId !== null && isLoading) {
+      setIsLoading(false);
+    }
+  }, [state.status, state.chatId, isLoading]);
 
   // ── Navigation actions ──────────────────────────────────────────────────
 
@@ -132,6 +144,7 @@ export function NavProvider({ children }: { children: ReactNode }) {
       state,
       activeProjectId: state.projectId,
       logId: state.logId,
+      isLoading,
       navigateToProject,
       navigateToChat,
       navigateToChatWithLog,
@@ -142,7 +155,7 @@ export function NavProvider({ children }: { children: ReactNode }) {
       navigateToPage,
       dispatch,
     }),
-    [state, navigateToProject, navigateToChat, navigateToChatWithLog, navigateToLog, navigateToNewChat, navigateToDeleteChat, navigateToRenameChat, navigateToPage, dispatch]
+    [state, isLoading, navigateToProject, navigateToChat, navigateToChatWithLog, navigateToLog, navigateToNewChat, navigateToDeleteChat, navigateToRenameChat, navigateToPage, dispatch]
   );
 
   return <NavContext.Provider value={value}>{children}</NavContext.Provider>;

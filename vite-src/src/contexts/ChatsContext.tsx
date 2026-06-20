@@ -63,6 +63,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const { settings } = useSettings();
   const { allAgents } = useAgentsContext();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
+  const initialAutoSelectDone = useRef(false);
   const { flows } = useFlowsContext();
  
   const { showFeedback: showFeedbackBase } = useFeedback();
@@ -92,7 +93,11 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       a.updatedAt > b.updatedAt ? a : b
     );
     setSelectedChatId(mostRecent.id);
-  }, [selectedChatId, chats]);
+    if (!initialAutoSelectDone.current) {
+      initialAutoSelectDone.current = true;
+      dispatch({ type: "CHAT_SELECT", chatId: mostRecent.id });
+    }
+  }, [selectedChatId, chats, dispatch]);
 
   // Derive logId from the selected chat's meta
   const selectedChatMeta = useMemo(() => {
