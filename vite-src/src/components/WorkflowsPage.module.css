@@ -53,10 +53,15 @@
   transition: all 0.15s ease;
 }
 
-.openFolderBtn:hover {
+.openFolderBtn:hover:not(:disabled) {
   border-color: #4a6cf7;
   color: #e0e0e0;
   background: rgba(74, 108, 247, 0.05);
+}
+
+.openFolderBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .refreshBtn {
@@ -111,7 +116,7 @@
   color: #f87171;
   font-size: 13px;
   line-height: 1.5;
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .conflictTitle {
@@ -172,6 +177,26 @@
   color: #9090a0;
 }
 
+.section {
+  margin-bottom: 24px;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: #9090a0;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 .flowsList {
   display: flex;
   flex-direction: column;
@@ -199,6 +224,19 @@
 
 .flowCardDisabled:hover {
   border-color: #2a2a4a;
+}
+
+.flowCardOverridden {
+  border-color: #1e1e26;
+  background: rgba(33, 34, 39, 0.05);
+}
+
+.flowCardOverridden:hover {
+  border-color: #1e1e26;
+}
+
+.flowCardOverridden .flowName {
+  text-decoration: line-through;
 }
 
 .flowCardHeader {
@@ -268,4 +306,18 @@
   background: rgba(74, 108, 247, 0.1);
   border-color: #4a6cf7;
   color: #4a6cf7;
+}
+
+.overriddenBadge {
+  margin-top: 4px;
+}
+
+.overriddenIndicator {
+  font-size: 11px;
+  color: #4a6cf7;
+  font-style: italic;
+  display: inline-block;
+  background: rgba(74, 108, 247, 0.1);
+  padding: 2px 8px;
+  border-radius: 4px;
 }

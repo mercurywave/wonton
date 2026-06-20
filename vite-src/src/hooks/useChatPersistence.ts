@@ -5,6 +5,7 @@ import {
   MSGS_DIR_NAME,
   DOCS_DIR_NAME,
   TMP_DIR_NAME,
+  FLOWS_DIR_NAME,
   isBackendConnected,
   getProjectDataDir
 } from "../utils/platformUtils";
@@ -60,6 +61,15 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   } catch (err: any) {
     if (err.code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create tmp dir", err);
+    }
+  }
+
+  const flowsDir = `${projectDir}/${FLOWS_DIR_NAME}`;
+  try {
+    await filesystem.createDirectory(flowsDir);
+  } catch (err: any) {
+    if (err.code !== "EEXIST") {
+      console.error("ensureChatFolder: failed to create flows dir", err);
     }
   }
 

@@ -119,6 +119,7 @@ export interface Flow {
   states?: Record<string, FlowState>;
   command?: string;
   isCommand?: boolean;
+  source?: string; // "global" or project ID
 }
 
 export interface FlowActionButton {

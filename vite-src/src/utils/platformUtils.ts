@@ -83,6 +83,14 @@ export async function getProjectDataDir(projectId: string): Promise<string> {
   return await joinPath(rootDir, projectId);
 }
 
+export async function getFlowsDirPath(projectId?: string): Promise<string> {
+  const rootDir = await getRootDataDir();
+  if (projectId) {
+    return await joinPath(rootDir, projectId, FLOWS_DIR_NAME);
+  }
+  return await joinPath(rootDir, FLOWS_DIR_NAME);
+}
+
 export function isBackendConnected(): boolean {
   return typeof window !== "undefined" && "electronAPI" in window;
 }
