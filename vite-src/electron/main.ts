@@ -264,10 +264,10 @@ ipcMain.handle("watch:start", async (event, dirPath, fileName) => {
   if (!win) return { watcherId: 0 };
 
   const watcher = watch(dirPath, { persistent: true }, (eventType, filename) => {
-    if (filename === fileName) {
+    if (!fileName || filename === fileName) {
       win.webContents.send("watch:change", {
         id: key,
-        filename: fileName,
+        filename: filename ?? "",
         eventType,
       });
     }

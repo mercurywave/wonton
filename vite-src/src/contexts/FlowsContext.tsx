@@ -5,12 +5,14 @@ import {
   useEffect,
   useMemo,
   useCallback,
+  useRef,
   ReactNode,
 } from "react";
 import { Flow } from "../types/chat";
 import { useNav } from "./NavContext";
 import { flowStore } from "../store/flows";
 import { projectMetaStore } from "../store/projectMeta";
+import { filesystem } from "../utils/electronFs";
 
 interface FlowsContextValue {
   flows: Flow[];
@@ -39,6 +41,10 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const [conflictIds, setConflictIds] = useState<string[]>(() => flowStore.getConflictIds());
   const [conflictFiles, setConflictFiles] = useState<Record<string, string>>(() => flowStore.getConflictFiles());
   const [overriddenGlobalIds, setOverriddenGlobalIds] = useState<string[]>(() => flowStore.getOverriddenGlobalIds());
+  const globalWatcherKeyRef = useRef<string>("");
+  const projectWatcherKeyRef = useRef<string>("");
+  const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const refreshCountRef = useRef(0);
 
   const loadFlows = useCallback(async () => {
     const projectId = nav.projectId;
@@ -63,8 +69,36 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     setIsLoading(false);
   }, [nav.projectId]);
 
-  useEffect(() => {
+ useEffect(() => {
     let cancelled = false;
+    let iifeCleanup: (() => void) | null = null;
+
+    const scheduleRefresh = async () => {
+      if (cancelled) return;
+      refreshCountRef.current += 1;
+      const currentCount = refreshCountRef.current;
+
+      if (refreshTimerRef.current) {
+        clearTimeout(refreshTimerRef.current);
+      }
+
+      refreshTimerRef.current = setTimeout(async () => {
+        if (currentCount !== refreshCountRef.current) return;
+        try {
+          await flowStore.refresh();
+          if (!cancelled) {
+            setFlows(flowStore.getFlows());
+            setGlobalFlowsPath(flowStore.getGlobalFlowsPath());
+            setProjectFlowsPath(flowStore.getProjectFlowsPath());
+            setConflictIds(flowStore.getConflictIds());
+            setConflictFiles(flowStore.getConflictFiles());
+            setOverriddenGlobalIds(flowStore.getOverriddenGlobalIds());
+          }
+        } catch {
+          // ignore refresh errors
+        }
+      }, 500);
+    };
 
     (async () => {
       setIsLoading(true);
@@ -72,6 +106,62 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       if (!cancelled) {
         await loadFlows();
       }
+
+      const projectId = nav.projectId;
+      if (!projectId) return;
+
+      try {
+        const globalDir = flowStore.getGlobalFlowsPath();
+        if (globalDir) {
+          const globalResult = await filesystem.watchDir(globalDir);
+          globalWatcherKeyRef.current = globalResult.watcherId;
+        }
+      } catch {
+        // global flows dir may not exist yet
+      }
+
+      try {
+        const projectDir = flowStore.getProjectFlowsPath();
+        if (projectDir) {
+          const projectResult = await filesystem.watchDir(projectDir);
+          projectWatcherKeyRef.current = projectResult.watcherId;
+        }
+      } catch {
+        // project flows dir may not exist yet
+      }
+
+      const handler = (_event: any, ev: any) => {
+        if (!ev || !ev.id) return;
+        const watcherKey = ev.id;
+        const isGlobal = watcherKey === globalWatcherKeyRef.current;
+        const isProject = watcherKey === projectWatcherKeyRef.current;
+        if (!isGlobal && !isProject) return;
+        scheduleRefresh();
+      };
+
+      window.electronAPI.events.on("watch:change", handler);
+
+      const stopWatcher = async (key: string) => {
+        if (key) {
+          try {
+            await filesystem.removeWatcher(key);
+          } catch {
+            // ignore cleanup errors
+          }
+        }
+      };
+
+      iifeCleanup = () => {
+        window.electronAPI.events.off("watch:change", handler);
+
+        if (refreshTimerRef.current) {
+          clearTimeout(refreshTimerRef.current);
+          refreshTimerRef.current = null;
+        }
+
+        stopWatcher(globalWatcherKeyRef.current);
+        stopWatcher(projectWatcherKeyRef.current);
+      };
     })();
 
     const unsubscribe = flowStore.subscribe(() => {
@@ -85,6 +175,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      iifeCleanup?.();
       unsubscribe();
     };
   }, [loadFlows, nav.projectId]);

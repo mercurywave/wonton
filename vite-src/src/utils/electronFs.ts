@@ -101,4 +101,9 @@ export const filesystem = {
     throwIfNotElectron();
     await window.electronAPI.filesystem.removeWatcher(watcherId);
   },
+
+  async watchDir(dirPath: string): Promise<WatcherResult> {
+    throwIfNotElectron();
+    return window.electronAPI.filesystem.createWatcher(dirPath);
+  },
 };
