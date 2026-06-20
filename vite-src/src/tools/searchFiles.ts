@@ -47,30 +47,36 @@ export class SearchFilesHandler implements ToolHandler {
   }
 
   private globToRegex(pattern: string): RegExp {
-    const segments = pattern.split("/");
-    const regexParts: string[] = [];
+    let regexPattern = "";
+    let i = 0;
 
-    for (let i = 0; i < segments.length; i++) {
-      const segment = segments[i];
+    while (i < pattern.length) {
+      const char = pattern[i];
 
-      if (segment === "**") {
-        regexParts.push("(?:[^/.][^/]*/)*");
-      } else {
-        let escaped = "";
-        for (let j = 0; j < segment.length; j++) {
-          const char = segment[j];
-          if (char === "*") {
-            escaped += "[^.]*";
-          } else {
-            escaped += char;
-          }
+      if (char === "*") {
+        regexPattern += "[^/]*";
+        i++;
+      } else if (char === "{") {
+        let depth = 1;
+        let j = i + 1;
+        while (j < pattern.length && depth > 0) {
+          if (pattern[j] === "{") depth++;
+          else if (pattern[j] === "}") depth--;
+          j++;
         }
-        regexParts.push(escaped);
+        const braceContent = pattern.slice(i + 1, j - 1);
+        regexPattern += "(?:" + braceContent.replace(/,/g, "|") + ")";
+        i = j;
+      } else if (/[.+?^$()|[\]\\]/.test(char)) {
+        regexPattern += "\\" + char;
+        i++;
+      } else {
+        regexPattern += char;
+        i++;
       }
     }
 
-    const regex = regexParts.join("/");
-    return new RegExp(`^${regex}$`, "i");
+    return new RegExp(`^${regexPattern}$`, "i");
   }
 
   private async searchDirectory(
