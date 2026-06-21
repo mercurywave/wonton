@@ -1,0 +1,347 @@
+.field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #9090a0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  color: #e0e0e0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.input::placeholder {
+  color: #555;
+}
+
+.select {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  color: #e0e0e0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+  cursor: pointer;
+}
+
+.select:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.select option {
+  background: #16162a;
+  color: #e0e0e0;
+}
+
+.textarea {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  color: #e0e0e0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  transition: border-color 0.15s ease;
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.textarea::placeholder {
+  color: #555;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  color: #e0e0e0;
+}
+
+.header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.modelsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.modelsSection > label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #9090a0;
+}
+
+.modelsPrompt {
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+}
+
+.modelsLoading {
+  font-size: 13px;
+  color: #9090a0;
+}
+
+.modelsError {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modelsErrorText {
+  font-size: 13px;
+  color: #e06060;
+  line-height: 1.4;
+}
+
+.retryButton {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  color: #4a6cf7;
+  padding: 6px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  align-self: flex-start;
+}
+
+.retryButton:hover {
+  border-color: #4a6cf7;
+  background: rgba(74, 108, 247, 0.1);
+}
+
+.modelsEmpty {
+  font-size: 13px;
+  color: #666;
+  font-style: italic;
+}
+
+.modelsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modelCard {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.modelCard:hover {
+  border-color: #3a3a5a;
+}
+
+.modelCardHidden {
+  opacity: 0.4;
+  pointer-events: auto;
+}
+
+.modelCardHidden:hover {
+  border-color: #2a2a4a;
+}
+
+.modelIdHidden {
+  color: #666;
+}
+
+.defaultButtonDisabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.defaultButtonDisabled:hover {
+  border-color: #2a2a4a;
+  color: #888;
+  background: none;
+}
+
+.modelCardDefault {
+  background: rgba(74, 108, 247, 0.06);
+  border-color: rgba(74, 108, 247, 0.3);
+}
+
+.modelCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.modelId {
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0e0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.defaultButton {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid #2a2a4a;
+  color: #888;
+  padding: 5px 10px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.defaultButton:hover {
+  border-color: #4a6cf7;
+  color: #e0e0e0;
+}
+
+.defaultButtonActive {
+  background: rgba(74, 108, 247, 0.15);
+  border-color: #4a6cf7;
+  color: #4a6cf7;
+}
+
+.modelCardBody {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+
+.aliasField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.aliasField label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.aliasInput {
+  background: #0f0f1a;
+  border: 1px solid #2a2a4a;
+  color: #e0e0e0;
+  padding: 8px 10px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.aliasInput:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.aliasInput::placeholder {
+  color: #555;
+}
+
+.contextField {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.contextField label {
+  font-size: 11px;
+  font-weight: 500;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.contextInput {
+  background: #0f0f1a;
+  border: 1px solid #2a2a4a;
+  color: #e0e0e0;
+  padding: 8px 10px;
+  border-radius: 5px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.contextInput:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.contextInput::placeholder {
+  color: #555;
+}
+
+.hideButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  background: none;
+  border: 1px solid #2a2a4a;
+  color: #666;
+  padding: 8px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.hideButton:hover {
+  color: #e0e0e0;
+  border-color: #4a6cf7;
+  background: rgba(255, 255, 255, 0.03);
+}
