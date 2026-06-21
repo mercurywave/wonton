@@ -191,6 +191,8 @@ export interface Won {
   setStatus(message?: string): void;
   createSubagent(options?: SubagentOptions): Promise<string>;
   runAgent(logId: string, userMessage: string): Promise<string>;
+  runPrompt(userMessage: string): Promise<string>;
+  finishWorkflow(): Promise<void>;
 }
 
 export interface StatsEntry {

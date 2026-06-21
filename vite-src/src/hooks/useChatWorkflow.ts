@@ -12,6 +12,7 @@ import { emit } from "../contexts";
 import { loadSettings } from "./useChatSettings";
 import { runQuery as runQueryImpl } from "./useLLMQuery";
 import { runToolCallLoop } from "./useChatApi";
+import { filterToAvailableTools } from "../tools";
 import { getAgentByName, resolveAgentFolderPath } from "../utils/agents";
 
 interface UseChatWorkflowOptions {
@@ -360,6 +361,63 @@ export function buildWon(
       await chatStore.saveSubagentMeta(projectId, chatId, subagentMeta);
       
       return result.finalMessage.content;
+    },
+    async runPrompt(userMessage: string): Promise<string> {
+      if (logId) { throw new Error("Cannot runPrompt from sub agent"); }
+      const settings = loadSettings();
+      const chat = chatStore.getChat(projectId, chatId);
+      const projectMeta = projectMetaStore.getProjectMeta(projectId);
+      await agentStore.load();
+      const allAgents = agentStore.getAllAgents();
+      const resolvedAgentId = chat?.activeAgentId || "builtin:default";
+      const agent = allAgents.find((a) => a.id === resolvedAgentId);
+      const mainLogId = chatStore.getLogId(projectId, chatId) ?? "";
+      const chatMessages = chatLogsStore.getLog(projectId, mainLogId) || [];
+      const systemPrompt = agent?.systemPrompt || projectMeta?.systemPrompt || settings.systemPrompt;
+      const model = projectMeta?.defaultModel || settings.defaultModel || chat?.activeModel || "";
+      const reasoningEffort = (chat?.reasoningEffort as ReasoningEffort | undefined) || settings.reasoningEffort;
+      const folderPath = projectStore.getProjectById(projectId)?.folderPath;
+      const userChatMessage: ChatMessage = {
+        id: crypto.randomUUID(),
+        role: "user",
+        content: userMessage.trim(),
+        timestamp: Date.now(),
+      };
+      const resolvedTools = await filterToAvailableTools(
+        agent?.defaultToolSet || [],
+        folderPath,
+        agent,
+        allAgents,
+      );
+      const result = await runToolCallLoop({
+        settings,
+        systemPrompt,
+        model,
+        toolNames: resolvedTools.map(t => t.function.name),
+        folderPath,
+        initialMessages: [...chatMessages, userChatMessage],
+        signal: undefined,
+        projectId,
+        chatId,
+        logId: mainLogId,
+        isSubagent: false,
+        agentId: resolvedAgentId,
+        agent,
+        allAgents,
+        reasoningEffort,
+        onUpdateMessage: () => {},
+        onChatUpdated: () => {},
+        onValidate: showFeedback,
+      });
+      return result.finalMessage.content;
+    },
+    async finishWorkflow() {
+      await chatStore.updateChatMeta(projectId, chatId, {
+        workflowId: undefined,
+        workflowStateKey: undefined,
+        workflowData: undefined,
+        updatedAt: Date.now(),
+      });
     },
   };
 }
