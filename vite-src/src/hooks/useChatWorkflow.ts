@@ -1,5 +1,5 @@
 import { useRef, useCallback, useMemo } from "react";
-import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won, SubagentMeta, SubagentOptions } from "../types/chat";
+import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won, SubagentMeta, SubagentOptions, ReasoningEffort } from "../types/chat";
 import { FeedbackPayload } from "../contexts";
 import { agentStore } from "../store/agents";
 import { generateUniqueFileName, getProjectDataDir } from "../utils/platformUtils";
@@ -279,6 +279,7 @@ export function buildWon(
       
       // Create and save subagent meta
       const subagentId = crypto.randomUUID();
+      const thinkingValue = options?.thinking === true ? "medium" : options?.thinking === false ? "none" : (options?.thinking as ReasoningEffort | undefined);
       const subagentMeta: SubagentMeta = {
         id: subagentId,
         agentId: agent.id,
@@ -288,6 +289,8 @@ export function buildWon(
         createdAt: Date.now(),
         updatedAt: Date.now(),
         logId: subagentLogId,
+        model: options?.model,
+        thinking: thinkingValue,
       };
       await chatStore.saveSubagentMeta(projectId, chatId, subagentMeta);
       
@@ -325,11 +328,15 @@ export function buildWon(
         timestamp: Date.now(),
       };
       
+      // Resolve model and thinking from subagent meta, falling back to settings
+      const model = subagentMeta.model || settings.defaultModel;
+      const reasoningEffort = (subagentMeta.thinking as ReasoningEffort | undefined) || "none";
+      
       // Run the subagent tool-call loop
       const result = await runToolCallLoop({
         settings,
         systemPrompt: agent.systemPrompt,
-        model: settings.defaultModel,
+        model,
         toolNames: subagentMeta.toolSet || [],
         folderPath,
         initialMessages: [chatMessage],
@@ -341,7 +348,7 @@ export function buildWon(
         agentId: agent.id,
         agent,
         allAgents,
-        reasoningEffort: "none",
+        reasoningEffort,
         onUpdateMessage: () => {},
         onChatUpdated: () => {},
         onValidate: showFeedback,

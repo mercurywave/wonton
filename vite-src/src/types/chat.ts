@@ -69,6 +69,8 @@ export interface SubagentMeta {
   createdAt: number;
   updatedAt: number;
   logId: string;
+  model?: string;
+  thinking?: ReasoningEffort;
 }
 
 export interface VersionHistoryEntry {

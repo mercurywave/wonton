@@ -1,5 +1,5 @@
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
-import { ToolResult, ChatMessage, ToolCall, Agent } from "../types/chat";
+import { ToolResult, ChatMessage, ToolCall, Agent, ReasoningEffort } from "../types/chat";
 import { runToolCallLoop } from "../hooks/useChatApi";
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
@@ -145,8 +145,10 @@ export class ExecuteSubagentHandler implements ToolHandler {
       timestamp: Date.now(),
     };
 
-    // Resolve model for subagent
-    const subagentModel = settings.defaultModel || agentId;
+    // Resolve model for subagent from chat-level settings
+    const chatMeta = chatStore.getChat(projectId, chatId);
+    const subagentModel = chatMeta?.activeModel || settings.defaultModel || agentId;
+    const subagentThinking = (chatMeta?.reasoningEffort as ReasoningEffort | undefined) || undefined;
 
     // Run the subagent tool-call loop
     const result = await runToolCallLoop({
@@ -163,6 +165,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
       isSubagent: true,
       agentId: agent.id,
       agent,
+      reasoningEffort: subagentThinking,
       onUpdateMessage: () => {
         // No UI update needed for subagent — it's a background tool call
       },

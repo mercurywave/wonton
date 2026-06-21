@@ -19,7 +19,7 @@ import { useFlowsContext } from "./FlowsContext";
 import { FeedbackPayload, useFeedback } from "./FeedbackContext";
 import { useNotificationsContext } from "./NotificationsContext";
 import { isBackendConnected } from "../utils/platformUtils";
-import { ChatMessage, ChatMeta, FlowActionButton, ReasoningEffort } from "../types/chat";
+import { ChatMessage, ChatMeta, FlowActionButton, ReasoningEffort, SubagentMeta } from "../types/chat";
 import { chatLogsStore } from "../store/chatLogs";
 import { chatStore } from "../store/chats";
 
@@ -120,11 +120,19 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     return selectedChatMeta.activeAgentId || "builtin:default";
   }, [selectedChatMeta]);
 
-  // Resolve the effective active model (chat override or settings default)
+  // Resolve the active subagent meta when viewing a subagent log
+  const activeSubagentMeta = useMemo(() => {
+    if (!navLogId || !selectedChatMeta) return null;
+    if (navLogId === selectedChatMeta.logId) return null;
+    return selectedChatMeta.subagents?.find((s) => s.logId === navLogId) ?? null;
+  }, [navLogId, selectedChatMeta]);
+
+  // Resolve the effective active model (subagent override, chat override, or settings default)
   const activeModel = useMemo(() => {
     if (!selectedChatMeta) return settings.defaultModel;
+    if (activeSubagentMeta?.model) return activeSubagentMeta.model;
     return selectedChatMeta.activeModel ?? settings.defaultModel;
-  }, [selectedChatMeta, settings.defaultModel]);
+  }, [selectedChatMeta, activeSubagentMeta, settings.defaultModel]);
 
   // Callback to change the active agent for the selected chat
   const onAgentChange = useCallback(
@@ -139,36 +147,54 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     [selectedChatId, activeProjectId]
   );
 
-  // Callback to change the active model for the selected chat
+  // Helper to update a specific subagent's meta for the selected chat
+  const updateSubagentMeta = useCallback(
+    async (logId: string, partial: Partial<Pick<SubagentMeta, 'model' | 'thinking'>>) => {
+      if (!selectedChatId) return;
+      const subagents = selectedChatMeta?.subagents || [];
+      const updatedSubagents = subagents.map((s) =>
+        s.logId === logId ? { ...s, ...partial } : s
+      );
+      await projectChatsUpdateChatMeta(selectedChatId, { subagents: updatedSubagents });
+    },
+    [selectedChatId, selectedChatMeta, projectChatsUpdateChatMeta]
+  );
+
+  // Callback to change the active model for the selected chat or subagent
   const onModelChange = useCallback(
     async (modelId: string) => {
       if (!selectedChatId || !activeProjectId) return;
-      if (modelId !== settings.defaultModel) {
+      if (activeSubagentMeta) {
+        await updateSubagentMeta(activeSubagentMeta.logId, { model: modelId || undefined });
+      } else if (modelId !== settings.defaultModel) {
         await projectChatsUpdateChatMeta(selectedChatId, { activeModel: modelId });
       } else {
         await projectChatsUpdateChatMeta(selectedChatId, { activeModel: undefined });
       }
     },
-    [selectedChatId, activeProjectId, settings.defaultModel]
+    [selectedChatId, activeProjectId, activeSubagentMeta, settings.defaultModel, updateSubagentMeta]
   );
 
-  // Resolve the effective active reasoning effort (chat override or settings default)
+  // Resolve the effective active reasoning effort (subagent override, chat override, or settings default)
   const activeReasoningEffort = useMemo(() => {
     if (!selectedChatMeta) return settings.reasoningEffort;
+    if (activeSubagentMeta?.thinking !== undefined) return activeSubagentMeta.thinking;
     return selectedChatMeta.reasoningEffort ?? settings.reasoningEffort;
-  }, [selectedChatMeta, settings.reasoningEffort]);
+  }, [selectedChatMeta, activeSubagentMeta, settings.reasoningEffort]);
 
-  // Callback to change the active reasoning effort for the selected chat
+  // Callback to change the active reasoning effort for the selected chat or subagent
   const onReasoningEffortChange = useCallback(
     async (effort: ReasoningEffort) => {
       if (!selectedChatId || !activeProjectId) return;
-      if (effort !== settings.reasoningEffort) {
+      if (activeSubagentMeta) {
+        await updateSubagentMeta(activeSubagentMeta.logId, { thinking: effort });
+      } else if (effort !== settings.reasoningEffort) {
         await projectChatsUpdateChatMeta(selectedChatId, { reasoningEffort: effort });
       } else {
         await projectChatsUpdateChatMeta(selectedChatId, { reasoningEffort: undefined });
       }
     },
-    [selectedChatId, activeProjectId, settings.reasoningEffort]
+    [selectedChatId, activeProjectId, activeSubagentMeta, settings.reasoningEffort, updateSubagentMeta]
   );
 
   // Active logId: navLogId if set (explicit log selection), otherwise fall back to chat's main log
