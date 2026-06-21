@@ -64,7 +64,9 @@ const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ..
     try {
       await fs.mkdir(dirPath, { recursive: true });
     } catch (err: any) {
-      throw { code: err.code || "E_FS_CREATE_DIR", message: err.message };
+      const error = new Error(err.message || "Failed to create directory");
+      (error as any).code = err.code || "E_FS_CREATE_DIR";
+      throw error;
     }
   },
 
@@ -73,7 +75,9 @@ const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ..
       const content = await fs.readFile(filePath, "utf-8");
       return content;
     } catch (err: any) {
-      throw { code: err.code || "E_FS_READ", message: err.message };
+      const error = new Error(err.message || "Failed to read file");
+      (error as any).code = err.code || "E_FS_READ";
+      throw error;
     }
   },
 
@@ -81,7 +85,9 @@ const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ..
     try {
       await fs.writeFile(filePath, content, "utf-8");
     } catch (err: any) {
-      throw { code: err.code || "E_FS_WRITE", message: err.message };
+      const error = new Error(err.message || "Failed to write file");
+      (error as any).code = err.code || "E_FS_WRITE";
+      throw error;
     }
   },
 
@@ -89,7 +95,9 @@ const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ..
     try {
       await fs.appendFile(filePath, content, "utf-8");
     } catch (err: any) {
-      throw { code: err.code || "E_FS_APPEND", message: err.message };
+      const error = new Error(err.message || "Failed to append to file");
+      (error as any).code = err.code || "E_FS_APPEND";
+      throw error;
     }
   },
 
@@ -97,7 +105,9 @@ const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ..
     try {
       await fs.rm(filePath, { recursive: false, force: true });
     } catch (err: any) {
-      throw { code: err.code || "E_FS_REMOVE", message: err.message };
+      const error = new Error(err.message || "Failed to remove file");
+      (error as any).code = err.code || "E_FS_REMOVE";
+      throw error;
     }
   },
 
@@ -106,7 +116,9 @@ const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ..
       const entries = await fs.readdir(dirPath);
       return entries.map((entry: string) => ({ entry }));
     } catch (err: any) {
-      throw { code: err.code || "E_FS_READ_DIR", message: err.message };
+      const error = new Error(err.message || "Failed to read directory");
+      (error as any).code = err.code || "E_FS_READ_DIR";
+      throw error;
     }
   },
 
@@ -121,7 +133,9 @@ const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ..
         createdTime: stat.birthtimeMs,
       };
     } catch (err: any) {
-      throw { code: err.code || "E_FS_STATS", message: err.message };
+      const error = new Error(err.message || "Failed to stat file");
+      (error as any).code = err.code || "E_FS_STATS";
+      throw error;
     }
   },
 
