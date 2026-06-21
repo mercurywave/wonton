@@ -281,8 +281,16 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
         }
       }
 
-      // Build next API call with tool results appended
-      currentApiMessages = [...currentApiMessages, ...toolResults.map((tr) => ({
+      // Build next API call with assistant message and tool results appended
+      currentApiMessages = [...currentApiMessages, {
+        role: "assistant" as const,
+        content: assistantMessage.content,
+        tool_calls: assistantMessage.toolCalls?.map((tc) => ({
+          type: "function" as const,
+          id: tc.id,
+          function: { name: tc.name, arguments: tc.arguments },
+        })),
+      }, ...toolResults.map((tr) => ({
         role: "tool" as const,
         tool_call_id: tr.toolCallId,
         content: tr.content,
