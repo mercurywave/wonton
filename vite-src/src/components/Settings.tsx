@@ -4,13 +4,15 @@ import styles from "../components/Settings.module.css";
 import ServerSettings from "../components/ServerSettings";
 import ModelSettings from "../components/ModelSettings";
 import PreferencesSettings from "../components/PreferencesSettings";
+import AgentsSettings from "../components/AgentsSettings";
 
-type Tab = "server" | "models" | "preferences";
+type Tab = "server" | "models" | "preferences" | "agents";
 
 const tabs: { key: Tab; label: string }[] = [
   { key: "server", label: "Server" },
   { key: "models", label: "Models" },
   { key: "preferences", label: "Preferences" },
+  { key: "agents", label: "Agents" },
 ];
 
 export default function Settings() {
@@ -41,6 +43,7 @@ export default function Settings() {
           {activeTab === "server" && <ServerSettings />}
           {activeTab === "models" && <ModelSettings />}
           {activeTab === "preferences" && <PreferencesSettings />}
+          {activeTab === "agents" && <AgentsSettings />}
         </div>
       </div>
     </div>
