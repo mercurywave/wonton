@@ -1,4 +1,4 @@
-import { useRef, useEffect, useCallback, useMemo, useState } from "react";
+import { useRef, useEffect, useCallback, useMemo, useState, memo } from "react";
 import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play, Brain, Copy, Undo2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -156,7 +156,7 @@ function WorkflowSelector({ workflows, onSelect, selectedWorkflowId }: { workflo
   );
 }
 
-function MessageBubble({ message, modelAliases, toolResultMessages, chatId, onUserMessageAction }: { message: ChatMessageType; modelAliases: Record<string, string>; toolResultMessages?: ChatMessageType[]; chatId?: string; onUserMessageAction?: (params: { chatId: string; messageId: string; action: 'copy' | 'rollback' }) => Promise<void> }) {
+const MessageBubble = memo(function MessageBubble({ message, modelAliases, toolResultMessages, chatId, onUserMessageAction }: { message: ChatMessageType; modelAliases: Record<string, string>; toolResultMessages?: ChatMessageType[]; chatId?: string; onUserMessageAction?: (params: { chatId: string; messageId: string; action: 'copy' | 'rollback' }) => Promise<void> }) {
   const isUser = message.role === "user";
   const hasStats = message.role !== "user" && message.stats;
   const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
@@ -282,7 +282,7 @@ function MessageBubble({ message, modelAliases, toolResultMessages, chatId, onUs
       )}
     </div>
   );
-}
+});
 
 export default function ChatPanel({
   messages,
