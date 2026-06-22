@@ -52,7 +52,7 @@ export async function sanitizeAndResolvePath(
     };
   }
 
-  const relativePath = await filesystem.getRelativePath(resolvedAbs, folderAbs);
+  const relativePath = await filesystem.getRelativePath(folderAbs, resolvedAbs);
 
   return {
     success: true,

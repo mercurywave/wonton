@@ -74,7 +74,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
   let allAssistantMessages: ChatMessageWithToolCalls[] = [];
   let hasMoreToolCalls = true;
   let round = 0;
-  const MAX_TOOL_ROUNDS = 10;
+  const MAX_TOOL_ROUNDS = 100;
   const persistedMessageIds = new Set<string>();
   const requestStartTime = Date.now();
 
