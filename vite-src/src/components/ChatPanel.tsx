@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback, useMemo, useState, memo } from "react";
+import React from "react";
 import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play, Brain, Copy, Undo2 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -282,6 +283,49 @@ const MessageBubble = memo(function MessageBubble({ message, modelAliases, toolR
       )}
     </div>
   );
+});
+
+const MessageList = memo(function MessageList({ messages, modelAliases, selectedChatId, onUserMessageAction }: { messages: ChatMessageType[]; modelAliases: Record<string, string>; selectedChatId: string | null; onUserMessageAction?: (params: { chatId: string; messageId: string; action: 'copy' | 'rollback' }) => Promise<void> }) {
+  const elements: React.ReactElement[] = [];
+  const skip: Set<number> = new Set();
+
+  for (let i = 0; i < messages.length; i++) {
+    if (skip.has(i)) continue;
+
+    const msg = messages[i];
+
+    if (msg.toolCalls && msg.toolCalls.length > 0) {
+      const toolResultMessages: ChatMessageType[] = [];
+      for (let j = i + 1; j < messages.length; j++) {
+        if (skip.has(j)) break;
+        const next = messages[j];
+        if (next.role === "tool" && next.toolCallId) {
+          if (msg.toolCalls!.some((tc) => tc.id === next.toolCallId)) {
+            toolResultMessages.push(next);
+            skip.add(j);
+          } else {
+            break;
+          }
+        } else {
+          break;
+        }
+      }
+      elements.push(
+        <div key={msg.id}>
+          <MessageBubble message={msg} modelAliases={modelAliases} toolResultMessages={toolResultMessages} chatId={selectedChatId ?? undefined} onUserMessageAction={onUserMessageAction} />
+        </div>
+      );
+      continue;
+    }
+
+    elements.push(
+      <div key={msg.id}>
+        <MessageBubble message={msg} modelAliases={modelAliases} chatId={selectedChatId ?? undefined} onUserMessageAction={onUserMessageAction} />
+      </div>
+    );
+  }
+
+  return elements;
 });
 
 export default function ChatPanel({
@@ -656,48 +700,7 @@ export default function ChatPanel({
               selectedWorkflowId={(resolvedWorkflow?.id)}
             />
           )}
-          {(() => {
-             const skip: Set<number> = new Set();
-             const elements: React.ReactElement[] = [];
-
-             for (let i = 0; i < messages.length; i++) {
-                if (skip.has(i)) continue;
-
-                const msg = messages[i];
-
-               if (msg.toolCalls && msg.toolCalls.length > 0) {
-                  const toolResultMessages: ChatMessageType[] = [];
-                  for (let j = i + 1; j < messages.length; j++) {
-                    if (skip.has(j)) break;
-                    const next = messages[j];
-                    if (next.role === "tool" && next.toolCallId) {
-                      if (msg.toolCalls!.some((tc) => tc.id === next.toolCallId)) {
-                        toolResultMessages.push(next);
-                        skip.add(j);
-                      } else {
-                        break;
-                      }
-                    } else {
-                      break;
-                    }
-                  }
-                  elements.push(
-                    <div key={msg.id}>
-                      <MessageBubble message={msg} modelAliases={settings.modelAliases} toolResultMessages={toolResultMessages} chatId={selectedChatId ?? undefined} onUserMessageAction={onUserMessageAction} />
-                    </div>
-                  );
-                  continue;
-                }
-
-                elements.push(
-                  <div key={msg.id}>
-                    <MessageBubble message={msg} modelAliases={settings.modelAliases} chatId={selectedChatId ?? undefined} onUserMessageAction={onUserMessageAction} />
-                  </div>
-                );
-              }
-
-              return elements;
-            })()}
+         <MessageList messages={messages} modelAliases={settings.modelAliases} selectedChatId={selectedChatId} onUserMessageAction={onUserMessageAction} />
            <div ref={messagesEndRef} />
            {bubbleData && (
              <SelectionBubble
