@@ -159,14 +159,24 @@ function TreeNodeComponent({
     return (
       <div className={`${styles.node} ${styles.hiddenNode}`} style={{ paddingLeft: `${depth * 16 + 8}px` }}>
         <div className={styles.nodeContent}>
+          <div className={styles.expandPlaceholder} />
+
           <div className={styles.nodeIcon}>
-            {node.isDirectory ? <EyeOff size={14} /> : <EyeOff size={14} />}
+            {node.isDirectory ? <Folder size={14} /> : <File size={14} />}
           </div>
+
           <span className={styles.nodeLabel}>{node.name}</span>
-          <PermissionSelect
-            value={effectivePerm}
-            onChange={handlePermissionChange}
-          />
+
+          <div className={styles.permissionIndicator}>
+            <EyeOff size={14} />
+          </div>
+
+          <div className={styles.permissionSelectWrapper}>
+            <PermissionSelect
+              value={effectivePerm}
+              onChange={handlePermissionChange}
+            />
+          </div>
         </div>
       </div>
     );
@@ -206,10 +216,12 @@ function TreeNodeComponent({
             </div>
           )}
 
-          <PermissionSelect
-            value={effectivePerm}
-            onChange={handlePermissionChange}
-          />
+          <div className={styles.permissionSelectWrapper}>
+            <PermissionSelect
+              value={effectivePerm}
+              onChange={handlePermissionChange}
+            />
+          </div>
         </div>
       </div>
 

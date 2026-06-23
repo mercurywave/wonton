@@ -58,7 +58,6 @@
 }
 
 .nodeLabel {
-  flex: 1;
   font-size: 13px;
   color: #c0c0c0;
   overflow: hidden;
@@ -74,10 +73,16 @@
   min-width: 14px;
 }
 
+.permissionSelectWrapper {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .permissionSelect {
   background: #1a1a2e;
-  border: 1px solid #2a2a4a;
-  color: #c0c0c0;
+  border: 1px solid transparent;
+  color: #575757;
   font-size: 11px;
   padding: 2px 4px;
   border-radius: 3px;
@@ -87,12 +92,14 @@
 }
 
 .permissionSelect:hover {
-  border-color: #4a6cf7;
+  border: 1px solid #4a6cf7;
+  color: #c0c0c0;
 }
 
 .permissionSelect:focus {
   outline: none;
   border-color: #4a6cf7;
+  color: #c0c0c0;
 }
 
 .permissionBadge {
