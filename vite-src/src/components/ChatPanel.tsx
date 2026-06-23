@@ -701,7 +701,14 @@ export default function ChatPanel({
             />
           )}
          <MessageList messages={messages} modelAliases={settings.modelAliases} selectedChatId={selectedChatId} onUserMessageAction={onUserMessageAction} />
-           <div ref={messagesEndRef} />
+            {isProcessing && (
+              <div className={styles.thinkingIndicator}>
+                <span className={styles.dot}></span>
+                <span className={styles.dot}></span>
+                <span className={styles.dot}></span>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
            {bubbleData && (
              <SelectionBubble
                position={bubbleData}
