@@ -1,0 +1,141 @@
+.treeContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  user-select: none;
+}
+
+.node {
+  display: flex;
+  align-items: center;
+  padding: 2px 0;
+  min-height: 28px;
+}
+
+.nodeContent {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+}
+
+.folderNode {
+  cursor: pointer;
+}
+
+.folderNode:hover .nodeLabel {
+  color: #e0e0e0;
+}
+
+.expandBtn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  border-radius: 3px;
+  min-width: 18px;
+}
+
+.expandBtn:hover {
+  color: #e0e0e0;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.expandPlaceholder {
+  min-width: 18px;
+}
+
+.nodeIcon {
+  display: flex;
+  align-items: center;
+  color: #888;
+  min-width: 18px;
+}
+
+.nodeLabel {
+  flex: 1;
+  font-size: 13px;
+  color: #c0c0c0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.permissionIndicator {
+  display: flex;
+  align-items: center;
+  color: #f59e0b;
+  min-width: 14px;
+}
+
+.permissionSelect {
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  color: #c0c0c0;
+  font-size: 11px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  min-width: 60px;
+  max-width: 80px;
+}
+
+.permissionSelect:hover {
+  border-color: #4a6cf7;
+}
+
+.permissionSelect:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.permissionBadge {
+  font-size: 10px;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 1px 4px;
+  border-radius: 2px;
+  text-transform: lowercase;
+}
+
+.children {
+  display: flex;
+  flex-direction: column;
+}
+
+.hiddenNode {
+  opacity: 0.5;
+}
+
+.loadingContainer,
+.emptyContainer,
+.errorContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  color: #888;
+  font-size: 13px;
+}
+
+.loadingText,
+.emptyText {
+  color: #888;
+  font-size: 13px;
+}
+
+.errorText {
+  color: #ef4444;
+  font-size: 13px;
+}
+
+.errorNode,
+.loadingNode {
+  padding: 2px 0;
+}

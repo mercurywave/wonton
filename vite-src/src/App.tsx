@@ -7,6 +7,7 @@ import { useUI } from "./contexts";
 import { useNav } from "./contexts";
 import { useEventBus } from "./contexts";
 import { useNotificationsContext } from "./contexts";
+import { FilePermissionsProvider } from "./contexts";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
 import Settings from "./components/Settings";
@@ -260,7 +261,9 @@ function App() {
           </div>
         )}
         {nav.page === "settings" && (
-          <Settings />
+          <FilePermissionsProvider projectId={activeProjectId}>
+            <Settings onFolderChange={handleChangeFolder} />
+          </FilePermissionsProvider>
         )}
         {nav.page === "projects" && !projectSettingsId && (
           <ProjectsPage

@@ -22,6 +22,7 @@ export { NavProvider, useNav } from "./NavContext";
 export { EventBusProvider, useEventBus, emit, on } from "./EventBusContext";
 export { FeedbackProvider, useFeedback, type FeedbackPayload } from "./FeedbackContext";
 export { NotificationsProvider, useNotificationsContext } from "./NotificationsContext";
+export { FilePermissionsProvider, useFilePermissions } from "./FilePermissionsContext";
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (

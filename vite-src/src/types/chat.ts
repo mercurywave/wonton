@@ -105,11 +105,14 @@ export interface ChatMeta {
   versionHistory?: VersionHistoryEntry[];
 }
 
+export type FilePermission = "full" | "readonly" | "hidden";
+
 export interface ProjectMeta {
   createdAt: number;
   systemPrompt?: string;
   defaultModel?: string;
   disabledFlows?: string[];
+  filePermissions?: Record<string, FilePermission>;
 }
 
 export interface Flow {

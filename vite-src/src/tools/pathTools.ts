@@ -1,4 +1,5 @@
 import { filesystem } from "../utils/electronFs";
+import { FilePermission } from "../types/chat";
 
 export interface SanitizePathResult {
   success: boolean;
@@ -59,4 +60,29 @@ export async function sanitizeAndResolvePath(
     resolvedPath: normalizedResolved,
     relativePath,
   };
+}
+
+export function getEffectivePermission(
+  permissions: Record<string, FilePermission> | undefined,
+  relativePath: string,
+  isDirectory: boolean
+): FilePermission {
+  if (!permissions || Object.keys(permissions).length === 0) {
+    return "full";
+  }
+
+  const parts = relativePath.split("/").filter(Boolean);
+
+  for (let i = 0; i < parts.length; i++) {
+    const ancestorPath = parts.slice(0, i + 1).join("/");
+    const perm = permissions[ancestorPath];
+    if (perm === "hidden") {
+      return "hidden";
+    }
+    if (perm === "readonly" && isDirectory) {
+      return "readonly";
+    }
+  }
+
+  return "full";
 }

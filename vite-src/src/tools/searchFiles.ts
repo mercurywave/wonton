@@ -1,6 +1,8 @@
 import { filesystem } from "../utils/electronFs";
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
+import { getEffectivePermission } from "./pathTools";
+import { projectMetaStore } from "../store/projectMeta";
 
 export const SEARCH_FILES_TOOL_NAME = "glob";
 
@@ -85,7 +87,9 @@ export class SearchFilesHandler implements ToolHandler {
     currentSegmentIndex: number,
     results: SearchResult[],
     maxResults: number,
-    depth: number
+    depth: number,
+    projectId: string | undefined,
+    folderPath: string
   ): Promise<boolean> {
     if (depth > 5 || results.length >= maxResults) {
       return results.length >= maxResults;
@@ -116,6 +120,17 @@ export class SearchFilesHandler implements ToolHandler {
           if (results.length >= maxResults) return true;
           if (entry.startsWith(".")) continue;
 
+          const entryRelPath = `${folderPath === dirPath ? "" : dirPath.replace(folderPath + "/", "")}${entry}`;
+          const relPath = entryRelPath.startsWith("/") ? entryRelPath.slice(1) : entryRelPath;
+
+          if (projectId) {
+            const meta = projectMetaStore.getProjectMeta(projectId);
+            const effectivePerm = getEffectivePermission(meta?.filePermissions, relPath, true);
+            if (effectivePerm === "hidden") {
+              continue;
+            }
+          }
+
           const fullPath = `${dirPath}/${entry}`;
           const stat = await filesystem.getStats(fullPath);
           if (stat && !stat.isDirectory && nextRegex.test(entry)) {
@@ -127,6 +142,17 @@ export class SearchFilesHandler implements ToolHandler {
           if (results.length >= maxResults) return true;
           if (entry.startsWith(".")) continue;
 
+          const entryRelPath = `${folderPath === dirPath ? "" : dirPath.replace(folderPath + "/", "")}${entry}`;
+          const relPath = entryRelPath.startsWith("/") ? entryRelPath.slice(1) : entryRelPath;
+
+          if (projectId) {
+            const meta = projectMetaStore.getProjectMeta(projectId);
+            const effectivePerm = getEffectivePermission(meta?.filePermissions, relPath, true);
+            if (effectivePerm === "hidden") {
+              continue;
+            }
+          }
+
           const fullPath = `${dirPath}/${entry}`;
           try {
             const stat = await filesystem.getStats(fullPath);
@@ -137,7 +163,9 @@ export class SearchFilesHandler implements ToolHandler {
                 currentSegmentIndex + 1,
                 results,
                 maxResults,
-                depth + 1
+                depth + 1,
+                projectId,
+                folderPath
               );
               if (done) return true;
             }
@@ -155,6 +183,17 @@ export class SearchFilesHandler implements ToolHandler {
         if (results.length >= maxResults) return true;
         if (entry.startsWith(".")) continue;
 
+        const entryRelPath = `${folderPath === dirPath ? "" : dirPath.replace(folderPath + "/", "")}${entry}`;
+        const relPath = entryRelPath.startsWith("/") ? entryRelPath.slice(1) : entryRelPath;
+
+        if (projectId) {
+          const meta = projectMetaStore.getProjectMeta(projectId);
+          const effectivePerm = getEffectivePermission(meta?.filePermissions, relPath, true);
+          if (effectivePerm === "hidden") {
+            continue;
+          }
+        }
+
         const fullPath = `${dirPath}/${entry}`;
         if (!entryRegex.test(entry)) continue;
 
@@ -169,7 +208,9 @@ export class SearchFilesHandler implements ToolHandler {
               currentSegmentIndex + 1,
               results,
               maxResults,
-              depth + 1
+              depth + 1,
+              projectId,
+              folderPath
             );
             if (done) return true;
           }
@@ -186,7 +227,7 @@ export class SearchFilesHandler implements ToolHandler {
 
   async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { query, maxResults = 20 } = args as { query: string; maxResults?: number };
-    const { folderPath } = context;
+    const { folderPath, projectId } = context;
 
     if (!folderPath) {
       return {
@@ -212,7 +253,9 @@ export class SearchFilesHandler implements ToolHandler {
       0,
       results,
       maxResults,
-      0
+      0,
+      projectId,
+      folderPath
     );
 
     if (results.length === 0) {

@@ -1,0 +1,110 @@
+.container {
+  display: flex;
+  justify-content: center;
+  height: 100%;
+  overflow-y: auto;
+}
+
+.content {
+  max-width: 700px;
+  width: 100%;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  color: #e0e0e0;
+}
+
+.header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.linkPrompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  padding: 48px 0;
+  color: #888;
+}
+
+.linkPrompt p {
+  font-size: 14px;
+  margin: 0;
+}
+
+.linkButton {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #4a6cf7;
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.linkButton:hover {
+  background: #3a5ce5;
+}
+
+.folderSection {
+  margin-bottom: 20px;
+}
+
+.folderRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+}
+
+.folderLabel {
+  flex: 1;
+  font-size: 13px;
+  color: #c0c0c0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.folderAction {
+  background: none;
+  border: 1px solid #2a2a4a;
+  color: #888;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.folderAction:hover {
+  color: #e0e0e0;
+  border-color: #4a6cf7;
+}
+
+.treeSection {
+  background: #1a1a2e;
+  border: 1px solid #2a2a4a;
+  border-radius: 6px;
+  padding: 12px;
+  overflow-y: auto;
+  max-height: 500px;
+}

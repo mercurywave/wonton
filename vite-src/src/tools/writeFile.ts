@@ -1,9 +1,10 @@
 import { filesystem } from "../utils/electronFs";
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
-import { sanitizeAndResolvePath } from "./pathTools";
+import { sanitizeAndResolvePath, getEffectivePermission } from "./pathTools";
 import { resolveTempFilePath } from "../utils/platformUtils";
 import { chatStore } from "../store/chats";
+import { projectMetaStore } from "../store/projectMeta";
 
 export const WRITE_FILE_TOOL_NAME = "write";
 
@@ -99,6 +100,26 @@ export class WriteFileHandler implements ToolHandler {
       }
       fullPath = sanitized.resolvedPath!;
       responsePath = sanitized.relativePath!;
+    }
+
+    // Check file permissions
+    if (projectId && !tempResult.redirected) {
+      const meta = projectMetaStore.getProjectMeta(projectId);
+      const effectivePerm = getEffectivePermission(meta?.filePermissions, responsePath, false);
+      if (effectivePerm === "hidden") {
+        return {
+          callId: "",
+          content: `Error: File is hidden and cannot be written: ${responsePath}`,
+          isError: true,
+        };
+      }
+      if (effectivePerm === "readonly") {
+        return {
+          callId: "",
+          content: `Error: File is read-only and cannot be written: ${responsePath}`,
+          isError: true,
+        };
+      }
     }
 
     try {

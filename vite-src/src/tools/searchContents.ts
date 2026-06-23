@@ -1,6 +1,8 @@
 import { filesystem } from "../utils/electronFs";
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
+import { getEffectivePermission } from "./pathTools";
+import { projectMetaStore } from "../store/projectMeta";
 
 export const SEARCH_CONTENTS_TOOL_NAME = "grep";
 
@@ -100,7 +102,9 @@ export class SearchContentsHandler implements ToolHandler {
     query: string,
     results: ContentSearchResult[],
     maxResults: number,
-    depth: number
+    depth: number,
+    projectId: string | undefined,
+    folderPath: string
   ): Promise<boolean> {
     if (depth > 5 || results.length >= maxResults) {
       return results.length >= maxResults;
@@ -116,13 +120,24 @@ export class SearchContentsHandler implements ToolHandler {
         if (results.length >= maxResults) return true;
         if (entry.startsWith(".")) continue;
 
+        const entryRelPath = `${folderPath === dirPath ? "" : dirPath.replace(folderPath + "/", "")}${entry}`;
+        const relPath = entryRelPath.startsWith("/") ? entryRelPath.slice(1) : entryRelPath;
+
+        if (projectId) {
+          const meta = projectMetaStore.getProjectMeta(projectId);
+          const effectivePerm = getEffectivePermission(meta?.filePermissions, relPath, true);
+          if (effectivePerm === "hidden") {
+            continue;
+          }
+        }
+
         const fullPath = `${dirPath}/${entry}`;
         try {
           const stat = await filesystem.getStats(fullPath);
           if (!stat) continue;
 
           if (stat.isDirectory) {
-            const done = await this.searchDirectory(fullPath, query, results, maxResults, depth + 1);
+            const done = await this.searchDirectory(fullPath, query, results, maxResults, depth + 1, projectId, folderPath);
             if (done) return true;
           } else {
             const done = await this.searchFile(fullPath, query, maxResults, results);
@@ -141,7 +156,7 @@ export class SearchContentsHandler implements ToolHandler {
 
   async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { query, maxResults = 20 } = args as { query: string; maxResults?: number };
-    const { folderPath } = context;
+    const { folderPath, projectId } = context;
 
     if (!folderPath) {
       return {
@@ -160,7 +175,7 @@ export class SearchContentsHandler implements ToolHandler {
     }
 
     const results: ContentSearchResult[] = [];
-    const done = await this.searchDirectory(folderPath, query, results, maxResults, 0);
+    const done = await this.searchDirectory(folderPath, query, results, maxResults, 0, projectId, folderPath);
 
     const relResults = results.map((r) => ({
       path: r.path.replace(folderPath, "").replace(/^\//, ""),
@@ -182,4 +197,3 @@ export class SearchContentsHandler implements ToolHandler {
     };
   }
 }
-
