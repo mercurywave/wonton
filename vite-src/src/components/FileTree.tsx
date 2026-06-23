@@ -261,12 +261,13 @@ export default function FileTree({
 
   const loadRoot = useCallback(async () => {
     try {
+      const normFolderPath = folderPath.replace(/\\/g, "/");
       const entries = await filesystem.readDirectory(folderPath);
       const treeNodes: TreeNode[] = [];
 
       for (const e of entries) {
         if (e.entry.startsWith(".")) continue;
-        const fullPath = `${folderPath}/${e.entry}`;
+        const fullPath = `${normFolderPath}/${e.entry}`;
         const stat = await filesystem.getStats(fullPath);
         if (!stat) continue;
 
@@ -297,6 +298,29 @@ export default function FileTree({
       return next;
     });
   }, []);
+
+ useEffect(() => {
+    if (isLoaded && permissions && Object.keys(permissions).length > 0) {
+      const normFolderPath = folderPath.replace(/\\/g, "/");
+      const expanded = new Set<string>(expandedPaths);
+      let needsUpdate = false;
+      for (const relPath of Object.keys(permissions)) {
+        const parts = relPath.split("/").filter(Boolean);
+        const ancestorCount = parts.length > 1 ? parts.length - 1 : parts.length;
+        for (let i = 0; i < ancestorCount; i++) {
+          const ancestorRel = parts.slice(0, i + 1).join("/");
+          const ancestorAbs = `${normFolderPath}/${ancestorRel}`;
+          if (!expanded.has(ancestorAbs)) {
+            expanded.add(ancestorAbs);
+            needsUpdate = true;
+          }
+        }
+      }
+      if (needsUpdate) {
+        setExpandedPaths(expanded);
+      }
+    }
+  }, [isLoaded, folderPath, permissions]);
 
   if (loadError && !isLoaded) {
     return (

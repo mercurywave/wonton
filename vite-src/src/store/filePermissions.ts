@@ -80,6 +80,10 @@ const filePermissionsStore: FilePermissionsStore = {
   },
 
   async setPermission(projectId: string, relativePath: string, permission: FilePermission) {
+    if (permission === "full") {
+      await this.removePermission(projectId, relativePath);
+      return;
+    }
     const meta = projectMetaStore.getProjectMeta(projectId);
     const existingPermissions = meta?.filePermissions ?? {};
     const nextPermissions = { ...existingPermissions, [relativePath]: permission };
