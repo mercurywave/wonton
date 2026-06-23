@@ -133,7 +133,7 @@ export class SearchFilesHandler implements ToolHandler {
 
           const fullPath = `${dirPath}/${entry}`;
           const stat = await filesystem.getStats(fullPath);
-          if (stat && !stat.isDirectory && nextRegex.test(entry)) {
+          if (stat && nextRegex.test(entry)) {
             results.push({ path: fullPath, size: stat.size || 0 });
           }
         }
@@ -199,7 +199,7 @@ export class SearchFilesHandler implements ToolHandler {
 
         try {
           const stat = await filesystem.getStats(fullPath);
-          if (stat && !stat.isDirectory && isLastPattern) {
+          if (stat && isLastPattern) {
             results.push({ path: fullPath, size: stat.size || 0 });
           } else if (stat?.isDirectory && !isLastPattern) {
             const done = await this.searchDirectory(
@@ -233,14 +233,6 @@ export class SearchFilesHandler implements ToolHandler {
       return {
         callId: "",
         content: "Error: No folder linked to this project",
-        isError: true,
-      };
-    }
-
-    if (!query || query.length < 2) {
-      return {
-        callId: "",
-        content: "Error: Query must be at least 2 characters",
         isError: true,
       };
     }
