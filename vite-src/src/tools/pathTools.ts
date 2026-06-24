@@ -1,11 +1,92 @@
 import { filesystem } from "../utils/electronFs";
 import { FilePermission } from "../types/chat";
+import { ToolResult } from "../types/chat";
+import { FeedbackPayload } from "../contexts";
 
 export interface SanitizePathResult {
   success: boolean;
   resolvedPath?: string;
   relativePath?: string;
   error?: string;
+}
+
+interface CheckWarnResultDenied {
+  denied: true;
+  result: ToolResult;
+}
+
+interface CheckWarnResultAllowed {
+  denied: false;
+}
+
+type CheckWarnResult = CheckWarnResultDenied | CheckWarnResultAllowed;
+
+export async function checkFilePermissionWarn(
+  showFeedback: ((projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>) | undefined,
+  projectId: string,
+  chatId: string,
+  logId: string,
+  operation: "write" | "edit",
+  relativePath: string,
+): Promise<CheckWarnResult> {
+  if (!showFeedback) {
+    return { denied: false };
+  }
+
+  const choice = await showFeedback(
+    projectId, chatId, logId,
+    {
+      type: "select",
+      question: `The agent wants to ${operation}:\n\`\`\`\n${relativePath}\n\`\`\`\n\nThis file has a "warn" permission. Allow the operation?`,
+      choices: ["Allow", "Deny", "Deny with Instructions"],
+    } as FeedbackPayload
+  );
+
+  if (typeof choice === "number") {
+    if (choice === 0) {
+      return { denied: false };
+    }
+    if (choice === 1) {
+      return {
+        denied: true,
+        result: {
+          callId: "",
+          content: "Operation denied by user",
+          isError: true,
+        },
+      };
+    }
+    if (choice === 2) {
+      const instructions = await showFeedback(
+        projectId, chatId, logId,
+        {
+          type: "text",
+          question: "Provide instructions for the agent:",
+          placeholder: `e.g., ${operation === "write" ? "Write to a different file instead" : "Make the change differently"}`,
+        } as FeedbackPayload
+      );
+      if (typeof instructions === "string" && instructions.trim()) {
+        return {
+          denied: true,
+          result: {
+            callId: "",
+            content: `Operation denied by user: ${instructions}`,
+            isError: true,
+          },
+        };
+      }
+      return {
+        denied: true,
+        result: {
+          callId: "",
+          content: "Operation denied by user",
+          isError: true,
+        },
+      };
+    }
+  }
+
+  return { denied: false };
 }
 
 function normalizePathSeparators(filePath: string): string {
@@ -81,6 +162,9 @@ export function getEffectivePermission(
     }
     if (perm === "readonly" && isDirectory) {
       return "readonly";
+    }
+    if (perm === "warn" && !isDirectory) {
+      return "warn";
     }
   }
 

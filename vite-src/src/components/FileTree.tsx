@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { ChevronRight, ChevronDown, Folder, FolderOpen, File, Lock, EyeOff } from "lucide-react";
+import { ChevronRight, ChevronDown, Folder, FolderOpen, File, Lock, EyeOff, Bell } from "lucide-react";
 import { FilePermission } from "../types/chat";
 import { filesystem } from "../utils/electronFs";
 import styles from "../components/FileTree.module.css";
@@ -29,6 +29,9 @@ function getPermissionIcon(
   if (permission === "readonly" && isDirectory) {
     return <Lock size={14} />;
   }
+  if (permission === "warn") {
+    return <Bell size={14} />;
+  }
   return null;
 }
 
@@ -39,7 +42,7 @@ function PermissionSelect({
   value: FilePermission;
   onChange: (p: FilePermission) => void;
 }) {
-  const options: FilePermission[] = ["full", "readonly", "hidden"];
+  const options: FilePermission[] = ["full", "readonly", "hidden", "warn"];
 
   return (
     <select
@@ -148,16 +151,20 @@ function TreeNodeComponent({
       if (perm === "readonly" && node.isDirectory) {
         return "readonly";
       }
+      if (perm === "warn" && !node.isDirectory) {
+        return "warn";
+      }
     }
     return permissions[relPath] || "full";
   };
 
   const effectivePerm = getEffectivePerm();
   const isHidden = effectivePerm === "hidden";
+  const isWarn = effectivePerm === "warn";
 
   if (isHidden) {
     return (
-      <div className={`${styles.node} ${styles.hiddenNode}`} style={{ paddingLeft: `${depth * 16 + 8}px` }}>
+      <div className={`${styles.node} ${styles.hiddenNode}`} style={{ paddingLeft: `${depth * 16 + 8}px` }} title="Hidden - file access is blocked">
         <div className={styles.nodeContent}>
           <div className={styles.expandPlaceholder} />
 
@@ -167,8 +174,35 @@ function TreeNodeComponent({
 
           <span className={styles.nodeLabel}>{node.name}</span>
 
-          <div className={styles.permissionIndicator}>
+          <div className={`${styles.permissionIndicator} ${styles.permissionIndicatorHidden}`}>
             <EyeOff size={14} />
+          </div>
+
+          <div className={styles.permissionSelectWrapper}>
+            <PermissionSelect
+              value={effectivePerm}
+              onChange={handlePermissionChange}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isWarn && !node.isDirectory) {
+    return (
+      <div className={`${styles.node} ${styles.hiddenNode}`} style={{ paddingLeft: `${depth * 16 + 8}px` }} title="Warn - file access requires approval">
+        <div className={styles.nodeContent}>
+          <div className={styles.expandPlaceholder} />
+
+          <div className={styles.nodeIcon}>
+            <File size={14} />
+          </div>
+
+          <span className={styles.nodeLabel}>{node.name}</span>
+
+          <div className={`${styles.permissionIndicator} ${styles.permissionIndicatorWarn}`}>
+            <Bell size={14} />
           </div>
 
           <div className={styles.permissionSelectWrapper}>
@@ -211,7 +245,7 @@ function TreeNodeComponent({
           <span className={styles.nodeLabel}>{node.name}</span>
 
           {getPermissionIcon(effectivePerm, node.isDirectory) && (
-            <div className={styles.permissionIndicator}>
+            <div className={`${styles.permissionIndicator}${isHidden ? ` ${styles.permissionIndicatorHidden}` : isWarn ? ` ${styles.permissionIndicatorWarn}` : ` ${styles.permissionIndicatorReadonly}`}`}>
               {getPermissionIcon(effectivePerm, node.isDirectory)}
             </div>
           )}

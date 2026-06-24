@@ -105,7 +105,7 @@ export interface ChatMeta {
   versionHistory?: VersionHistoryEntry[];
 }
 
-export type FilePermission = "full" | "readonly" | "hidden";
+export type FilePermission = "full" | "readonly" | "hidden" | "warn";
 
 export interface ProjectMeta {
   createdAt: number;

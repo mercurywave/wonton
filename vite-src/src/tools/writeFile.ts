@@ -1,7 +1,7 @@
 import { filesystem } from "../utils/electronFs";
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
-import { sanitizeAndResolvePath, getEffectivePermission } from "./pathTools";
+import { sanitizeAndResolvePath, getEffectivePermission, checkFilePermissionWarn } from "./pathTools";
 import { resolveTempFilePath } from "../utils/platformUtils";
 import { chatStore } from "../store/chats";
 import { projectMetaStore } from "../store/projectMeta";
@@ -51,7 +51,7 @@ export class WriteFileHandler implements ToolHandler {
 
   async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { path, content } = args as { path: string; content: string | null };
-    const { folderPath, projectId, chatId } = context;
+    const { folderPath, projectId, chatId, logId, showFeedback } = context;
 
     if (!folderPath) {
       return {
@@ -119,6 +119,15 @@ export class WriteFileHandler implements ToolHandler {
           content: `Error: File is read-only and cannot be written: ${responsePath}`,
           isError: true,
         };
+      }
+      if (effectivePerm === "warn") {
+        const warnResult = await checkFilePermissionWarn(
+          showFeedback, projectId!, chatId!, logId!,
+          "write", responsePath
+        );
+        if (warnResult.denied) {
+          return warnResult.result;
+        }
       }
     }
 

@@ -69,8 +69,19 @@
 .permissionIndicator {
   display: flex;
   align-items: center;
-  color: #f59e0b;
   min-width: 14px;
+}
+
+.permissionIndicator.permissionIndicatorHidden {
+  color: #ef4444;
+}
+
+.permissionIndicator.permissionIndicatorReadonly {
+  color: #888;
+}
+
+.permissionIndicator.permissionIndicatorWarn {
+  color: #f59e0b;
 }
 
 .permissionSelectWrapper {

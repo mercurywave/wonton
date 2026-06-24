@@ -55,6 +55,9 @@ function getEffectivePermissionInternal(
     if (perm === "readonly" && isDirectory) {
       return "readonly";
     }
+    if (perm === "warn" && !isDirectory) {
+      return "warn";
+    }
   }
 
   if (permissions[relativePath]) {
