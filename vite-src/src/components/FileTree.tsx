@@ -19,14 +19,11 @@ interface FileTreeProps {
   isLoading: boolean;
 }
 
-function getPermissionIcon(
-  permission: FilePermission,
-  isDirectory: boolean
-): React.ReactNode {
+function getPermissionIcon(permission: FilePermission): React.ReactNode {
   if (permission === "hidden") {
     return <EyeOff size={14} />;
   }
-  if (permission === "readonly" && isDirectory) {
+  if (permission === "readonly") {
     return <Lock size={14} />;
   }
   if (permission === "warn") {
@@ -244,9 +241,9 @@ function TreeNodeComponent({
 
           <span className={styles.nodeLabel}>{node.name}</span>
 
-          {getPermissionIcon(effectivePerm, node.isDirectory) && (
+          {getPermissionIcon(effectivePerm) && (
             <div className={`${styles.permissionIndicator}${isHidden ? ` ${styles.permissionIndicatorHidden}` : isWarn ? ` ${styles.permissionIndicatorWarn}` : ` ${styles.permissionIndicatorReadonly}`}`}>
-              {getPermissionIcon(effectivePerm, node.isDirectory)}
+              {getPermissionIcon(effectivePerm)}
             </div>
           )}
 

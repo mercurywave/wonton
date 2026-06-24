@@ -52,7 +52,7 @@ function getEffectivePermissionInternal(
     if (perm === "hidden") {
       return "hidden";
     }
-    if (perm === "readonly" && isDirectory) {
+    if (perm === "readonly") {
       return "readonly";
     }
     if (perm === "warn" && !isDirectory) {
