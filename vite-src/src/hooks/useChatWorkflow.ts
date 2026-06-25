@@ -2,7 +2,9 @@ import { useRef, useCallback, useMemo } from "react";
 import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won, SubagentMeta, SubagentOptions, ReasoningEffort } from "../types/chat";
 import { FeedbackPayload } from "../contexts";
 import { agentStore } from "../store/agents";
-import { generateUniqueFileName, getProjectDataDir } from "../utils/platformUtils";
+import { generateUniqueFileName, getProjectDataDir, resolveTempFilePath } from "../utils/platformUtils";
+import { filesystem } from "../utils/electronFs";
+import { sanitizeAndResolvePath } from "../tools/pathTools";
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
 import { projectStore } from "../store/projects";
@@ -76,6 +78,50 @@ export function buildWon(
     return uniqueName;
   }
 
+  async function readFile(path: string): Promise<string> {
+    if (!path || typeof path !== "string" || path.trim().length === 0) {
+      throw new Error("readFile: path is required");
+    }
+
+    const folderPath = projectStore.getProjectById(projectId)?.folderPath;
+    if (!folderPath) {
+      throw new Error("readFile: No folder linked to this project");
+    }
+
+    const reservedTempFiles = await chatStore.getReservedTempFiles(projectId, chatId);
+    const tempResult = await resolveTempFilePath(path, projectId, reservedTempFiles);
+
+    let fullPath: string;
+    let responsePath: string;
+    if (tempResult.redirected) {
+      fullPath = tempResult.tmpPath;
+      responsePath = tempResult.virtualPath;
+    } else {
+      const sanitized = await sanitizeAndResolvePath(folderPath, path);
+      if (!sanitized.success) {
+        throw new Error(`readFile: ${sanitized.error}`);
+      }
+      fullPath = sanitized.resolvedPath!;
+      responsePath = sanitized.relativePath!;
+    }
+
+    const stat = await filesystem.getStats(fullPath);
+    if (!stat) {
+      throw new Error(`readFile: File not found: ${responsePath}`);
+    }
+
+    if (stat.isDirectory) {
+      throw new Error(`readFile: Path is a directory, not a file: ${responsePath}`);
+    }
+
+    const content = await filesystem.readFile(fullPath);
+    if (content === undefined || content === null) {
+      throw new Error(`readFile: Could not read file: ${responsePath}`);
+    }
+
+    return content;
+  }
+
   return {
     async advance(nextStateKey: string) {
       if(logId) { throw new Error("Cannot advance from sub agent"); }
@@ -84,6 +130,7 @@ export function buildWon(
       });
     },
     reserveTempFile,
+    readFile,
     openFile: (uniqueName: string) => {
       if(typeof uniqueName !== "string") { throw new Error("openFile: uniqueName is required"); }
       emit("requestOpenFile", { uniqueName });
