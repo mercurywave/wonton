@@ -29,6 +29,27 @@ export async function checkFilePermissionWarn(
   operation: "write" | "edit",
   relativePath: string,
 ): Promise<CheckWarnResult> {
+  return checkPermissionWarn(showFeedback, projectId, chatId, logId, operation, relativePath);
+}
+
+export async function checkDirectoryPermissionWarn(
+  showFeedback: ((projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>) | undefined,
+  projectId: string,
+  chatId: string,
+  logId: string,
+  relativePath: string,
+): Promise<CheckWarnResult> {
+  return checkPermissionWarn(showFeedback, projectId, chatId, logId, "create directory", relativePath);
+}
+
+async function checkPermissionWarn(
+  showFeedback: ((projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>) | undefined,
+  projectId: string,
+  chatId: string,
+  logId: string,
+  operation: string,
+  relativePath: string,
+): Promise<CheckWarnResult> {
   if (!showFeedback) {
     return { denied: false };
   }
@@ -37,7 +58,7 @@ export async function checkFilePermissionWarn(
     projectId, chatId, logId,
     {
       type: "select",
-      question: `The agent wants to ${operation}:\n\`\`\`\n${relativePath}\n\`\`\`\n\nThis file has a "warn" permission. Allow the operation?`,
+      question: `The agent wants to ${operation}:\n\`\`\`\n${relativePath}\n\`\`\`\n\nAllow the operation?`,
       choices: ["Allow", "Deny", "Deny with Instructions"],
     } as FeedbackPayload
   );
@@ -62,7 +83,7 @@ export async function checkFilePermissionWarn(
         {
           type: "text",
           question: "Provide instructions for the agent:",
-          placeholder: `e.g., ${operation === "write" ? "Write to a different file instead" : "Make the change differently"}`,
+          placeholder: "Provide instructions for the agent",
         } as FeedbackPayload
       );
       if (typeof instructions === "string" && instructions.trim()) {
@@ -89,7 +110,7 @@ export async function checkFilePermissionWarn(
   return { denied: false };
 }
 
-function normalizePathSeparators(filePath: string): string {
+export function normalizePathSeparators(filePath: string): string {
   return filePath.replace(/\\/g, "/");
 }
 

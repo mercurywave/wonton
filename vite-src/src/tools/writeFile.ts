@@ -1,7 +1,7 @@
 import { filesystem } from "../utils/electronFs";
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
-import { sanitizeAndResolvePath, getEffectivePermission, checkFilePermissionWarn } from "./pathTools";
+import { sanitizeAndResolvePath, getEffectivePermission, checkFilePermissionWarn, checkDirectoryPermissionWarn, normalizePathSeparators } from "./pathTools";
 import { resolveTempFilePath } from "../utils/platformUtils";
 import { chatStore } from "../store/chats";
 import { projectMetaStore } from "../store/projectMeta";
@@ -128,6 +128,38 @@ export class WriteFileHandler implements ToolHandler {
         if (warnResult.denied) {
           return warnResult.result;
         }
+      }
+    }
+
+    // Ensure parent directory exists
+    const responsePathNorm = normalizePathSeparators(responsePath);
+    const parentRel = responsePathNorm.substring(0, responsePathNorm.lastIndexOf("/"));
+    if (parentRel) {
+      const folderAbs = await filesystem.getAbsolutePath(folderPath);
+      const parentAbs = await filesystem.joinPath(folderAbs, parentRel);
+      const parentAbsNorm = normalizePathSeparators(parentAbs);
+      const folderAbsNorm = normalizePathSeparators(folderAbs);
+
+      if (parentAbsNorm !== folderAbsNorm && !parentAbsNorm.startsWith(folderAbsNorm + "/")) {
+        return {
+          callId: "",
+          content: `Error: Cannot create directory outside project folder`,
+          isError: true,
+        };
+      }
+
+      // Check if parent directory exists
+      const parentStat = await filesystem.getStats(parentAbs).catch(() => null);
+      if (!parentStat || !parentStat.isDirectory) {
+        const warnResult = await checkDirectoryPermissionWarn(
+          showFeedback, projectId!, chatId!, logId!,
+          parentRel
+        );
+        if (warnResult.denied) {
+          return warnResult.result;
+        }
+
+        await filesystem.createDirectory(parentAbs);
       }
     }
 
