@@ -27,7 +27,7 @@ interface UseChatWorkflowOptions {
 }
 
 interface UseChatWorkflowReturn {
-  executeAdjustPrompt(userContent: string, modelId?: string): Promise<string>;
+  executeAdjustPrompt(userContent: string): Promise<string>;
   onSendPrompt(): Promise<void>;
   onChatResponse(response: ChatMessage): Promise<void>;
   onActionButtonClick(button: FlowActionButton, logId?: string): Promise<void>;
@@ -421,7 +421,7 @@ export function buildWon(
       const mainLogId = chatStore.getLogId(projectId, chatId) ?? "";
       const chatMessages = chatLogsStore.getLog(projectId, mainLogId) || [];
       const systemPrompt = agent?.systemPrompt || projectMeta?.systemPrompt || settings.systemPrompt;
-      const model = projectMeta?.defaultModel || settings.defaultModel || chat?.activeModel || "";
+      const model = chat?.activeModel || projectMeta?.defaultModel || settings.defaultModel || "";
       const reasoningEffort = (chat?.reasoningEffort as ReasoningEffort | undefined) || settings.reasoningEffort;
       const folderPath = projectStore.getProjectById(projectId)?.folderPath;
       const userChatMessage: ChatMessage = {

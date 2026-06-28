@@ -460,11 +460,11 @@ export function useChatApi(
         abortRef.current = controller;
 
         const systemPrompt = agentSystemPrompt || projectMeta?.systemPrompt || settings.systemPrompt;
-        const model = projectMeta?.defaultModel || settings.defaultModel || effectiveModel;
+        const model = effectiveModel || projectMeta?.defaultModel || settings.defaultModel;
 
         // Generate title before kicking off the agent (only for first message)
         if (messagesRef.current.length === 0 && projectId && chatId) {
-          const titleModel = projectMeta?.defaultModel || settings.defaultModel || modelId;
+          const titleModel = modelId || projectMeta?.defaultModel || settings.defaultModel;
           generateTitle(originalContent || content, titleModel).catch(() => {});
         }
 
