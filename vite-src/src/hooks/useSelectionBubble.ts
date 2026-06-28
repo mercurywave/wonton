@@ -39,9 +39,10 @@ export function useSelectionBubble(containerRef: React.RefObject<HTMLElement | n
       }
 
       const containerRect = containerRef.current.getBoundingClientRect();
+      const scrollTop = containerRef.current.scrollTop;
       setBubbleData({
         left: rect.left - containerRect.left + rect.width / 2,
-        top: rect.top - containerRect.top - 8,
+        top: rect.top - containerRect.top - 8 + scrollTop,
         text,
       });
     };
