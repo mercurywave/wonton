@@ -27,6 +27,12 @@
   justify-content: space-between;
 }
 
+.chatHeaderDropdowns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .chatHeaderName {
   font-size: 13px;
   color: #666;

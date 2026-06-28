@@ -658,18 +658,20 @@ export default function ChatPanel({
                 chatName
               )}
             </span>
-            <LogSelector
-              logs={logOptions}
-              activeLogId={effectiveLogId || currentChat?.logId || ""}
-              onLogChange={navigateToLog}
-            />
-            {onFileSelect && (
-              <FileSelector
-                files={currentChat?.reservedTempFiles || []}
-                activeFileUniqueName={activeFileUniqueName || null}
-                onFileSelect={onFileSelect}
+            <div className={styles.chatHeaderDropdowns}>
+              <LogSelector
+                logs={logOptions}
+                activeLogId={effectiveLogId || currentChat?.logId || ""}
+                onLogChange={navigateToLog}
               />
-            )}
+              {onFileSelect && (
+                <FileSelector
+                  files={currentChat?.reservedTempFiles || []}
+                  activeFileUniqueName={activeFileUniqueName || null}
+                  onFileSelect={onFileSelect}
+                />
+              )}
+            </div>
           </div>
         )}
         
