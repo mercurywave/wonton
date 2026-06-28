@@ -1,6 +1,6 @@
 import { useRef, useCallback, useMemo } from "react";
 import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won, SubagentMeta, SubagentOptions, ReasoningEffort } from "../types/chat";
-import { FeedbackPayload } from "../contexts";
+import { FeedbackPayload, addToast } from "../contexts";
 import { agentStore } from "../store/agents";
 import { generateUniqueFileName, getProjectDataDir, resolveTempFilePath } from "../utils/platformUtils";
 import { filesystem } from "../utils/electronFs";
@@ -466,6 +466,9 @@ export function buildWon(
         updatedAt: Date.now(),
       });
     },
+    toast(message: string, severity?: "info" | "success" | "warning" | "error") {
+      addToast(message, severity);
+    },
   };
 }
 
@@ -479,11 +482,13 @@ export async function executeCommand(
   if (!chatId || !projectId) return;
   const won = buildWon(projectId, chatId, undefined, showFeedback);
   const hookFn = new Function("won", `return (async () => {${command}})();`) as unknown as (won: Won) => Promise<void>;
-  try {
-    await hookFn(won);
-  } catch (err) {
-    console.error(`command "${flowId}" failed:`, err);
-  }
+ try {
+      await hookFn(won);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      addToast(`Command "${flowId}" failed: ${msg}`, "error");
+      console.error(`command "${flowId}" failed:`, err);
+    }
 }
 
 export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflowReturn {
@@ -506,6 +511,8 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     try {
       await hookFn(won);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      addToast(`onEnter hook failed in state "${stateKey}": ${msg}`, "error");
       console.error(`onEnter hook failed in state "${stateKey}":`, err);
     }
   }, [flows, workflowId, chatId, projectId]);
@@ -532,6 +539,8 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
           return result.trim();
         }
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        addToast(`hookAdjustPrompt failed in state "${workflowStateKey}": ${msg}`, "error");
         console.error(`hookAdjustPrompt failed in state "${workflowStateKey}":`, err);
       }
       return userContent;
@@ -550,6 +559,8 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     try {
       await hookFn(won);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      addToast(`onSendPrompt hook failed in state "${workflowStateKey}": ${msg}`, "error");
       console.error(`onSendPrompt hook failed in state "${workflowStateKey}":`, err);
     }
   }, [flows, workflowId, chatId, workflowStateKey, projectId]);
@@ -562,9 +573,11 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     const won = buildWon(projectId, chatId, undefined, showFeedback);
     const hookFn = new Function("won", "response", `return (async () => {${state.onChatResponse}})();`) as unknown as (won: Won, response: ChatMessage) => Promise<void>;
 
-    try {
+ try {
       await hookFn(won, response);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      addToast(`onChatResponse hook failed in state "${workflowStateKey}": ${msg}`, "error");
       console.error(`onChatResponse hook failed in state "${workflowStateKey}":`, err);
     }
   }, [flows, workflowId, chatId, workflowStateKey, projectId]);
@@ -580,6 +593,8 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
     try {
       await hookFn(won, button.idx);
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      addToast(`onActionButton hook failed in state "${workflowStateKey}": ${msg}`, "error");
       console.error(`onActionButton hook failed in state "${workflowStateKey}":`, err);
     }
   }, [flows, workflowId, chatId, workflowStateKey, projectId]);

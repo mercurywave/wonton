@@ -197,6 +197,7 @@ export interface Won {
   runPrompt(userMessage: string): Promise<string>;
   readFile(path: string): Promise<string>;
   finishWorkflow(): Promise<void>;
+  toast(message: string, severity?: "info" | "success" | "warning" | "error"): void;
 }
 
 export interface StatsEntry {

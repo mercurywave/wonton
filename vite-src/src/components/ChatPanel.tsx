@@ -18,6 +18,7 @@ import LogSelector from "./LogSelector";
 import FileSelector from "./FileSelector";
 import SelectionBubble from "./SelectionBubble";
 import FeedbackPopup from "./FeedbackPopup";
+import ToastPopup from "./ToastPopup";
 import { getDisplayName } from "../utils/modelUtils";
 import { getAvailableTools } from "../tools";
 import ToolCallSection from "./ToolCallSection";
@@ -720,6 +721,7 @@ export default function ChatPanel({
        </div>
 
        <FeedbackPopup />
+        <ToastPopup />
 
        {extensionStatus && (
          <div className={styles.extensionStatusBar}>

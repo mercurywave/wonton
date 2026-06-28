@@ -8,6 +8,7 @@ import { TasksProvider } from "./TasksContext";
 import { UIProvider } from "./UIContext";
 import { NavProvider } from "./NavContext";
 import { EventBusProvider } from "./EventBusContext";
+import { ToastProvider } from "./ToastContext";
 import { FeedbackProvider } from "./FeedbackContext";
 import { NotificationsProvider } from "./NotificationsContext";
 
@@ -23,6 +24,7 @@ export { EventBusProvider, useEventBus, emit, on } from "./EventBusContext";
 export { FeedbackProvider, useFeedback, type FeedbackPayload } from "./FeedbackContext";
 export { NotificationsProvider, useNotificationsContext } from "./NotificationsContext";
 export { FilePermissionsProvider, useFilePermissions } from "./FilePermissionsContext";
+export { ToastProvider, useToast, addToast, dismissToast, type ToastSeverity } from "./ToastContext";
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
@@ -33,7 +35,8 @@ export function AppProviders({ children }: { children: ReactNode }) {
             <NavProvider>
               <FlowsProvider>
                 <EventBusProvider>
-                  <FeedbackProvider>
+                  <ToastProvider>
+                    <FeedbackProvider>
                     <ChatsProvider>
                       <TasksProvider>
                         <UIProvider>
@@ -42,6 +45,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
                       </TasksProvider>
                     </ChatsProvider>
                   </FeedbackProvider>
+                  </ToastProvider>
                 </EventBusProvider>
               </FlowsProvider>
             </NavProvider>
