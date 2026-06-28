@@ -427,7 +427,7 @@ export function buildWon(
       const userChatMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
-        content: userMessage.trim(),
+        content: userMessage.trim().split("\n").map(t => t.trim()).join("\n"),
         timestamp: Date.now(),
       };
       const resolvedTools = await filterToAvailableTools(
