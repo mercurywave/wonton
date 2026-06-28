@@ -3,6 +3,8 @@ import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
 import { getEffectivePermission } from "./pathTools";
 import { projectMetaStore } from "../store/projectMeta";
+import { chatStore } from "../store/chats";
+import { getProjectDataDir, TMP_DIR_NAME } from "../utils/platformUtils";
 
 export const SEARCH_CONTENTS_TOOL_NAME = "grep";
 
@@ -10,6 +12,7 @@ interface ContentSearchResult {
   path: string;
   size: number;
   matches: MatchInfo[];
+  isTempFile?: boolean;
 }
 
 interface MatchInfo {
@@ -62,7 +65,8 @@ export class SearchContentsHandler implements ToolHandler {
     filePath: string,
     query: string,
     maxResults: number,
-    results: ContentSearchResult[]
+    results: ContentSearchResult[],
+    isTempFile = false
   ): Promise<boolean> {
     try {
       const stat = await filesystem.getStats(filePath);
@@ -88,6 +92,7 @@ export class SearchContentsHandler implements ToolHandler {
           path: filePath,
           size: stat.size || 0,
           matches,
+          isTempFile,
         });
       }
     } catch {
@@ -156,7 +161,7 @@ export class SearchContentsHandler implements ToolHandler {
 
   async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { query, maxResults = 20 } = args as { query: string; maxResults?: number };
-    const { folderPath, projectId } = context;
+    const { folderPath, projectId, chatId } = context;
 
     if (!folderPath) {
       return {
@@ -177,14 +182,48 @@ export class SearchContentsHandler implements ToolHandler {
     const results: ContentSearchResult[] = [];
     const done = await this.searchDirectory(folderPath, query, results, maxResults, 0, projectId, folderPath);
 
-    const relResults = results.map((r) => ({
-      path: r.path.replace(folderPath, "").replace(/^\//, ""),
-      size: r.size,
-      matches: r.matches.map((m) => ({
-        line: m.line,
-        content: m.content,
-      })),
-    }));
+    const reservedTempFiles = (chatId && projectId)
+      ? await chatStore.getReservedTempFiles(projectId, chatId)
+      : undefined;
+
+    let dataDir: string | undefined;
+    if (reservedTempFiles && reservedTempFiles.length > 0 && projectId) {
+      dataDir = await getProjectDataDir(projectId);
+      for (const reservation of reservedTempFiles) {
+        if (results.length >= maxResults) break;
+        const tmpPath = `${dataDir}/${TMP_DIR_NAME}/${reservation.uniqueName}`;
+        try {
+          const stat = await filesystem.getStats(tmpPath);
+          if (stat && !stat.isDirectory) {
+            const tempDone = await this.searchFile(tmpPath, query, maxResults, results, true);
+            if (tempDone) break;
+          }
+        } catch {
+          // temp file may not exist yet
+        }
+      }
+    }
+
+    const relResults = results.map((r) => {
+      let path: string;
+      if (r.isTempFile) {
+        const reservation = reservedTempFiles?.find(res => {
+          const tmpPath = `${dataDir}/${TMP_DIR_NAME}/${res.uniqueName}`;
+          return tmpPath === r.path;
+        });
+        path = reservation?.uniqueName ?? r.path;
+      } else {
+        path = r.path.replace(folderPath, "").replace(/^\//, "");
+      }
+      return {
+        path,
+        size: r.size,
+        matches: r.matches.map((m) => ({
+          line: m.line,
+          content: m.content,
+        })),
+      };
+    });
 
     const output = JSON.stringify({
       results: relResults,
