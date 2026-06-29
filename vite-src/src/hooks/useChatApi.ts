@@ -491,7 +491,7 @@ export function useChatApi(
           allAgents,
           reasoningEffort,
           onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId, messageReasoningContent) => {
-            if (logId) {
+            if (logId && messageRole !== "tool") {
               const pending = chatLogsStore.getPendingMessage(projectId!, logId);
               const baseMsg = (pending?.id === messageId) ? pending : { id: messageId, timestamp: Date.now() };
               chatLogsStore.updatePendingMessage(projectId!, logId, {
