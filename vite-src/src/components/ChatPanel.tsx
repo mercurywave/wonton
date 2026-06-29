@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback, useMemo, useState, memo } from "react";
 import React from "react";
-import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play, Brain, Copy, Undo2 } from "lucide-react";
+import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play, Brain, Copy, Undo2, Utensils } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
@@ -829,7 +829,7 @@ export default function ChatPanel({
               title="Run command"
               disabled={enabledCommands.length === 0}
             >
-              <Play size={16} />
+              <Utensils size={16} />
             </button>
             {showCommandsPopup && (
               <div ref={popupRef} className={styles.commandPopupWrapper}>
