@@ -436,6 +436,12 @@ export function buildWon(
         agent,
         allAgents,
       );
+      const customToolDefs = (() => {
+        if (!chat?.workflowId) return [];
+        const allFlows = flowStore.getFlows();
+        const flow = allFlows.find((f) => f.id === chat.workflowId);
+        return flow?.tools ?? [];
+      })();
       const result = await runToolCallLoop({
         settings,
         systemPrompt,
@@ -452,6 +458,7 @@ export function buildWon(
         agent,
         allAgents,
         reasoningEffort,
+        customTools: customToolDefs.length > 0 ? customToolDefs : undefined,
         onUpdateMessage: () => {},
         onChatUpdated: () => {},
         onValidate: showFeedback,
