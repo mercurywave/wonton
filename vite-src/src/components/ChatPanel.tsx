@@ -384,6 +384,10 @@ export default function ChatPanel({
 
     loadDraft();
 
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus();
+    });
+
     // Subscribe to chat metadata changes (e.g. from extensions calling won.setChatDraft())
     const unsubscribe = chatStore.subscribe(activeProjectId, () => {
       const chatMeta = chatStore.getChat(activeProjectId, selectedChatId);
