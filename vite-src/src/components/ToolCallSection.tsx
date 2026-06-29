@@ -8,6 +8,7 @@ import { SEARCH_CONTENTS_TOOL_NAME } from "../tools/searchContents";
 import { WRITE_FILE_TOOL_NAME } from "../tools/writeFile";
 import { EXECUTE_SUBAGENT_TOOL_NAME } from "../tools/executeSubagent";
 import { EXEC_COMMAND_TOOL_NAME } from "../tools/execCommand";
+import { EDIT_FILE_TOOL_NAME } from "../tools/editFile";
 import { useNav } from "../contexts/NavContext";
 
 function parseArgs(toolCall: ToolCall): object | null {
@@ -257,6 +258,16 @@ const toolConfigs: Record<string, ToolConfig> = {
           );
         }
       }
+      return result ? <pre className={styles.toolCallContent}>{result}</pre> : null;
+    },
+  },
+  [EDIT_FILE_TOOL_NAME]: {
+    header: (parsedArgs) => {
+      const path = extractArgString(parsedArgs, "path");
+      return <ToolHeader icon={<FileText className={styles.toolCallIcon} size={14} />} name="Edit" pathLabel={path ? formatTruncatedPath(path) : null} />;
+    },
+    content: (_parsedArgs, parsedResult) => {
+      const result = parsedResult.formatted;
       return result ? <pre className={styles.toolCallContent}>{result}</pre> : null;
     },
   },
