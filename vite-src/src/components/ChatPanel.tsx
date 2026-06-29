@@ -503,10 +503,18 @@ export default function ChatPanel({
     const loadTools = async () => {
       let agent = allAgents.find((a) => a.id === activeAgentId);
       const tools = await getAvailableTools(activeProject?.folderPath, agent, allAgents);
-      setAvailableTools(tools);
+      const customToolDefs = resolvedWorkflow?.tools?.map((t) => ({
+        type: "function" as const,
+        function: {
+          name: t.name,
+          description: t.description,
+          parameters: { type: "object", properties: {} } as object,
+        },
+      })) ?? [];
+      setAvailableTools([...tools, ...customToolDefs]);
     };
     loadTools();
-  }, [activeProject?.folderPath, activeAgentId, allAgents]);
+  }, [activeProject?.folderPath, activeAgentId, allAgents, resolvedWorkflow?.tools]);
   const { maxTokens } = useContextWindow(activeModel, settings);
 
   const usageTokens = useMemo(() => {

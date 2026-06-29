@@ -224,6 +224,27 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     [showFeedbackBase, dispatch]
   );
 
+  // Workflow execution for the selected chat
+  const selectedChatForWorkflow = selectedChatMeta;
+
+  const {
+    executeAdjustPrompt: workflowExecuteAdjustPrompt,
+    onSendPrompt: workflowExecuteOnSendPrompt,
+    onChatResponse: workflowExecuteOnChatResponse,
+    onActionButtonClick: workflowOnActionButtonClick,
+    advance,
+    currentFlow,
+  } = useChatWorkflow({
+    workflowId: selectedChatForWorkflow?.workflowId,
+    workflowStateKey: selectedChatForWorkflow?.workflowStateKey,
+    flows,
+    chatId: selectedChatId || undefined,
+    projectId: activeProjectId || undefined,
+    showFeedback: wrappedShowFeedback,
+  });
+
+  const workflowCustomTools = currentFlow?.tools;
+
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     settings,
     selectedChatId || undefined,
@@ -242,6 +263,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     allAgents,
     wrappedShowFeedback,
     activeReasoningEffort,
+    workflowCustomTools,
   );
 
   // Track previous isLoading to detect completion of user-initiated chats
@@ -261,24 +283,6 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       showNotification("Response complete", title);
     }
   }, [isLoading, showNotification, selectedChatId, activeProjectId, projectsCtx.projects]);
-
-  // Workflow execution for the selected chat
-  const selectedChatForWorkflow = selectedChatMeta;
-
-  const {
-    executeAdjustPrompt: workflowExecuteAdjustPrompt,
-    onSendPrompt: workflowExecuteOnSendPrompt,
-    onChatResponse: workflowExecuteOnChatResponse,
-    onActionButtonClick: workflowOnActionButtonClick,
-    advance,
-  } = useChatWorkflow({
-    workflowId: selectedChatForWorkflow?.workflowId,
-    workflowStateKey: selectedChatForWorkflow?.workflowStateKey,
-    flows,
-    chatId: selectedChatId || undefined,
-    projectId: activeProjectId || undefined,
-    showFeedback: wrappedShowFeedback,
-  });
 
   const wrappedSendMessage = useCallback(
     async (content: string, modelId: string) => {

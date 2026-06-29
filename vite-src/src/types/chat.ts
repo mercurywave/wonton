@@ -115,6 +115,12 @@ export interface ProjectMeta {
   filePermissions?: Record<string, FilePermission>;
 }
 
+export interface FlowCustomTool {
+  name: string;
+  description: string;
+  code: string;
+}
+
 export interface Flow {
   id: string;
   name: string;
@@ -125,6 +131,7 @@ export interface Flow {
   command?: string;
   isCommand?: boolean;
   source?: string; // "global" or project ID
+  tools?: FlowCustomTool[];
 }
 
 export interface FlowActionButton {

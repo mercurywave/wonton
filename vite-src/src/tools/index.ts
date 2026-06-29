@@ -58,6 +58,8 @@ export async function getAvailableTools(folderPath?: string, agent?: Agent, allA
   return await filterAndCleanTools(Object.values(toolHandlers), folderPath, agent, allAgents);
 }
 
+export { executeCustomTool, getCustomToolDefinitions, findCustomTool } from "./customTool";
+
 async function filterAndCleanTools(allTools: ToolHandler[], folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition[]> {
   const availableAgents = (allAgents && agent && agent.subagentAllowlist) 
     ? allAgents.filter(a => agent.subagentAllowlist?.includes(a.id))
