@@ -477,6 +477,7 @@ export function buildWon(
       addToast(message, severity);
     },
     async submitPrompt(prompt: string) {
+      prompt = prompt.trim().split("\n").map(t => t.trim()).join("\n");
       if (!chatId || !projectId) {
         throw new Error("Cannot submitPrompt: no active chat or project");
       }
