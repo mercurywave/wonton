@@ -476,6 +476,12 @@ export function buildWon(
     toast(message: string, severity?: "info" | "success" | "warning" | "error") {
       addToast(message, severity);
     },
+    async submitPrompt(prompt: string) {
+      if (!chatId || !projectId) {
+        throw new Error("Cannot submitPrompt: no active chat or project");
+      }
+      emit("extension-submit-prompt", { prompt });
+    },
   };
 }
 

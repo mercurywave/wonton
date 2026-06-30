@@ -612,6 +612,16 @@ export default function ChatPanel({
   }, [onEvent]);
 
   useEffect(() => {
+    const handleExtensionSubmit = (payload: unknown) => {
+      const { prompt } = payload as { prompt: string };
+      if (!prompt || isLoading || !selectedChatId) return;
+      setDraft("");
+      onSend(prompt, activeModel);
+    };
+    return onEvent("extension-submit-prompt", handleExtensionSubmit);
+  }, [onEvent, isLoading, selectedChatId, onSend, activeModel, setDraft]);
+
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (popupRef.current && !popupRef.current.contains(event.target as Node)) {
         setShowCommandsPopup(false);
