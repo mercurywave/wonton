@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { GitBranch, FolderOpen, Loader2, Play, Wrench } from "lucide-react";
 import styles from "../components/WorkflowsPage.module.css";
+import AgentsSettings from "../components/AgentsSettings";
 import { useFlowsContext } from "../contexts/FlowsContext";
 import { useToolsContext } from "../contexts/ToolsContext";
 import { isBackendConnected, isWindowsSync } from "../utils/platformUtils";
@@ -85,15 +86,16 @@ function FlowCard({ flow, isDisabled, isOverridden, hasConflict, onToggle }: {
   );
 }
 
-const tabs: { key: "workflows" | "tools"; label: string }[] = [
+const tabs: { key: "workflows" | "tools" | "agents"; label: string }[] = [
   { key: "workflows", label: "Workflows" },
   { key: "tools", label: "Tools" },
+  { key: "agents", label: "Agents" },
 ];
 
 export default function WorkflowsPage() {
   const { flows, disabledFlows, isLoading, globalFlowsPath, projectFlowsPath, toggleFlow, conflictIds, conflictFiles, overriddenGlobalIds } = useFlowsContext();
   const { tools, toolsDirPath } = useToolsContext();
-  const [activeTab, setActiveTab] = useState<"workflows" | "tools">("workflows");
+  const [activeTab, setActiveTab] = useState<"workflows" | "tools" | "agents">("workflows");
   const windowsOnly = isWindowsSync();
   const overriddenSet = new Set(overriddenGlobalIds);
   const hasConflict = conflictIds.length > 0;
@@ -198,6 +200,8 @@ export default function WorkflowsPage() {
           )}
 
           {activeTab === "tools" && <ToolsSection toolsDirPath={toolsDirPath} tools={tools} />}
+
+          {activeTab === "agents" && <AgentsSettings />}
         </div>
         {activeTab === "workflows" && (
           <div className={styles.headerActions}>

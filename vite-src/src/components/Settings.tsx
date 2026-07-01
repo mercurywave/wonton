@@ -4,11 +4,10 @@ import styles from "../components/Settings.module.css";
 import ServerSettings from "../components/ServerSettings";
 import ModelSettings from "../components/ModelSettings";
 import PreferencesSettings from "../components/PreferencesSettings";
-import AgentsSettings from "../components/AgentsSettings";
 import FilePermissionsSettings from "../components/FilePermissionsSettings";
 import { useFilePermissions, useProjects, useNav } from "../contexts";
 
-type Tab = "server" | "models" | "preferences" | "agents" | "permissions";
+type Tab = "server" | "models" | "preferences" | "permissions";
 
 interface SettingsProps {
   onFolderChange?: (id: string) => void;
@@ -18,7 +17,6 @@ const tabs: { key: Tab; label: string }[] = [
   { key: "server", label: "Server" },
   { key: "models", label: "Models" },
   { key: "preferences", label: "Preferences" },
-  { key: "agents", label: "Agents" },
   { key: "permissions", label: "Permissions" },
 ];
 
@@ -54,7 +52,6 @@ export default function Settings({ onFolderChange }: SettingsProps) {
           {activeTab === "server" && <ServerSettings />}
           {activeTab === "models" && <ModelSettings />}
           {activeTab === "preferences" && <PreferencesSettings />}
-          {activeTab === "agents" && <AgentsSettings />}
           {activeTab === "permissions" && (
             <FilePermissionsTab
               folderPath={folderPath}
