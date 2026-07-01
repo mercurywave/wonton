@@ -555,6 +555,7 @@ export default function ChatPanel({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const mainContentRef = useRef<HTMLDivElement>(null);
   const { bubbleData, dismiss: dismissBubble } = useSelectionBubble(messagesContainerRef);
 
   useEffect(() => {
@@ -633,6 +634,14 @@ export default function ChatPanel({
     }
   }, [showCommandsPopup]);
 
+  useEffect(() => {
+    if (mainContentRef.current) {
+      requestAnimationFrame(() => {
+        mainContentRef.current!.scrollTop = mainContentRef.current!.scrollHeight;
+      });
+    }
+  }, [messages.length]);
+
   const handleSubmit = useCallback(
     async (e: React.SyntheticEvent) => {
       e.preventDefault();
@@ -661,7 +670,7 @@ export default function ChatPanel({
 
   return (
     <div className={styles.container}>
-      <div className={styles.mainContent}>
+      <div className={styles.mainContent} ref={mainContentRef}>
         {chatName && (
           <div className={styles.chatHeader}>
             <span className={styles.chatHeaderName}>
