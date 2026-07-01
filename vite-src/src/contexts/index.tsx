@@ -3,6 +3,7 @@ import { SettingsProvider } from "./SettingsContext";
 import { ProjectsProvider } from "./ProjectsContext";
 import { AgentsProvider } from "./AgentsContext";
 import { FlowsProvider } from "./FlowsContext";
+import { ToolsProvider } from "./ToolsContext";
 import { ChatsProvider } from "./ChatsContext";
 import { TasksProvider } from "./TasksContext";
 import { UIProvider } from "./UIContext";
@@ -16,6 +17,7 @@ export { SettingsProvider, useSettings } from "./SettingsContext";
 export { ProjectsProvider, useProjects } from "./ProjectsContext";
 export { AgentsProvider, useAgentsContext } from "./AgentsContext";
 export { FlowsProvider, useFlowsContext } from "./FlowsContext";
+export { ToolsProvider, useToolsContext } from "./ToolsContext";
 export { ChatsProvider, useChats } from "./ChatsContext";
 export { TasksProvider, useTasks } from "./TasksContext";
 export { UIProvider, useUI } from "./UIContext";
@@ -34,19 +36,21 @@ export function AppProviders({ children }: { children: ReactNode }) {
           <AgentsProvider>
             <NavProvider>
               <FlowsProvider>
-                <EventBusProvider>
-                  <ToastProvider>
-                    <FeedbackProvider>
-                    <ChatsProvider>
-                      <TasksProvider>
-                        <UIProvider>
-                          {children}
-                        </UIProvider>
-                      </TasksProvider>
-                    </ChatsProvider>
-                  </FeedbackProvider>
-                  </ToastProvider>
-                </EventBusProvider>
+                <ToolsProvider>
+                  <EventBusProvider>
+                    <ToastProvider>
+                      <FeedbackProvider>
+                        <ChatsProvider>
+                          <TasksProvider>
+                            <UIProvider>
+                              {children}
+                            </UIProvider>
+                          </TasksProvider>
+                        </ChatsProvider>
+                      </FeedbackProvider>
+                    </ToastProvider>
+                  </EventBusProvider>
+                </ToolsProvider>
               </FlowsProvider>
             </NavProvider>
           </AgentsProvider>

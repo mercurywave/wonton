@@ -121,6 +121,12 @@ export interface FlowCustomTool {
   code: string;
 }
 
+export interface ProjectCustomTool {
+  name: string;
+  description: string;
+  code: string;
+}
+
 export interface Flow {
   id: string;
   name: string;

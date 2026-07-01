@@ -16,6 +16,7 @@ import { useProjects } from "./ProjectsContext";
 import { useNav } from "./NavContext";
 import { useAgentsContext } from "./AgentsContext";
 import { useFlowsContext } from "./FlowsContext";
+import { useToolsContext } from "./ToolsContext";
 import { FeedbackPayload, useFeedback } from "./FeedbackContext";
 import { useNotificationsContext } from "./NotificationsContext";
 import { isBackendConnected } from "../utils/platformUtils";
@@ -243,7 +244,19 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     showFeedback: wrappedShowFeedback,
   });
 
-  const workflowCustomTools = currentFlow?.tools;
+  const { tools: projectTools } = useToolsContext();
+  const workflowCustomTools = useMemo(() => {
+    const toolMap = new Map<string, { name: string; description: string; code: string }>();
+    for (const t of projectTools) {
+      toolMap.set(t.name, { name: t.name, description: t.description, code: t.code });
+    }
+    if (currentFlow?.tools) {
+      for (const t of currentFlow.tools) {
+        toolMap.set(t.name, { name: t.name, description: t.description, code: t.code });
+      }
+    }
+    return Array.from(toolMap.values());
+  }, [projectTools, currentFlow?.tools]);
 
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     settings,

@@ -15,6 +15,7 @@ export const TMP_DIR_NAME = "tmp";
 export const PROJECTS_FILE_NAME = "projects.json";
 export const AGENTS_FILE_NAME = "agents.json";
 export const FLOWS_DIR_NAME = "flows";
+export const TOOLS_DIR_NAME = "tools";
 export const TASKS_DIR_NAME = "tasks";
 export const DEFAULT_PROJECT_ID = "default";
 
@@ -89,6 +90,11 @@ export async function getFlowsDirPath(projectId?: string): Promise<string> {
     return await joinPath(rootDir, projectId, FLOWS_DIR_NAME);
   }
   return await joinPath(rootDir, FLOWS_DIR_NAME);
+}
+
+export async function getToolsDirPath(projectId: string): Promise<string> {
+  const projectDir = await getProjectDataDir(projectId);
+  return await joinPath(projectDir, TOOLS_DIR_NAME);
 }
 
 export function isBackendConnected(): boolean {

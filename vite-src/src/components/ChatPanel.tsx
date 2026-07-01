@@ -7,7 +7,7 @@ import styles from "../components/ChatPanel.module.css";
 import { ChatMessage as ChatMessageType, LLMStats, Flow, ToolDefinition } from "../types/chat";
 import { useContextWindow } from "../hooks/useContextWindow";
 import { useSelectionBubble } from "../hooks/useSelectionBubble";
-import { useSettings, useAgentsContext, useChats, useProjects, useNav, useFlowsContext, useEventBus } from "../contexts";
+import { useSettings, useAgentsContext, useChats, useProjects, useNav, useFlowsContext, useToolsContext, useEventBus } from "../contexts";
 import { chatStore } from "../store/chats";
 import { isBackendConnected } from "../utils/platformUtils";
 import ModelPicker from "./ModelPicker";
@@ -420,6 +420,7 @@ export default function ChatPanel({
     };
   }, [draft, writeProjectId, writeChatId]);
   const { flows, enabledWorkflows, commandFlows, disabledFlows } = useFlowsContext();
+  const { tools: projectTools } = useToolsContext();
   const { on: onEvent } = useEventBus();
   const [showCommandsPopup, setShowCommandsPopup] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
@@ -503,18 +504,29 @@ export default function ChatPanel({
     const loadTools = async () => {
       let agent = allAgents.find((a) => a.id === activeAgentId);
       const tools = await getAvailableTools(activeProject?.folderPath, agent, allAgents);
-      const customToolDefs = resolvedWorkflow?.tools?.map((t) => ({
+      
+      // Merge project tools with workflow tools (workflow tools overwrite by name)
+      const toolMap = new Map<string, { name: string; description: string }>();
+      for (const t of projectTools) {
+        toolMap.set(t.name, { name: t.name, description: t.description });
+      }
+      if (resolvedWorkflow?.tools) {
+        for (const t of resolvedWorkflow.tools) {
+          toolMap.set(t.name, { name: t.name, description: t.description });
+        }
+      }
+      const customToolDefs = Array.from(toolMap.values()).map((t) => ({
         type: "function" as const,
         function: {
           name: t.name,
           description: t.description,
           parameters: { type: "object", properties: {} } as object,
         },
-      })) ?? [];
+      }));
       setAvailableTools([...tools, ...customToolDefs]);
     };
     loadTools();
-  }, [activeProject?.folderPath, activeAgentId, allAgents, resolvedWorkflow?.tools]);
+  }, [activeProject?.folderPath, activeAgentId, allAgents, resolvedWorkflow?.tools, projectTools]);
   const { maxTokens } = useContextWindow(activeModel, settings);
 
   const usageTokens = useMemo(() => {

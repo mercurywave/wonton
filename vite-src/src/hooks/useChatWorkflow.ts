@@ -1,5 +1,5 @@
 import { useRef, useCallback, useMemo } from "react";
-import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won, SubagentMeta, SubagentOptions, ReasoningEffort } from "../types/chat";
+import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won, SubagentMeta, SubagentOptions, ReasoningEffort, FlowCustomTool } from "../types/chat";
 import { FeedbackPayload, addToast } from "../contexts";
 import { agentStore } from "../store/agents";
 import { generateUniqueFileName, getProjectDataDir, resolveTempFilePath } from "../utils/platformUtils";
@@ -10,6 +10,7 @@ import { chatLogsStore } from "../store/chatLogs";
 import { projectStore } from "../store/projects";
 import { projectMetaStore } from "../store/projectMeta";
 import { flowStore } from "../store/flows";
+import { toolStore } from "../store/tools";
 import { emit } from "../contexts";
 import { loadSettings } from "./useChatSettings";
 import { runQuery as runQueryImpl } from "./useLLMQuery";
@@ -437,10 +438,22 @@ export function buildWon(
         allAgents,
       );
       const customToolDefs = (() => {
-        if (!chat?.workflowId) return [];
+        const toolMap = new Map<string, FlowCustomTool>();
+        const projectTools = toolStore.getTools();
+        for (const t of projectTools) {
+          toolMap.set(t.name, { name: t.name, description: t.description, code: t.code });
+        }
+        if (!chat?.workflowId) {
+          return Array.from(toolMap.values());
+        }
         const allFlows = flowStore.getFlows();
         const flow = allFlows.find((f) => f.id === chat.workflowId);
-        return flow?.tools ?? [];
+        if (flow?.tools) {
+          for (const t of flow.tools) {
+            toolMap.set(t.name, { name: t.name, description: t.description, code: t.code });
+          }
+        }
+        return Array.from(toolMap.values());
       })();
       const result = await runToolCallLoop({
         settings,
