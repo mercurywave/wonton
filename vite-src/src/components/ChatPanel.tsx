@@ -535,7 +535,7 @@ export default function ChatPanel({
       return 0;
     }
     const stats = lastMsg.stats;
-    return (stats.promptTokens || 0) + (stats.completionTokens || 0);
+    return (stats.promptTokens || 0) + (stats.completionTokens || 0) + (stats.cacheN || 0);
   }, [messages]);
 
   // Build text content for tokenization
@@ -559,7 +559,19 @@ export default function ChatPanel({
   const messagesText = useMemo(
     () =>
       messages
-        .map((m) => `[${m.role}]: ${m.content ?? ""}`)
+        .map((m) => {
+          if (m.toolCalls && m.toolCalls.length > 0) {
+            const toolCallText = m.toolCalls
+              .map((tc) => JSON.stringify({
+                type: "function",
+                id: tc.id,
+                function: { name: tc.name, arguments: tc.arguments },
+              }))
+              .join("\n");
+            return `[${m.role}]: ${m.content ?? ""}\n${toolCallText}`;
+          }
+          return `[${m.role}]: ${m.content ?? ""}`;
+        })
         .join("\n"),
     [messages]
   );
