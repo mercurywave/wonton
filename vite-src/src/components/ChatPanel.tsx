@@ -601,25 +601,27 @@ export default function ChatPanel({
       processed = processed.slice(0, half) + "..." + processed.slice(processed.length - half);
     }
     const reText = `RE "${processed}": `;
-    setDraft(draft + reText);
+    setDraft(prev => prev + (prev.length > 0 ? "\n" : "") + reText);
     requestAnimationFrame(() => {
       textareaRef.current?.focus();
-      const cursorPos = draft.length + reText.length;
+      const prevLength = textareaRef.current?.value.length ?? 0;
+      const cursorPos = prevLength + (prevLength > 0 ? 1 : 0) + reText.length;
       if (textareaRef.current) {
         textareaRef.current.selectionStart = textareaRef.current.selectionEnd = cursorPos;
       }
     });
     dismissBubble();
-  }, [draft, setDraft, dismissBubble]);
+  }, [dismissBubble]);
 
   // Listen for RE comments from FileViewerPanel via event bus
   useEffect(() => {
     const handleReComment = (payload: unknown) => {
       const reText = payload as string;
-      setDraft(draft + reText);
+      setDraft(prev => prev + (prev.length > 0 ? "\n" : "") + reText);
       requestAnimationFrame(() => {
         textareaRef.current?.focus();
-        const cursorPos = draft.length + reText.length;
+        const prevLength = textareaRef.current?.value.length ?? 0;
+        const cursorPos = prevLength + (prevLength > 0 ? 1 : 0) + reText.length;
         if (textareaRef.current) {
           textareaRef.current.selectionStart = textareaRef.current.selectionEnd = cursorPos;
         }
@@ -627,7 +629,7 @@ export default function ChatPanel({
     };
 
     return onEvent("re-comment", handleReComment);
-  }, [draft, onEvent, setDraft]);
+  }, [onEvent, setDraft]);
 
   useEffect(() => {
     const handleExtensionStatus = (payload: unknown) => {
