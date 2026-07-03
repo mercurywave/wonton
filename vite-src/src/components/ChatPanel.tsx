@@ -530,12 +530,14 @@ export default function ChatPanel({
   const { maxTokens } = useContextWindow(activeModel, settings);
 
   const usageTokens = useMemo(() => {
-    const lastMsg = messages[messages.length - 1];
-    if (!lastMsg || lastMsg.role !== "assistant" || !lastMsg.stats) {
-      return 0;
+    for (let i = messages.length - 1; i >= 0; i--) {
+      const msg = messages[i];
+      if (msg.role === "assistant" && msg.stats) {
+        const s = msg.stats;
+        return (s.promptTokens || 0) + (s.completionTokens || 0) + (s.cacheN || 0);
+      }
     }
-    const stats = lastMsg.stats;
-    return (stats.promptTokens || 0) + (stats.completionTokens || 0) + (stats.cacheN || 0);
+    return 0;
   }, [messages]);
 
   // Build text content for tokenization
