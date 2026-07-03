@@ -6,7 +6,6 @@ import { useChats } from "./contexts";
 import { useUI } from "./contexts";
 import { useNav } from "./contexts";
 import { useEventBus } from "./contexts";
-import { useNotificationsContext } from "./contexts";
 import { FilePermissionsProvider } from "./contexts";
 import Sidebar from "./components/Sidebar";
 import ChatPanel from "./components/ChatPanel";
@@ -36,7 +35,6 @@ function App() {
   const { messages, isLoading, getIsProcessing, sendMessage, stopGeneration, setSelectedChatId, createChat, deleteChat, renameChat, chats, selectedChatId } = useChats();
   const { sidebarOpen, isMobile } = useUI();
   const { on: onEvent } = useEventBus();
-  const { showNotification } = useNotificationsContext();
   const {
     state: nav,
     activeProjectId,
@@ -194,16 +192,6 @@ function App() {
       navigateToChat(chatId);
     });
   }, [onEvent, navigateToChat]);
-
-  useEffect(() => {
-    return onEvent("commandWaitingApproval", (payload: unknown) => {
-      const { command } = payload as { command: string };
-      showNotification(
-        "Command Approval Required",
-        `Waiting for approval: ${command}`
-      );
-    });
-  }, [onEvent, showNotification]);
 
   const showProjectFeatures = isBackendConnected() && projects.length > 0;
 

@@ -3,15 +3,20 @@ import {
   useContext,
   useCallback,
   useMemo,
+  useRef,
   ReactNode,
   useState,
+  useEffect,
 } from "react";
 import {
   queueApproval,
   dequeueApproval,
   getFirstPendingApprovalAcrossAllChats,
   ApprovalRequest,
+  chatStore,
 } from "../store/chats";
+import { projectStore } from "../store/projects";
+import { useNotificationsContext } from "./NotificationsContext";
 
 export type FeedbackType = "alert" | "select" | "text";
 
@@ -47,6 +52,35 @@ const ExtensionFeedback = createContext<ExtensionFeedbackValue | null>(null);
 export function FeedbackProvider({ children }: { children: ReactNode }) {
   const [currentRequest, setCurrentRequest] = useState<ApprovalRequest | null>(null);
   const [projectId, setProjectId] = useState<string | null>(null);
+  const { showNotification } = useNotificationsContext();
+  const prevRequestRef = useRef<ApprovalRequest | null>(null);
+
+  // Trigger notification when a new feedback popup appears
+  useEffect(() => {
+    if (currentRequest && currentRequest !== prevRequestRef.current) {
+      prevRequestRef.current = currentRequest;
+      const project = projectStore.getProjectById(projectId!);
+      const chat = chatStore.getChat(projectId!, currentRequest.chatId);
+      const chatName = chat?.name || "Chat";
+      const projectName = project?.name || "";
+      const title = projectName ? `${projectName} - ${chatName}` : chatName;
+
+      let body: string;
+      switch (currentRequest.payload.type) {
+        case "select":
+          body = `${currentRequest.payload.question} (${currentRequest.payload.choices.length} options)`;
+          break;
+        case "text":
+          body = currentRequest.payload.question + (currentRequest.payload.placeholder ? ` (${currentRequest.payload.placeholder})` : "");
+          break;
+        case "alert":
+          body = currentRequest.payload.message;
+          break;
+      }
+
+      showNotification(title, body);
+    }
+  }, [currentRequest, projectId, showNotification]);
 
   const showFeedback = useCallback(
     (projectId: string, chatId: string, logId: string, payload: FeedbackPayload): Promise<number | string | void> => {
@@ -67,6 +101,7 @@ export function FeedbackProvider({ children }: { children: ReactNode }) {
           if (prev) return prev; // already showing something
           return request;
         });
+        return request;
       });
     },
     []
