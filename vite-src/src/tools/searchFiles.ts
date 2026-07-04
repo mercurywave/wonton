@@ -94,8 +94,8 @@ export class SearchFilesHandler implements ToolHandler {
     projectId: string | undefined,
     folderPath: string
   ): Promise<boolean> {
-    if (depth > 5 || results.length >= maxResults) {
-      return results.length >= maxResults;
+    if (results.length >= maxResults) {
+      return true;
     }
 
     if (!filesystem) return false;
@@ -257,6 +257,9 @@ export class SearchFilesHandler implements ToolHandler {
       ? await chatStore.getReservedTempFiles(projectId, chatId)
       : undefined;
 
+    const leafPattern = patternSegments[patternSegments.length - 1];
+    const leafRegex = this.globToRegex(leafPattern);
+
     let dataDir: string | undefined;
     if (reservedTempFiles && reservedTempFiles.length > 0 && projectId) {
       dataDir = await getProjectDataDir(projectId);
@@ -265,7 +268,7 @@ export class SearchFilesHandler implements ToolHandler {
         const tmpPath = `${dataDir}/${TMP_DIR_NAME}/${reservation.uniqueName}`;
         try {
           const stat = await filesystem.getStats(tmpPath);
-          if (stat && !stat.isDirectory) {
+          if (stat && !stat.isDirectory && leafRegex.test(reservation.baseName)) {
             results.push({ path: tmpPath, size: stat.size || 0, isTempFile: true });
           }
         } catch {

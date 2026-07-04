@@ -111,8 +111,8 @@ export class SearchContentsHandler implements ToolHandler {
     projectId: string | undefined,
     folderPath: string
   ): Promise<boolean> {
-    if (depth > 5 || results.length >= maxResults) {
-      return results.length >= maxResults;
+    if (results.length >= maxResults) {
+      return true;
     }
 
     if (!filesystem) return false;
