@@ -411,7 +411,7 @@ export default function Sidebar({
                       <Flag size={10} />
                     </span>
                   )}
-                  <span className={styles.taskName}>{task.text}</span>
+                  <span className={styles.taskName} title={task.text}>{task.text}</span>
                   <button
                     className={styles.taskGraduateBtn}
                     onClick={(e) => {
