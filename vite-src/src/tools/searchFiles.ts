@@ -163,7 +163,7 @@ export class SearchFilesHandler implements ToolHandler {
               const done = await this.searchDirectory(
                 fullPath,
                 patternSegments,
-                currentSegmentIndex + 1,
+                currentSegmentIndex,
                 results,
                 maxResults,
                 depth + 1,
@@ -229,7 +229,7 @@ export class SearchFilesHandler implements ToolHandler {
   }
 
   async execute(args: object, context: ToolContext): Promise<ToolResult> {
-    const { query, maxResults = 20 } = args as { query: string; maxResults?: number };
+    const { query, maxResults = 50 } = args as { query: string; maxResults?: number };
     const { folderPath, projectId, chatId } = context;
 
     if (!folderPath) {
