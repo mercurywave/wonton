@@ -30,7 +30,7 @@ const TasksContext = createContext<TasksContextValue | null>(null);
 
 export function TasksProvider({ children }: { children: ReactNode }) {
   const { activeProjectId } = useNav();
-  const { createChat } = useChats();
+  const { createChat, updateChatMeta } = useChats();
 
   const {
     tasks,
@@ -38,20 +38,28 @@ export function TasksProvider({ children }: { children: ReactNode }) {
     createTask,
     updateTask,
     deleteTask,
-    graduateTask,
+    graduateTask: graduateTaskBase,
   } = useTasksData(isBackendConnected() ? (activeProjectId ?? undefined) : undefined);
+
+  const wrappedGraduateTask = useCallback(async (taskId: string, chatId: string) => {
+    const task = tasks.find((t) => t.id === taskId);
+    await graduateTaskBase(taskId, chatId);
+    if (task && chatId) {
+      await updateChatMeta("", chatId, { draft: task.text });
+    }
+  }, [tasks, graduateTaskBase, updateChatMeta]);
 
   const createChatAndGraduateRef = useRef(async (taskId: string) => {
     const chat = await createChat();
-    await graduateTask(taskId, chat.id);
+    await wrappedGraduateTask(taskId, chat.id);
   });
 
   useEffect(() => {
     createChatAndGraduateRef.current = async (taskId: string) => {
       const chat = await createChat();
-      await graduateTask(taskId, chat.id);
+      await wrappedGraduateTask(taskId, chat.id);
     };
-  }, [createChat, graduateTask]);
+  }, [createChat, wrappedGraduateTask]);
 
   const createChatAndGraduate = useCallback(async (taskId: string) => {
     await createChatAndGraduateRef.current(taskId);
@@ -70,9 +78,9 @@ export function TasksProvider({ children }: { children: ReactNode }) {
 
   const createChatAndGraduateWithId = useCallback(async (taskId: string): Promise<string> => {
     const chat = await createChat();
-    await graduateTask(taskId, chat.id);
+    await wrappedGraduateTask(taskId, chat.id);
     return chat.id;
-  }, [createChat, graduateTask]);
+  }, [createChat, wrappedGraduateTask]);
 
   const value = useMemo(
     () => ({
@@ -81,12 +89,12 @@ export function TasksProvider({ children }: { children: ReactNode }) {
       createTask,
       updateTask,
       deleteTask,
-      graduateTask,
+      graduateTask: wrappedGraduateTask,
       createChatAndGraduate,
       createChatAndGraduateWithId,
       getSortedActiveTasks,
     }),
-    [tasks, isLoading, createTask, updateTask, deleteTask, graduateTask, createChatAndGraduate, createChatAndGraduateWithId, getSortedActiveTasks]
+    [tasks, isLoading, createTask, updateTask, deleteTask, wrappedGraduateTask, createChatAndGraduate, createChatAndGraduateWithId, getSortedActiveTasks]
   );
 
   return <TasksContext.Provider value={value}>{children}</TasksContext.Provider>;
