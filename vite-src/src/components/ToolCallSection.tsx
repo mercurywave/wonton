@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { diffLines } from "diff";
 import { Hammer, FileText, ChevronDown, ChevronRight, ArrowUpRight, Terminal } from "lucide-react";
 import styles from "../components/ToolCallSection.module.css";
 import { ToolCall } from "../types/chat";
@@ -266,7 +267,40 @@ const toolConfigs: Record<string, ToolConfig> = {
       const path = extractArgString(parsedArgs, "path");
       return <ToolHeader icon={<FileText className={styles.toolCallIcon} size={14} />} name="Edit" pathLabel={path ? formatTruncatedPath(path) : null} />;
     },
-    content: (_parsedArgs, parsedResult) => {
+    content: (parsedArgs, parsedResult) => {
+      if (parsedArgs && !("raw" in parsedArgs)) {
+        const args = parsedArgs as { path?: string; edits?: { oldText: string; newText: string }[] };
+        if (args.edits && args.edits.length > 0) {
+          const allChanges: { text: string; added?: boolean; removed?: boolean }[] = [];
+          for (const edit of args.edits) {
+            if (edit.oldText === edit.newText) continue;
+            const changes = diffLines(edit.oldText, edit.newText, { newlineIsToken: true });
+            for (const change of changes) {
+              if (change.added) {
+                allChanges.push({ text: change.value, added: true });
+              } else if (change.removed) {
+                allChanges.push({ text: change.value, removed: true });
+              } else {
+                allChanges.push({ text: change.value });
+              }
+            }
+          }
+          if (allChanges.length > 0) {
+            return (
+              <div className={styles.toolCallContent} style={{ whiteSpace: "pre-wrap", maxHeight: "500px" }}>
+                {allChanges.map((change, i) => (
+                  <span
+                    key={i}
+                    className={change.added ? styles.diffAdded : change.removed ? styles.diffRemoved : undefined}
+                  >
+                    {change.text}
+                  </span>
+                ))}
+              </div>
+            );
+          }
+        }
+      }
       const result = parsedResult.formatted;
       return result ? <pre className={styles.toolCallContent}>{result}</pre> : null;
     },
