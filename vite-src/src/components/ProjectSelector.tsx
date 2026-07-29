@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, FolderOpen, Loader2 } from "lucide-react";
 import { Project } from "../types/project";
 import styles from "../components/ProjectSelector.module.css";
 
@@ -36,6 +36,19 @@ export default function ProjectSelector({
 
   const activeProject = projects.find((p) => p.id === activeProjectId);
   const displayName = activeProject?.name ?? "Default";
+  const folderPath = activeProject?.folderPath;
+  const [isOpening, setIsOpening] = useState(false);
+
+  const handleOpenFolder = async () => {
+    if (!folderPath || isOpening) return;
+    setIsOpening(true);
+    try {
+      await window.electronAPI.os.open(folderPath);
+    } catch (err) {
+      console.error("failed to open project folder", err);
+    }
+    setIsOpening(false);
+  };
 
   return (
     <div className={`${styles.container} ${isOpen ? "" : styles.collapsed}`} ref={dropdownRef}>
@@ -47,6 +60,32 @@ export default function ProjectSelector({
           <span className={styles.selectedText}>
             {displayName}
           </span>
+          {folderPath && (
+            <span
+              className={styles.folderBtn}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenFolder();
+              }}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  handleOpenFolder();
+                }
+              }}
+              title="Open folder"
+              aria-label="Open folder"
+            >
+              {isOpening ? (
+                <Loader2 size={14} className={styles.spinner} />
+              ) : (
+                <FolderOpen size={14} />
+              )}
+            </span>
+          )}
           {isDropdownOpen ? (
             <ChevronUp size={14} />
           ) : (
