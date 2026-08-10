@@ -61,7 +61,7 @@ const ChatsContext = createContext<ChatsContextValue | null>(null);
 export function ChatsProvider({ children }: { children: ReactNode }) {
   const projectsCtx = useProjects();
   const { activeProjectId, logId: navLogId, dispatch } = useNav();
-  const { settings } = useSettings();
+  const { settings, resolvedSettings } = useSettings();
   const { allAgents } = useAgentsContext();
   const [selectedChatId, setSelectedChatId] = useState<string | null>(null);
   const initialAutoSelectDone = useRef(false);
@@ -130,10 +130,10 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   // Resolve the effective active model (subagent override, chat override, or settings default)
   const activeModel = useMemo(() => {
-    if (!selectedChatMeta) return settings.defaultModel;
+    if (!selectedChatMeta) return resolvedSettings.defaultModel;
     if (activeSubagentMeta?.model) return activeSubagentMeta.model;
-    return selectedChatMeta.activeModel ?? settings.defaultModel;
-  }, [selectedChatMeta, activeSubagentMeta, settings.defaultModel]);
+    return selectedChatMeta.activeModel ?? resolvedSettings.defaultModel;
+  }, [selectedChatMeta, activeSubagentMeta, resolvedSettings.defaultModel]);
 
   // Callback to change the active agent for the selected chat
   const onAgentChange = useCallback(
@@ -167,13 +167,13 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       if (!selectedChatId || !activeProjectId) return;
       if (activeSubagentMeta) {
         await updateSubagentMeta(activeSubagentMeta.logId, { model: modelId || undefined });
-      } else if (modelId !== settings.defaultModel) {
+      } else if (modelId !== resolvedSettings.defaultModel) {
         await projectChatsUpdateChatMeta(selectedChatId, { activeModel: modelId });
       } else {
         await projectChatsUpdateChatMeta(selectedChatId, { activeModel: undefined });
       }
     },
-    [selectedChatId, activeProjectId, activeSubagentMeta, settings.defaultModel, updateSubagentMeta]
+    [selectedChatId, activeProjectId, activeSubagentMeta, resolvedSettings.defaultModel, updateSubagentMeta]
   );
 
   // Resolve the effective active reasoning effort (subagent override, chat override, or settings default)
@@ -259,7 +259,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   }, [projectTools, currentFlow?.tools]);
 
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
-    settings,
+    resolvedSettings,
     selectedChatId || undefined,
     isBackendConnected() ? (activeProjectId ?? undefined) : undefined,
     projectMeta || undefined,

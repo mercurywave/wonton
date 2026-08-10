@@ -52,7 +52,7 @@ function formatRate(tokens: number, ms: number): string {
 }
 
 export default function StatsPage() {
-  const { settings } = useSettings();
+  const { resolvedSettings } = useSettings();
   const { getProjectById } = useProjects();
   const [entries, setEntries] = useState<StatsEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -182,7 +182,7 @@ export default function StatsPage() {
   const totalTimeMs = useMemo(() => entries.reduce((s, e) => s + e.timeMs, 0), [entries]);
   const avgTps = useMemo(() => formatRate(totalCompletionTokens, totalTimeMs), [totalCompletionTokens, totalTimeMs]);
   const topModel = modelStats[0]?.model || "—";
-  const topModelDisplayName = getDisplayName(topModel, settings.modelAliases);
+  const topModelDisplayName = getDisplayName(topModel, resolvedSettings.modelAliases);
 
   const maxDailyTokens = useMemo(
     () => Math.max(...dailyTokens.map((d) => d.totalTokens), 1),
@@ -341,7 +341,7 @@ export default function StatsPage() {
                 <tbody>
                   {modelStats.map((ms) => (
                     <tr key={ms.model}>
-                      <td className={styles.td}>{getDisplayName(ms.model, settings.modelAliases)}</td>
+                      <td className={styles.td}>{getDisplayName(ms.model, resolvedSettings.modelAliases)}</td>
                       <td className={styles.td}>{ms.calls.toLocaleString()}</td>
                       <td className={styles.td}>{ms.promptTokens.toLocaleString()}</td>
                       <td className={styles.td}>{ms.completionTokens.toLocaleString()}</td>

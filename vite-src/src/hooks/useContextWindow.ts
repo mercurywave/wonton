@@ -1,9 +1,10 @@
-import { ChatSettings } from "./useChatSettings";
+import { ResolvedServerSettings } from "./useChatSettings";
 
 export function useContextWindow(
   modelId: string,
-  settings: ChatSettings
+  resolvedSettings: ResolvedServerSettings,
+  defaultContextWindow: number
 ): { maxTokens: number } {
-  const maxTokens = settings.contextWindows[modelId] ?? settings.defaultContextWindow;
+  const maxTokens = resolvedSettings.contextWindows[modelId] ?? defaultContextWindow;
   return { maxTokens };
 }

@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ChatMessage, LLMStats, ToolCall, ToolDefinition } from "../types/chat";
-import { ChatSettings } from "./useChatSettings";
+import { ResolvedServerSettings } from "./useChatSettings";
 import { chatLogsStore } from "../store/chatLogs";
 import { statsStore } from "../store/stats";
 import {
@@ -12,7 +12,7 @@ import {
 import { chatStore } from "../store/chats";
 
 export interface LLMQueryOptions {
-  settings: ChatSettings;
+  settings: ResolvedServerSettings;
   projectId: string;
   chatId: string;
   systemPrompt?: string;

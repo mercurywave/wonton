@@ -1,5 +1,5 @@
 import { ChatMessage, LLMStats, ReasoningEffort, ToolDefinition } from "../types/chat";
-import { ChatSettings } from "../hooks/useChatSettings";
+import { ResolvedServerSettings } from "../hooks/useChatSettings";
 
 interface SSEDelta {
   content?: string;
@@ -187,7 +187,7 @@ interface ApiRequestBody {
 }
 
 export async function makeApiCall(
-  settings: ChatSettings,
+  settings: ResolvedServerSettings,
   messages: ApiRequestBody["messages"],
   model: string,
   tools?: ToolDefinition[],

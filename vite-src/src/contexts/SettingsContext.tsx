@@ -4,49 +4,64 @@ import {
   useMemo,
   ReactNode,
 } from "react";
-import { ChatSettings, useChatSettings } from "../hooks/useChatSettings";
+import { ChatSettings, ResolvedServerSettings, useChatSettings } from "../hooks/useChatSettings";
 import { useServerModels } from "../hooks/useServerModels";
 import { ServerModel } from "../types/chat";
+import type { ServerEntry } from "../types/server";
 
 interface SettingsContextValue {
   settings: ChatSettings;
   updateSettings: (updates: Partial<ChatSettings>) => void;
+  resolvedSettings: ResolvedServerSettings;
   models: ServerModel[];
   modelsLoading: boolean;
   modelsError: string | null;
   refetchModels: () => void;
   hiddenModels: string[];
   visibleModels: ServerModel[];
+  servers: ServerEntry[];
+  activeServer: ServerEntry | undefined;
+  addServer: (entry: Omit<ServerEntry, "id">) => string;
+  removeServer: (id: string) => void;
+  updateServer: (id: string, updates: Partial<ServerEntry>) => void;
+  setActiveServer: (id: string) => void;
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null);
 
 export function SettingsProvider({ children }: { children: ReactNode }) {
-  const [settings, updateSettings] = useChatSettings();
+  const [settings, updateSettings, resolvedSettings, serverOps] = useChatSettings();
   const {
     models,
     isLoading: modelsLoading,
     error: modelsError,
     refetch: refetchModels,
-  } = useServerModels(settings.serverUrl, settings.apiKey);
+  } = useServerModels(resolvedSettings.serverUrl, resolvedSettings.apiKey);
 
   const visibleModels = useMemo(
-    () => models.filter((m) => !settings.hiddenModels.includes(m.id)),
-    [models, settings.hiddenModels]
+    () => models.filter((m) => !resolvedSettings.hiddenModels.includes(m.id)),
+    [models, resolvedSettings.hiddenModels]
   );
 
   const value = useMemo(
     () => ({
       settings,
       updateSettings,
+      resolvedSettings,
       models,
       modelsLoading,
       modelsError,
       refetchModels,
-      hiddenModels: settings.hiddenModels,
+      hiddenModels: resolvedSettings.hiddenModels,
       visibleModels,
+      servers: serverOps.servers,
+      activeServer: serverOps.activeServer,
+      addServer: serverOps.addServer,
+      removeServer: serverOps.removeServer,
+      updateServer: serverOps.updateServer,
+      setActiveServer: serverOps.setActiveServer,
     }),
-    [settings, updateSettings, models, modelsLoading, modelsError, refetchModels, visibleModels]
+    [settings, updateSettings, resolvedSettings, models, modelsLoading, modelsError, refetchModels, visibleModels, serverOps]
   );
 
   return <SettingsContext.Provider value={value}>{children}</SettingsContext.Provider>;

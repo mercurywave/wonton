@@ -147,7 +147,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
 
     // Resolve model for subagent from chat-level settings
     const chatMeta = chatStore.getChat(projectId, chatId);
-    const subagentModel = chatMeta?.activeModel || settings.defaultModel || agentId;
+    const subagentModel = chatMeta?.activeModel || settings.defaultModel || "";
     const subagentThinking = (chatMeta?.reasoningEffort as ReasoningEffort | undefined) || undefined;
 
     // Run the subagent tool-call loop

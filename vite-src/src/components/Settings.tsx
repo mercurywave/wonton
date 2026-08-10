@@ -1,27 +1,29 @@
 import { useState } from "react";
 import { Settings as SettingsIcon } from "lucide-react";
 import styles from "../components/Settings.module.css";
+import ServerListSettings from "../components/ServerListSettings";
 import ServerSettings from "../components/ServerSettings";
 import ModelSettings from "../components/ModelSettings";
 import PreferencesSettings from "../components/PreferencesSettings";
 import FilePermissionsSettings from "../components/FilePermissionsSettings";
 import { useFilePermissions, useProjects, useNav } from "../contexts";
 
-type Tab = "server" | "models" | "preferences" | "permissions";
+type Tab = "servers" | "server" | "models" | "preferences" | "permissions";
 
 interface SettingsProps {
   onFolderChange?: (id: string) => void;
 }
 
 const tabs: { key: Tab; label: string }[] = [
-  { key: "server", label: "Server" },
+  { key: "servers", label: "Servers" },
+  { key: "server", label: "Connection" },
   { key: "models", label: "Models" },
   { key: "preferences", label: "Preferences" },
   { key: "permissions", label: "Permissions" },
 ];
 
 export default function Settings({ onFolderChange }: SettingsProps) {
-  const [activeTab, setActiveTab] = useState<Tab>("server");
+  const [activeTab, setActiveTab] = useState<Tab>("servers");
   const { projects } = useProjects();
   const { activeProjectId } = useNav();
   const activeProject = projects.find((p) => p.id === activeProjectId);
@@ -49,6 +51,7 @@ export default function Settings({ onFolderChange }: SettingsProps) {
         </div>
 
         <div className={styles.tabContent}>
+          {activeTab === "servers" && <ServerListSettings />}
           {activeTab === "server" && <ServerSettings />}
           {activeTab === "models" && <ModelSettings />}
           {activeTab === "preferences" && <PreferencesSettings />}

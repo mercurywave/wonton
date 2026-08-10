@@ -12,7 +12,7 @@ import { projectMetaStore } from "../store/projectMeta";
 import { flowStore } from "../store/flows";
 import { toolStore } from "../store/tools";
 import { emit } from "../contexts";
-import { loadSettings } from "./useChatSettings";
+import { loadAndResolveSettings } from "./useChatSettings";
 import { runQuery as runQueryImpl } from "./useLLMQuery";
 import { runToolCallLoop } from "./useChatApi";
 import { filterToAvailableTools } from "../tools";
@@ -247,7 +247,7 @@ export function buildWon(
       const messageArr: ChatHistoryEntry[] = (typeof messages === 'string') 
         ? [{ content: messages, role: 'user' }]
         : messages;
-      const settings = loadSettings();
+      const settings = loadAndResolveSettings();
       const chat = chatStore.getChat(projectId, chatId);
       const projectMeta = projectMetaStore.getProjectMeta(projectId);
       const allAgents = agentStore.getAllAgents();
@@ -347,7 +347,7 @@ export function buildWon(
     },
     runAgent: async (logId: string, userMessage: string): Promise<string> => {
       // Load settings
-      const settings = loadSettings();
+      const settings = loadAndResolveSettings();
       
       // Find the subagent meta to get agent info
       const meta = chatStore.getChat(projectId, chatId);
@@ -378,7 +378,7 @@ export function buildWon(
       };
       
       // Resolve model and thinking from subagent meta, falling back to settings
-      const model = subagentMeta.model || settings.defaultModel;
+      const model = subagentMeta.model || settings.defaultModel || "";
       const reasoningEffort = (subagentMeta.thinking as ReasoningEffort | undefined) || "none";
       
       // Run the subagent tool-call loop
@@ -412,7 +412,7 @@ export function buildWon(
     },
     async runPrompt(userMessage: string): Promise<string> {
       if (logId) { throw new Error("Cannot runPrompt from sub agent"); }
-      const settings = loadSettings();
+      const settings = loadAndResolveSettings();
       const chat = chatStore.getChat(projectId, chatId);
       const projectMeta = projectMetaStore.getProjectMeta(projectId);
       await agentStore.load();

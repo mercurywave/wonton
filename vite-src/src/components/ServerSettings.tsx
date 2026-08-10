@@ -3,14 +3,25 @@ import styles from "../components/ServerSettings.module.css";
 import { useSettings } from "../contexts";
 
 export default function ServerSettings() {
-  const { settings, updateSettings } = useSettings();
-  const onUpdate = updateSettings;
+  const { resolvedSettings, updateServer, activeServer } = useSettings();
+
+  if (!activeServer) {
+    return (
+      <div>
+        <div className={styles.header}>
+          <Server size={20} />
+          <h2>Server</h2>
+        </div>
+        <p>No server configured. Go to the Servers tab to add one.</p>
+      </div>
+    );
+  }
 
   return (
     <div>
       <div className={styles.header}>
         <Server size={20} />
-        <h2>Server</h2>
+        <h2>Server — {activeServer.name}</h2>
       </div>
 
       <div className={styles.form}>
@@ -20,8 +31,8 @@ export default function ServerSettings() {
             id="serverUrl"
             type="url"
             className={styles.input}
-            value={settings.serverUrl}
-            onChange={(e) => onUpdate({ serverUrl: e.target.value })}
+            value={resolvedSettings.serverUrl}
+            onChange={(e) => updateServer(activeServer.id, { serverUrl: e.target.value })}
             placeholder="https://localhost"
           />
         </div>
@@ -32,8 +43,8 @@ export default function ServerSettings() {
             id="apiKey"
             type="password"
             className={styles.input}
-            value={settings.apiKey}
-            onChange={(e) => onUpdate({ apiKey: e.target.value })}
+            value={resolvedSettings.apiKey}
+            onChange={(e) => updateServer(activeServer.id, { apiKey: e.target.value })}
             placeholder="sk-..."
           />
         </div>

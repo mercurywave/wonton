@@ -1,5 +1,5 @@
 import { Agent, ToolCall, ToolResult } from "../types/chat";
-import { ChatSettings } from "../hooks/useChatSettings";
+import { ResolvedServerSettings } from "../hooks/useChatSettings";
 import { FeedbackPayload } from "../contexts";
 
 export interface ToolContext {
@@ -7,7 +7,7 @@ export interface ToolContext {
   projectId?: string;
   chatId?: string;
   logId?: string;
-  settings?: ChatSettings;
+  settings?: ResolvedServerSettings;
   onChatUpdated?: () => void;
   folderOverride?: string;
   showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;

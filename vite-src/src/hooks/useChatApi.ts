@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { ChatMessage, LLMStats, ProjectMeta, ToolCall, Agent, ReasoningEffort } from "../types/chat";
-import { ChatSettings } from "./useChatSettings";
+import { ResolvedServerSettings } from "./useChatSettings";
 import { runQuery } from "./useLLMQuery";
 import { buildApiMessages, makeApiCall, mergeStats, parseSSEChunk } from "../utils/llmApi";
 
@@ -17,7 +17,7 @@ interface ChatMessageWithToolCalls extends Omit<ChatMessage, "toolCalls"> {
 }
 
 interface ToolCallLoopOptions {
-  settings: ChatSettings;
+  settings: ResolvedServerSettings;
   systemPrompt: string;
   model: string;
   toolNames: string[];
@@ -355,7 +355,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
 }
 
 export function useChatApi(
-  settings: ChatSettings,
+  settings: ResolvedServerSettings,
   chatId?: string,
   projectId?: string,
   projectMeta?: ProjectMeta,

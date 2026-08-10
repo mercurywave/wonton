@@ -4,44 +4,56 @@ import styles from "../components/ModelSettings.module.css";
 import { useSettings } from "../contexts";
 
 export default function ModelSettings() {
-  const { settings, updateSettings, models, modelsLoading, modelsError, refetchModels } = useSettings();
-
-  const onUpdate = updateSettings;
+  const {
+    settings,
+    updateSettings,
+    resolvedSettings,
+    updateServer,
+    activeServer,
+    models,
+    modelsLoading,
+    modelsError,
+    refetchModels,
+  } = useSettings();
 
   const handleToggleDefault = (modelId: string) => {
-    onUpdate({ defaultModel: modelId });
+    if (!activeServer) return;
+    updateServer(activeServer.id, { defaultModel: modelId });
   };
 
   const handleToggleHidden = (modelId: string) => {
-    const hidden = settings.hiddenModels.includes(modelId);
+    if (!activeServer) return;
+    const hidden = resolvedSettings.hiddenModels.includes(modelId);
     const next = hidden
-      ? settings.hiddenModels.filter((id) => id !== modelId)
-      : [...settings.hiddenModels, modelId];
-    onUpdate({ hiddenModels: next });
-    if (settings.defaultModel === modelId) {
-      onUpdate({ defaultModel: "" });
+      ? resolvedSettings.hiddenModels.filter((id) => id !== modelId)
+      : [...resolvedSettings.hiddenModels, modelId];
+    updateServer(activeServer.id, { hiddenModels: next });
+    if (resolvedSettings.defaultModel === modelId) {
+      updateServer(activeServer.id, { defaultModel: "" });
     }
   };
 
   const handleContextChange = (modelId: string, value: string) => {
+    if (!activeServer) return;
     const num = parseInt(value);
-    const next = { ...settings.contextWindows };
+    const next = { ...resolvedSettings.contextWindows };
     if (num > 0) {
       next[modelId] = num;
     } else {
       delete next[modelId];
     }
-    onUpdate({ contextWindows: next });
+    updateServer(activeServer.id, { contextWindows: next });
   };
 
   const handleAliasChange = (modelId: string, value: string) => {
-    const next = { ...settings.modelAliases };
+    if (!activeServer) return;
+    const next = { ...resolvedSettings.modelAliases };
     if (value.trim()) {
       next[modelId] = value;
     } else {
       delete next[modelId];
     }
-    onUpdate({ modelAliases: next });
+    updateServer(activeServer.id, { modelAliases: next });
   };
 
   return (
@@ -58,7 +70,7 @@ export default function ModelSettings() {
             id="systemPrompt"
             className={styles.textarea}
             value={settings.systemPrompt}
-            onChange={(e) => onUpdate({ systemPrompt: e.target.value })}
+            onChange={(e) => updateSettings({ systemPrompt: e.target.value })}
             placeholder="You are a helpful assistant."
             rows={4}
           />
@@ -71,7 +83,7 @@ export default function ModelSettings() {
             type="number"
             className={styles.input}
             value={settings.defaultContextWindow}
-            onChange={(e) => onUpdate({ defaultContextWindow: parseInt(e.target.value) || 0 })}
+            onChange={(e) => updateSettings({ defaultContextWindow: parseInt(e.target.value) || 0 })}
             placeholder="131072"
             min={1024}
             step={1024}
@@ -84,7 +96,7 @@ export default function ModelSettings() {
             id="reasoningEffort"
             className={styles.select}
             value={settings.reasoningEffort}
-            onChange={(e) => onUpdate({ reasoningEffort: e.target.value as "none" | "low" | "medium" | "high" })}
+            onChange={(e) => updateSettings({ reasoningEffort: e.target.value as "none" | "low" | "medium" | "high" })}
           >
             <option value="none">None</option>
             <option value="low">Low</option>
@@ -96,13 +108,13 @@ export default function ModelSettings() {
         <div className={styles.modelsSection}>
           <label>Models</label>
 
-          {!settings.serverUrl.trim() && (
+          {!resolvedSettings.serverUrl.trim() && (
             <div className={styles.modelsPrompt}>
               Enter a server URL in the Server tab to discover available models.
             </div>
           )}
 
-          {settings.serverUrl.trim() && modelsLoading && (
+          {resolvedSettings.serverUrl.trim() && modelsLoading && (
             <div className={styles.modelsLoading}>Loading models...</div>
           )}
 
@@ -122,7 +134,7 @@ export default function ModelSettings() {
           {models.length === 0 &&
             !modelsLoading &&
             !modelsError &&
-            settings.serverUrl.trim() && (
+            resolvedSettings.serverUrl.trim() && (
               <div className={styles.modelsEmpty}>
                 No models available on this server.
               </div>
@@ -131,11 +143,11 @@ export default function ModelSettings() {
           {models.length > 0 && (
              <div className={styles.modelsList}>
               {models.map((model) => {
-               const isDefault = model.id === settings.defaultModel;
-               const isHidden = settings.hiddenModels.includes(model.id);
-               const customContext = model.id in settings.contextWindows;
-               const contextValue = settings.contextWindows[model.id] ?? "";
-               const aliasValue = settings.modelAliases[model.id] ?? "";
+               const isDefault = model.id === resolvedSettings.defaultModel;
+               const isHidden = resolvedSettings.hiddenModels.includes(model.id);
+               const customContext = model.id in resolvedSettings.contextWindows;
+               const contextValue = resolvedSettings.contextWindows[model.id] ?? "";
+               const aliasValue = resolvedSettings.modelAliases[model.id] ?? "";
 
                return (
                  <div

@@ -338,7 +338,7 @@ export default function ChatPanel({
   onFileSelect,
   activeTempFileUniqueName: activeFileUniqueName
 }: ChatPanelProps) {
-  const { visibleModels, settings } = useSettings();
+  const { visibleModels, resolvedSettings, settings } = useSettings();
   const { mainAgents, allAgents } = useAgentsContext();
   const { projects } = useProjects();
   const { activeProjectId, logId, navigateToLog } = useNav();
@@ -436,8 +436,8 @@ export default function ChatPanel({
     const agentId = currentChat?.activeAgentId || activeAgentId;
     const agent = allAgents.find((a) => a.id === agentId);
     const agentSystemPrompt = agent?.systemPrompt;
-    return agentSystemPrompt || settings.systemPrompt;
-  }, [allAgents, activeAgentId, selectedChatId, settings.systemPrompt]);
+    return agentSystemPrompt || resolvedSettings.systemPrompt;
+  }, [allAgents, activeAgentId, selectedChatId, resolvedSettings.systemPrompt]);
 
   const currentChat = useMemo(() => {
     if (!selectedChatId) return null;
@@ -527,7 +527,7 @@ export default function ChatPanel({
     };
     loadTools();
   }, [activeProject?.folderPath, activeAgentId, allAgents, resolvedWorkflow?.tools, projectTools]);
-  const { maxTokens } = useContextWindow(activeModel, settings);
+  const { maxTokens } = useContextWindow(activeModel, resolvedSettings, settings.defaultContextWindow);
 
   const usageTokens = useMemo(() => {
     for (let i = messages.length - 1; i >= 0; i--) {
@@ -762,7 +762,7 @@ export default function ChatPanel({
               selectedWorkflowId={(resolvedWorkflow?.id)}
             />
           )}
-         <MessageList messages={messages} modelAliases={settings.modelAliases} selectedChatId={selectedChatId} onUserMessageAction={onUserMessageAction} />
+          <MessageList messages={messages} modelAliases={resolvedSettings.modelAliases} selectedChatId={selectedChatId} onUserMessageAction={onUserMessageAction} />
             {isProcessing && (
               <div className={styles.thinkingIndicator}>
                 <span className={styles.dot}></span>
@@ -873,7 +873,7 @@ export default function ChatPanel({
           <div className={styles.footerSelectors}>
             <ModelPicker
               models={visibleModels}
-              modelAliases={settings.modelAliases}
+              modelAliases={resolvedSettings.modelAliases}
             />
             <AgentPicker
               agents={mainAgents}
@@ -916,7 +916,7 @@ export default function ChatPanel({
             <ContextRing
               usageTokens={usageTokens}
               maxTokens={maxTokens}
-              serverUrl={settings.serverUrl}
+              serverUrl={resolvedSettings.serverUrl}
               model={activeModel}
               systemPrompt={resolvedSystemPrompt}
               toolsJson={toolsJson}

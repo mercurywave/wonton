@@ -1,0 +1,193 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 24px;
+  color: #e0e0e0;
+}
+
+.header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.field label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #9090a0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input {
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  color: #e0e0e0;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.input:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.input::placeholder {
+  color: #555;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.serverList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.serverItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid #2a2a4a;
+  background: #16162a;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.serverItem:hover {
+  border-color: #3a3a5a;
+}
+
+.serverItem.active {
+  border-color: #4a6cf7;
+  background: #1a1a3a;
+}
+
+.serverItemName {
+  flex: 1;
+  font-size: 14px;
+  color: #e0e0e0;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 4px 6px;
+  border-radius: 4px;
+  text-align: left;
+  font-family: inherit;
+  transition: background 0.15s ease;
+}
+
+.serverItemName:hover {
+  background: #2a2a4a;
+}
+
+.serverItemUrl {
+  flex: 1.5;
+  font-size: 12px;
+  color: #707090;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.serverItemActions {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.serverItemActions button {
+  background: none;
+  border: none;
+  color: #707090;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.serverItemActions button:hover {
+  color: #e0e0e0;
+  background: #2a2a4a;
+}
+
+.serverItemActions button.deleteBtn:hover {
+  color: #f74a4a;
+}
+
+.addButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px dashed #2a2a4a;
+  background: transparent;
+  color: #707090;
+  font-size: 14px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.addButton:hover {
+  color: #e0e0e0;
+  border-color: #4a6cf7;
+  background: #1a1a3a;
+}
+
+.nameEditInput {
+  background: #0e0e1e;
+  border: 1px solid #4a6cf7;
+  color: #e0e0e0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  width: 100%;
+  min-width: 120px;
+}
+
+.nameEditInput:focus {
+  outline: none;
+}
+
+.urlEditInput {
+  background: #0e0e1e;
+  border: 1px solid #4a6cf7;
+  color: #e0e0e0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  width: 100%;
+  min-width: 200px;
+}
+
+.urlEditInput:focus {
+  outline: none;
+}
+
+.editRow {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
