@@ -6,6 +6,8 @@ import { TempFileReservation } from "../types/chat";
 // Platform-neutral data directory resolution
 
 export const DATA_DIR_NAME = "wonton";
+export const SETTINGS_FILE_NAME = "settings.json";
+export const STATE_FILE_NAME = "state.json";
 export const PROJ_FILE_NAME = "proj.json";
 export const CHATS_DIR_NAME = "chats";
 export const MSGS_DIR_NAME = "msgs";

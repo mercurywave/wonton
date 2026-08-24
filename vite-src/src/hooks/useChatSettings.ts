@@ -1,8 +1,8 @@
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { ReasoningEffort } from "../types/chat";
 import type { ServerEntry } from "../types/server";
-
-const STORAGE_KEY = "wonton_settings";
+import { filesystem } from "../utils/electronFs";
+import { getRootDataDir, isBackendConnected, SETTINGS_FILE_NAME, STATE_FILE_NAME } from "../utils/platformUtils";
 
 export interface ChatSettings {
   servers: ServerEntry[];
@@ -12,13 +12,6 @@ export interface ChatSettings {
   reasoningEffort: ReasoningEffort;
   notificationBehavior: "always" | "unfocused" | "never";
   lastProjectId: string;
-  // Deprecated legacy fields (kept for migration only)
-  serverUrl?: string;
-  apiKey?: string;
-  defaultModel?: string;
-  hiddenModels?: string[];
-  contextWindows?: Record<string, number>;
-  modelAliases?: Record<string, string>;
 }
 
 export interface ResolvedServerSettings {
@@ -32,6 +25,11 @@ export interface ResolvedServerSettings {
   reasoningEffort: ReasoningEffort;
 }
 
+interface ChatStateFile {
+  activeServerId: string;
+  lastProjectId: string;
+}
+
 const DEFAULT_SETTINGS: Omit<ChatSettings, "servers" | "activeServerId"> = {
   systemPrompt: "You are a helpful assistant.",
   defaultContextWindow: 131072,
@@ -40,70 +38,14 @@ const DEFAULT_SETTINGS: Omit<ChatSettings, "servers" | "activeServerId"> = {
   lastProjectId: "default",
 };
 
+let cachedSettings: ChatSettings | null = null;
+
 function generateServerId(): string {
   return crypto.randomUUID();
 }
 
-function nameFromUrl(url: string): string {
-  try {
-    const parsed = new URL(url);
-    return parsed.hostname;
-  } catch {
-    return url;
-  }
-}
-
-function migrateLegacy(parsed: Record<string, unknown>): ChatSettings {
-  const result: Partial<ChatSettings> = { ...DEFAULT_SETTINGS };
-
-  // Check if already has new format
-  if (Array.isArray(parsed.servers) && (parsed.servers as ServerEntry[]).length > 0) {
-    return { ...DEFAULT_SETTINGS, ...parsed } as ChatSettings;
-  }
-
-  // Migrate old 'model' field to 'defaultModel'
-  if ((parsed as { model?: string }).model && !parsed.defaultModel) {
-    parsed.defaultModel = (parsed as { model?: string }).model;
-  }
-  delete (parsed as { model?: unknown }).model;
-
-  // Create a server from legacy fields
-  const serverUrl = (parsed.serverUrl as string) || "https://localhost";
-  const server: ServerEntry = {
-    id: generateServerId(),
-    name: nameFromUrl(serverUrl),
-    serverUrl,
-    apiKey: (parsed.apiKey as string) || "",
-    defaultModel: (parsed.defaultModel as string) || "",
-    hiddenModels: (parsed.hiddenModels as string[]) || [],
-    contextWindows: (parsed.contextWindows as Record<string, number>) || {},
-    modelAliases: (parsed.modelAliases as Record<string, string>) || {},
-  };
-
-  result.servers = [server];
-  result.activeServerId = server.id;
-
-  return { ...DEFAULT_SETTINGS, ...result, servers: result.servers, activeServerId: result.activeServerId } as ChatSettings;
-}
-
-export function loadAndResolveSettings(): ResolvedServerSettings {
-  const settings = loadSettings();
-  return resolveSettings(settings);
-}
-
-export function loadSettings(): ChatSettings {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return migrateLegacy(parsed);
-    }
-  } catch {
-    // ignore parse errors
-  }
-
-  // Fresh install: create a default server
-  const defaultServer: ServerEntry = {
+function createDefaultServer(): ServerEntry {
+  return {
     id: generateServerId(),
     name: "localhost",
     serverUrl: "https://localhost",
@@ -113,7 +55,10 @@ export function loadSettings(): ChatSettings {
     contextWindows: {},
     modelAliases: {},
   };
+}
 
+function createDefaultSettings(): ChatSettings {
+  const defaultServer = createDefaultServer();
   return {
     ...DEFAULT_SETTINGS,
     servers: [defaultServer],
@@ -121,12 +66,116 @@ export function loadSettings(): ChatSettings {
   };
 }
 
-function saveSettings(settings: ChatSettings): void {
+async function getSettingsFilePath(): Promise<string> {
+  const rootDir = await getRootDataDir();
+  return `${rootDir}/${SETTINGS_FILE_NAME}`;
+}
+
+async function getStateFilePath(): Promise<string> {
+  const rootDir = await getRootDataDir();
+  return `${rootDir}/${STATE_FILE_NAME}`;
+}
+
+async function readJsonFile<T>(filePath: string): Promise<T | null> {
+  if (!isBackendConnected()) return null;
+
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    const content = await filesystem.readFile(filePath);
+    if (!content.trim()) return null;
+    return JSON.parse(content) as T;
+  } catch {
+    return null;
+  }
+}
+
+async function ensureRootDataDir(): Promise<void> {
+  if (!isBackendConnected()) return;
+
+  try {
+    await filesystem.createDirectory(await getRootDataDir());
+  } catch {
+    // directory may already exist
+  }
+}
+
+async function hydrateSettingsFromDisk(): Promise<ChatSettings> {
+  const defaults = createDefaultSettings();
+
+  if (!isBackendConnected()) {
+    cachedSettings = defaults;
+    return defaults;
+  }
+
+  try {
+    await ensureRootDataDir();
+    const [storedSettings, storedState] = await Promise.all([
+      readJsonFile<Partial<ChatSettings>>(await getSettingsFilePath()),
+      readJsonFile<Partial<ChatStateFile>>(await getStateFilePath()),
+    ]);
+
+    const nextSettings: ChatSettings = {
+      ...defaults,
+      ...(storedSettings ?? {}),
+      servers: Array.isArray(storedSettings?.servers) && storedSettings.servers.length > 0
+        ? storedSettings.servers
+        : defaults.servers,
+    };
+
+    const nextState: ChatStateFile = {
+      activeServerId: typeof storedState?.activeServerId === "string" && storedState.activeServerId
+        ? storedState.activeServerId
+        : nextSettings.activeServerId,
+      lastProjectId: typeof storedState?.lastProjectId === "string" && storedState.lastProjectId
+        ? storedState.lastProjectId
+        : DEFAULT_SETTINGS.lastProjectId,
+    };
+
+    const activeServer = nextSettings.servers.find((s) => s.id === nextState.activeServerId) ?? nextSettings.servers[0];
+    nextSettings.activeServerId = activeServer?.id ?? nextSettings.servers[0]?.id ?? "";
+    nextSettings.lastProjectId = nextState.lastProjectId;
+
+    if (!storedSettings || !storedState) {
+      await persistSettings(nextSettings);
+    }
+
+    cachedSettings = nextSettings;
+    return nextSettings;
+  } catch {
+    cachedSettings = defaults;
+    return defaults;
+  }
+}
+
+async function persistSettings(settings: ChatSettings): Promise<void> {
+  if (!isBackendConnected()) return;
+
+  try {
+    await ensureRootDataDir();
+    const rootDir = await getRootDataDir();
+    const { activeServerId, lastProjectId, ...settingsBlob } = settings;
+    const settingsPath = `${rootDir}/${SETTINGS_FILE_NAME}`;
+    const statePath = `${rootDir}/${STATE_FILE_NAME}`;
+
+    await filesystem.writeFile(settingsPath, JSON.stringify(settingsBlob, null, 2));
+    await filesystem.writeFile(statePath, JSON.stringify({ activeServerId, lastProjectId }, null, 2));
+
+    cachedSettings = settings;
   } catch {
     // ignore storage errors
   }
+}
+
+function saveSettings(settings: ChatSettings): void {
+  void persistSettings(settings);
+}
+
+export function loadAndResolveSettings(): ResolvedServerSettings {
+  const settings = loadSettings();
+  return resolveSettings(settings);
+}
+
+export function loadSettings(): ChatSettings {
+  return cachedSettings ?? createDefaultSettings();
 }
 
 function getActiveServer(settings: ChatSettings): ServerEntry | undefined {
@@ -160,6 +209,8 @@ export function resolveSettings(settings: ChatSettings): ResolvedServerSettings 
   };
 }
 
+void hydrateSettingsFromDisk();
+
 export function useChatSettings(): [
   ChatSettings,
   (updates: Partial<ChatSettings>) => void,
@@ -173,7 +224,23 @@ export function useChatSettings(): [
     setActiveServer: (id: string) => void;
   }
 ] {
-  const [settings, setSettings] = useState<ChatSettings>(loadSettings);
+  const [settings, setSettings] = useState<ChatSettings>(() => loadSettings());
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const hydrate = async () => {
+      const next = await hydrateSettingsFromDisk();
+      if (!cancelled) {
+        setSettings(next);
+      }
+    };
+
+    void hydrate();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const updateSettings = useCallback((updates: Partial<ChatSettings>) => {
     setSettings((prev) => {
