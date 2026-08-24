@@ -91,16 +91,24 @@ async function loadToolsFromDisk(projectId: string): Promise<LoadResult> {
 
 async function ensureToolsDirectory(projectId: string): Promise<void> {
   const projectDir = await getToolsDirPath(projectId);
-  const parentDir = projectDir.substring(0, projectDir.lastIndexOf("/"));
-  try {
-    await filesystem.createDirectory(parentDir);
-  } catch {
-    // parent may not exist yet or may already exist
+  const parentDir = projectDir.includes("/")
+    ? projectDir.substring(0, projectDir.lastIndexOf("/"))
+    : "";
+
+  if (parentDir) {
+    try {
+      await filesystem.createDirectory(parentDir);
+    } catch {
+      // parent may not exist yet or may already exist
+    }
   }
-  try {
-    await filesystem.createDirectory(projectDir);
-  } catch {
-    // directory may already exist
+
+  if (projectDir) {
+    try {
+      await filesystem.createDirectory(projectDir);
+    } catch {
+      // directory may already exist
+    }
   }
 }
 

@@ -3,6 +3,8 @@
 interface ElectronAPI {
   filesystem: {
     createDirectory: (dirPath: string) => Promise<void>;
+    tryReadFile: (filePath: string) => Promise<string | null>;
+    doesFileExist: (filePath: string) => Promise<boolean>;
     readFile: (filePath: string) => Promise<string>;
     writeFile: (filePath: string, content: string) => Promise<void>;
     appendFile: (filePath: string, content: string) => Promise<void>;

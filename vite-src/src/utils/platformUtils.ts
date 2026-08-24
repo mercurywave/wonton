@@ -60,9 +60,10 @@ export async function getRootDataDir(): Promise<string> {
 
   if (typeof window !== "undefined" && "electronAPI" in window) {
     const appPath = await window.electronAPI.dataDir.getAppPath();
-    dataDir = await joinPath(appPath, DATA_DIR_NAME);
+    const safeAppPath = appPath && appPath.trim() ? appPath : os.homedir();
+    dataDir = await joinPath(safeAppPath, DATA_DIR_NAME);
   } else if (platform === "win32") {
-    const localAppData = process.env.LOCALAPPDATA || "";
+    const localAppData = process.env.LOCALAPPDATA || os.homedir();
     dataDir = path.join(localAppData, DATA_DIR_NAME);
   } else if (platform === "darwin") {
     const home = os.homedir();
@@ -78,11 +79,14 @@ export async function getRootDataDir(): Promise<string> {
     }
   }
 
-  return dataDir;
+  return dataDir || "";
 }
 
 export async function getProjectDataDir(projectId: string): Promise<string> {
   const rootDir = await getRootDataDir();
+  if (!projectId || !projectId.trim()) {
+    return rootDir;
+  }
   return await joinPath(rootDir, projectId);
 }
 

@@ -80,8 +80,8 @@ async function readJsonFile<T>(filePath: string): Promise<T | null> {
   if (!isBackendConnected()) return null;
 
   try {
-    const content = await filesystem.readFile(filePath);
-    if (!content.trim()) return null;
+    const content = await filesystem.tryReadFile(filePath);
+    if (content === null || !content.trim()) return null;
     return JSON.parse(content) as T;
   } catch {
     return null;
@@ -92,7 +92,9 @@ async function ensureRootDataDir(): Promise<void> {
   if (!isBackendConnected()) return;
 
   try {
-    await filesystem.createDirectory(await getRootDataDir());
+    const rootDir = await getRootDataDir();
+    if (!rootDir || !rootDir.trim()) return;
+    await filesystem.createDirectory(rootDir);
   } catch {
     // directory may already exist
   }

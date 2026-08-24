@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // filesystem module
   filesystem: {
     createDirectory: (dirPath: string) => ipcRenderer.invoke("filesystem:createDirectory", dirPath),
+    tryReadFile: (filePath: string) => ipcRenderer.invoke("filesystem:tryReadFile", filePath),
+    doesFileExist: (filePath: string) => ipcRenderer.invoke("filesystem:doesFileExist", filePath),
     readFile: (filePath: string) => ipcRenderer.invoke("filesystem:readFile", filePath),
     writeFile: (filePath: string, content: string) => ipcRenderer.invoke("filesystem:writeFile", filePath, content),
     appendFile: (filePath: string, content: string) => ipcRenderer.invoke("filesystem:appendFile", filePath, content),

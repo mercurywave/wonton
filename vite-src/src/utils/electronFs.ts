@@ -27,8 +27,15 @@ function throwIfNotElectron() {
   }
 }
 
+function assertValidPath(value: string | undefined | null, kind: "file" | "directory") {
+  if (typeof value !== "string" || value.trim() === "") {
+    throw new Error(`${kind === "directory" ? "Directory" : "File"} path is required`);
+  }
+}
+
 export const filesystem = {
   async createDirectory(dirPath: string): Promise<void> {
+    assertValidPath(dirPath, "directory");
     throwIfNotElectron();
     await window.electronAPI.filesystem.createDirectory(dirPath);
   },
@@ -36,6 +43,18 @@ export const filesystem = {
   async readFile(filePath: string): Promise<string> {
     throwIfNotElectron();
     return window.electronAPI.filesystem.readFile(filePath);
+  },
+
+  async tryReadFile(filePath: string): Promise<string | null> {
+    if (!filePath || !filePath.trim()) return null;
+    throwIfNotElectron();
+    return window.electronAPI.filesystem.tryReadFile(filePath);
+  },
+
+  async doesFileExist(filePath: string): Promise<boolean> {
+    if (!filePath || !filePath.trim()) return false;
+    throwIfNotElectron();
+    return window.electronAPI.filesystem.doesFileExist(filePath);
   },
 
   async writeFile(filePath: string, content: string): Promise<void> {

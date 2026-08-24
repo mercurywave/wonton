@@ -106,7 +106,12 @@ export default function TempFileViewerPanel({
         );
         if (!tempResult.redirected) return;
 
-        const dirPath = tempResult.tmpPath.substring(0, tempResult.tmpPath.lastIndexOf("/"));
+        const lastSlash = tempResult.tmpPath.lastIndexOf("/");
+        const dirPath = lastSlash >= 0 ? tempResult.tmpPath.substring(0, lastSlash) : "";
+        if (!dirPath) {
+          return;
+        }
+
         const normalizedDir = await filesystem.getNormalizedPath(dirPath);
         const watcherId = await filesystem.createWatcher(normalizedDir);
         const watcherKey = watcherId.watcherId;

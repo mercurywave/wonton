@@ -6,6 +6,7 @@ import {
   getProjectDataDir,
   generateGuid,
   FLOWS_DIR_NAME,
+  getRootDataDir,
 } from "../utils/platformUtils";
 import {
   ensureChatFolder as ensureChatFolderNative,
@@ -77,15 +78,18 @@ function dispatch() {
 }
 
 async function ensureDataDir(): Promise<string> {
-  let dataDirPath: string;
+  let wontonDir: string;
   try {
-    dataDirPath = await getProjectDataDir("");
+    wontonDir = await getRootDataDir();
   } catch (err) {
-    console.error("projectStore: failed to get data dir path", err);
+    console.error("projectStore: failed to get root data dir", err);
     return "";
   }
 
-  const wontonDir = dataDirPath;
+  if (!wontonDir || !wontonDir.trim()) {
+    return "";
+  }
+
   try {
     await filesystem.createDirectory(wontonDir);
   } catch (err: any) {

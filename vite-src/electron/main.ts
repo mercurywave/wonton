@@ -61,6 +61,10 @@ app.on("window-all-closed", () => {
 // filesystem module
 const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ...args: any[]) => Promise<any> | any> = {
   async createDirectory(_event, dirPath) {
+    if (typeof dirPath !== "string" || dirPath.trim() === "") {
+      throw new Error("Directory path is required");
+    }
+
     try {
       await fs.mkdir(dirPath, { recursive: true });
     } catch (err: any) {
@@ -70,7 +74,29 @@ const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ..
     }
   },
 
+  async tryReadFile(_event, filePath) {
+    if (typeof filePath !== "string" || filePath.trim() === "") {
+      return null;
+    }
+
+    try {
+      const content = await fs.readFile(filePath, "utf-8");
+      return content;
+    } catch (err: any) {
+      if (err && err.code === "ENOENT") {
+        return null;
+      }
+      const error = new Error(err.message || "Failed to read file");
+      (error as any).code = err.code || "E_FS_READ";
+      throw error;
+    }
+  },
+
   async readFile(_event, filePath) {
+    if (typeof filePath !== "string" || filePath.trim() === "") {
+      throw new Error("File path is required");
+    }
+
     try {
       const content = await fs.readFile(filePath, "utf-8");
       return content;
@@ -78,6 +104,19 @@ const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ..
       const error = new Error(err.message || "Failed to read file");
       (error as any).code = err.code || "E_FS_READ";
       throw error;
+    }
+  },
+
+  async doesFileExist(_event, filePath) {
+    if (typeof filePath !== "string" || filePath.trim() === "") {
+      return false;
+    }
+
+    try {
+      await fs.access(filePath);
+      return true;
+    } catch {
+      return false;
     }
   },
 

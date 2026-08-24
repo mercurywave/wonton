@@ -76,9 +76,13 @@ const agentStore: AgentStoreInternal = {
     }
 
     try {
-      const content = await filesystem.readFile(filePath);
-      const parsed = JSON.parse(content) as Agent[];
-      state.customAgents = Array.isArray(parsed) ? parsed : [];
+      const content = await filesystem.tryReadFile(filePath);
+      if (content === null) {
+        state.customAgents = [];
+      } else {
+        const parsed = JSON.parse(content) as Agent[];
+        state.customAgents = Array.isArray(parsed) ? parsed : [];
+      }
     } catch {
       state.customAgents = [];
     }
