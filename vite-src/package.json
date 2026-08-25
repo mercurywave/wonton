@@ -48,29 +48,30 @@
 		"node": ">=22"
 	},
 	"build": {
-		"appId": "com.wonton.agent",
+		"appId": "com.wonton.app",
 		"productName": "Wonton",
+		"artifactName": "${productName}-${version}-win-${arch}.${ext}",
 		"directories": {
 			"output": "release"
 		},
 		"files": [
 			"dist/**/*",
-			"out/electron/**/*"
+			"out/electron/**/*",
+			"public/**/*"
 		],
 		"extraMetadata": {
 			"main": "out/electron/main.cjs"
 		},
 		"win": {
 			"target": "nsis",
-			"icon": "public/takeout.png"
+			"icon": "public/takeout.png",
+			"signAndEditExecutable": false
 		},
-		"mac": {
-			"target": "dmg",
-			"icon": "public/takeout.png"
-		},
-		"linux": {
-			"target": "AppImage",
-			"icon": "public/takeout.png"
+		"nsis": {
+			"oneClick": false,
+			"perMachine": false,
+			"allowToChangeInstallationDirectory": true,
+			"deleteAppDataOnUninstall": false
 		}
 	}
 }
