@@ -5,6 +5,13 @@ package-lock.json
 # Build outputs
 dist/
 out/
+release/
+*.dmg
+*.exe
+*.AppImage
+*.snap
+*.tar.gz
+*.zip
 
 # Environment
 .env
@@ -26,7 +33,6 @@ logs/
 
 # Neutralinojs binaries and builds
 /bin
-/dist
 /.tmp
 
 # Neutralinojs client (minified)
