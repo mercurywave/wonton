@@ -66,7 +66,7 @@
 		},
 		"win": {
 			"target": "nsis",
-			"icon": "public/takeout.png",
+			"icon": "public/takeout.ico",
 			"signAndEditExecutable": false
 		},
 		"nsis": {
