@@ -9,11 +9,11 @@
 	"scripts": {
 		"dev": "vite",
 		"build": "tsc -b && vite build",
-		"build:electron": "tsc -b electron/tsconfig.json && vite build && tsc -p electron/tsconfig.main.json",
+		"build:electron": "tsc -b electron/tsconfig.json && vite build && tsc -p electron/tsconfig.main.json && node rename-main.cjs",
 		"lint": "eslint .",
 		"preview": "vite preview",
 		"electron:dev": "concurrently \"vite\" \"wait-on http://localhost:5173 && tsc -p electron/tsconfig.main.json --watch\" \"tsc -p electron/tsconfig.main.json --watch --noEmit\" \"tsc -p electron/tsconfig.main.json && node rename-main.cjs && nodemon --watch electron --watch rename-main.cjs --exec electron .\"",
-		"electron:build": "tsc -b && vite build && tsc -p electron/tsconfig.main.json && electron-builder"
+		"electron:build": "tsc -b && vite build && tsc -p electron/tsconfig.main.json && node rename-main.cjs && electron-builder"
 	},
 	"dependencies": {
 		"lucide-react": "^1.11.0",
@@ -66,14 +66,16 @@
 		},
 		"win": {
 			"target": "nsis",
-			"icon": "public/takeout.ico",
-			"signAndEditExecutable": false
+			"icon": "public/takeout.ico"
 		},
 		"nsis": {
 			"oneClick": false,
 			"perMachine": false,
 			"allowToChangeInstallationDirectory": true,
-			"deleteAppDataOnUninstall": false
+			"deleteAppDataOnUninstall": false,
+			"installerIcon": "public/takeout.ico",
+			"uninstallerIcon": "public/takeout.ico",
+			"installerHeaderIcon": "public/takeout.ico"
 		}
 	}
 }

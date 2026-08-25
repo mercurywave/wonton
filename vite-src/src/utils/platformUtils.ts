@@ -1,5 +1,3 @@
-import path from "path";
-import os from "os";
 import { filesystem } from "./electronFs";
 import { TempFileReservation } from "../types/chat";
 
@@ -55,31 +53,18 @@ async function joinPath(...parts: string[]): Promise<string> {
 }
 
 export async function getRootDataDir(): Promise<string> {
-  let dataDir: string;
-  const platform = await getPlatformFromMain();
-
   if (typeof window !== "undefined" && "electronAPI" in window) {
     const appPath = await window.electronAPI.dataDir.getAppPath();
-    const safeAppPath = appPath && appPath.trim() ? appPath : os.homedir();
-    dataDir = await joinPath(safeAppPath, DATA_DIR_NAME);
-  } else if (platform === "win32") {
-    const localAppData = process.env.LOCALAPPDATA || os.homedir();
-    dataDir = path.join(localAppData, DATA_DIR_NAME);
-  } else if (platform === "darwin") {
-    const home = os.homedir();
-    dataDir = path.join(home, "Library", "Application Support", DATA_DIR_NAME);
-  } else {
-    // Linux
-    const xdgDataHome = process.env.XDG_DATA_HOME;
-    if (xdgDataHome) {
-      dataDir = path.join(xdgDataHome, DATA_DIR_NAME);
-    } else {
-      const home = os.homedir();
-      dataDir = path.join(home, ".local", "share", DATA_DIR_NAME);
+    const safeAppPath = appPath && appPath.trim() ? appPath : "";
+    if (!safeAppPath) {
+      return DATA_DIR_NAME;
     }
+    return await joinPath(safeAppPath, DATA_DIR_NAME);
   }
 
-  return dataDir || "";
+  // Non-Electron browser fallback. This app is shipped as an Electron app, so the
+  // main process owns the actual data directory resolution.
+  return DATA_DIR_NAME;
 }
 
 export async function getProjectDataDir(projectId: string): Promise<string> {

@@ -233,7 +233,7 @@ export default function Sidebar({
           <span className={styles.title}>Wonton</span>
           <img
             className={`${styles.logo} ${sidebarOpen ? styles.visible : ""}`}
-            src="/takeout.svg"
+            src="./takeout.svg"
             alt="Takeout"
           />
         </div>
@@ -444,7 +444,7 @@ export default function Sidebar({
         <div className={styles.footer}>
           <img
             className={`${styles.logo} ${!sidebarOpen ? styles.visible : ""}`}
-            src="/takeout.svg"
+            src="./takeout.svg"
             alt="Takeout"
           />
         </div>
