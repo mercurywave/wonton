@@ -1,5 +1,7 @@
 {
-	"name": "myapp",
+	"name": "wonton",
+	"description": "Local-first AI coding harness",
+	"author": "Wonton",
 	"private": true,
 	"version": "1.0.0",
 	"type": "module",
@@ -32,7 +34,7 @@
 		"@vitejs/plugin-react-swc": "^4.2.0",
 		"concurrently": "^9.1.0",
 		"diff": "^9.0.0",
-		"electron": "^44.0.0",
+		"electron": "44.0.0",
 		"electron-builder": "^26.15.3",
 		"eslint": "^9.9.0",
 		"eslint-plugin-react-hooks": "^7.0.0",
