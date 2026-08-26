@@ -12,123 +12,155 @@
   margin: 0;
 }
 
-.field label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #9090a0;
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.input {
-  background: #16162a;
-  border: 1px solid #2a2a4a;
-  color: #e0e0e0;
-  padding: 10px 12px;
-  border-radius: 6px;
-  font-size: 14px;
-  font-family: inherit;
-  transition: border-color 0.15s ease;
-}
-
-.input:focus {
-  outline: none;
-  border-color: #4a6cf7;
-}
-
-.input::placeholder {
-  color: #555;
-}
-
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
 .serverList {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
   margin-bottom: 16px;
 }
 
-.serverItem {
+.serverCard {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-radius: 6px;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 8px;
   border: 1px solid #2a2a4a;
   background: #16162a;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.serverItem:hover {
+.serverCard:hover {
   border-color: #3a3a5a;
 }
 
-.serverItem.active {
-  border-color: #4a6cf7;
-  background: #1a1a3a;
+.serverCardPrimary {
+  background: rgba(74, 108, 247, 0.06);
+  border-color: rgba(74, 108, 247, 0.3);
 }
 
-.serverItemName {
-  flex: 1;
-  font-size: 14px;
-  color: #e0e0e0;
-  cursor: pointer;
-  background: none;
-  border: none;
-  padding: 4px 6px;
-  border-radius: 4px;
-  text-align: left;
-  font-family: inherit;
-  transition: background 0.15s ease;
-}
-
-.serverItemName:hover {
-  background: #2a2a4a;
-}
-
-.serverItemUrl {
-  flex: 1.5;
-  font-size: 12px;
-  color: #707090;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.serverItemActions {
+.serverCardHeader {
   display: flex;
-  gap: 4px;
-  align-items: center;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.serverItemActions button {
-  background: none;
-  border: none;
+.serverNameWrap {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.serverLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: #707090;
-  cursor: pointer;
-  padding: 4px 6px;
-  border-radius: 4px;
+}
+
+.nameInput {
+  background: #0f0f1a;
+  border: 1px solid #2a2a4a;
+  color: #e0e0e0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 15px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.nameInput:focus,
+.input:focus {
+  outline: none;
+  border-color: #4a6cf7;
+}
+
+.serverCardActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.primaryButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: 1px solid #2a2a4a;
+  color: #888;
+  padding: 6px 10px;
+  border-radius: 5px;
   font-size: 12px;
   font-family: inherit;
-  transition: color 0.15s ease, background 0.15s ease;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.serverItemActions button:hover {
+.primaryButton:hover {
+  border-color: #4a6cf7;
   color: #e0e0e0;
-  background: #2a2a4a;
 }
 
-.serverItemActions button.deleteBtn:hover {
+.primaryButtonActive {
+  background: rgba(74, 108, 247, 0.15);
+  border-color: #4a6cf7;
+  color: #4a6cf7;
+}
+
+.deleteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: 1px solid #2a2a4a;
+  color: #707090;
+  padding: 6px 8px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.deleteBtn:hover {
   color: #f74a4a;
+  border-color: #f74a4a;
+}
+
+.serverFieldGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.fieldGroup label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #707090;
+}
+
+.input {
+  background: #0f0f1a;
+  border: 1px solid #2a2a4a;
+  color: #e0e0e0;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  transition: border-color 0.15s ease;
+}
+
+.input::placeholder {
+  color: #555;
 }
 
 .addButton {
@@ -151,43 +183,4 @@
   color: #e0e0e0;
   border-color: #4a6cf7;
   background: #1a1a3a;
-}
-
-.nameEditInput {
-  background: #0e0e1e;
-  border: 1px solid #4a6cf7;
-  color: #e0e0e0;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 14px;
-  font-family: inherit;
-  width: 100%;
-  min-width: 120px;
-}
-
-.nameEditInput:focus {
-  outline: none;
-}
-
-.urlEditInput {
-  background: #0e0e1e;
-  border: 1px solid #4a6cf7;
-  color: #e0e0e0;
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 12px;
-  font-family: inherit;
-  width: 100%;
-  min-width: 200px;
-}
-
-.urlEditInput:focus {
-  outline: none;
-}
-
-.editRow {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  flex: 1;
 }

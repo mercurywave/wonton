@@ -110,7 +110,7 @@ export default function ModelSettings() {
 
           {!resolvedSettings.serverUrl.trim() && (
             <div className={styles.modelsPrompt}>
-              Enter a server URL in the Server tab to discover available models.
+              Enter a server URL in the Connections tab to discover available models.
             </div>
           )}
 
