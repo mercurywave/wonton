@@ -168,6 +168,47 @@ export class PorkbunClient {
     return readJson<PorkbunTaskSummary>(response);
   }
 
+  async downloadTaskArtifact(taskId: string, kind: "zip" | "patch", savePath?: string): Promise<string | null> {
+    if (typeof window !== "undefined" && "electronAPI" in window) {
+      const ext = kind === "zip" ? "zip" : "patch";
+      const targetPath = savePath || (kind === "zip"
+        ? await window.electronAPI.os.showSaveDialog("Save Porkbun artifact", `${taskId}.${ext}`)
+        : await window.electronAPI.filesystem.getJoinedPath(await window.electronAPI.dataDir.getAppPath(), `tmp/porkbun-${taskId}.${ext}`));
+
+      if (!targetPath) {
+        return null;
+      }
+
+      await window.electronAPI.os.downloadFile(`${this.baseUrl}/api/v1/tasks/${taskId}/${kind}`, targetPath);
+      return targetPath;
+    }
+
+    const response = await fetch(`${this.baseUrl}/api/v1/tasks/${taskId}/${kind}`);
+    if (!response.ok) {
+      const payload = await readJson<{ error?: string }>(response);
+      throw new Error(payload.error || `Artifact download failed (${response.status})`);
+    }
+
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `${taskId}.${kind}`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+    return null;
+  }
+
+  async downloadTaskZip(taskId: string, defaultPath?: string): Promise<string | null> {
+    return this.downloadTaskArtifact(taskId, "zip", defaultPath);
+  }
+
+  async downloadTaskPatch(taskId: string, defaultPath?: string): Promise<string | null> {
+    return this.downloadTaskArtifact(taskId, "patch", defaultPath);
+  }
+
   async cancelTask(taskId: string): Promise<PorkbunTaskSummary> {
     const response = await fetch(`${this.baseUrl}/api/v1/tasks/${taskId}`, {
       method: "DELETE",

@@ -20,7 +20,9 @@ interface ElectronAPI {
   };
   os: {
     showFolderDialog: (title: string) => Promise<string>;
+    showSaveDialog: (title: string, defaultPath?: string) => Promise<string>;
     open: (folderPath: string) => Promise<void>;
+    downloadFile: (url: string, targetPath: string) => Promise<string>;
     execCommand: (command: string, cwd?: string) => Promise<{ stdout: string; stderr: string; status: number | null; signal?: string; killed?: boolean }>;
   };
   computer: {

@@ -61,6 +61,8 @@ export default function BatchesPage() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [doneAtByTask, setDoneAtByTask] = useState<Record<string, string>>({});
+  const [gitAvailable, setGitAvailable] = useState<boolean | null>(null);
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
 
@@ -100,6 +102,92 @@ export default function BatchesPage() {
     if (!client) return;
     void refreshData();
   }, [client, refreshData]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkGit() {
+      try {
+        const result = await window.electronAPI.os.execCommand("git --version");
+        if (isMounted) setGitAvailable(result.status === 0);
+      } catch {
+        if (isMounted) setGitAvailable(false);
+      }
+    }
+
+    void checkGit();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const markTaskDone = useCallback((taskId: string) => {
+    setDoneAtByTask((prev) => (prev[taskId] ? prev : { ...prev, [taskId]: new Date().toISOString() }));
+  }, []);
+
+  const handleDownloadZip = useCallback(async (taskId: string, titleText?: string | null) => {
+    if (!client) return;
+    setBusyId(taskId);
+    setError(null);
+
+    try {
+      const resolvedPath = await client.downloadTaskZip(taskId, titleText ? `${titleText.replace(/[^a-z0-9-_]+/gi, "-").toLowerCase()}.zip` : undefined);
+      if (resolvedPath) {
+        markTaskDone(taskId);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "ZIP download failed.";
+      setError(message);
+    } finally {
+      setBusyId(null);
+    }
+  }, [client, markTaskDone]);
+
+  const handleApplyPatch = useCallback(async (taskId: string) => {
+    if (!client) return;
+    if (!activeProject?.folderPath) {
+      setError("Select a project before applying a patch.");
+      return;
+    }
+
+    const projectRoot = activeProject.folderPath;
+    setBusyId(taskId);
+    setError(null);
+
+    try {
+      if (gitAvailable === false) {
+        throw new Error("Git is not available in this environment, so patch application is disabled.");
+      }
+
+      const patchPath = await client.downloadTaskPatch(taskId);
+      if (!patchPath) {
+        throw new Error("Patch artifact was not available for this task.");
+      }
+
+      const gitCheck = await window.electronAPI.os.execCommand("git --version", projectRoot);
+      if (gitCheck.status !== 0) {
+        throw new Error(gitCheck.stderr || "Git is not available in the selected project folder.");
+      }
+
+      const checkResult = await window.electronAPI.os.execCommand(`git apply --check --unsafe-paths "${patchPath}"`, projectRoot);
+      if (checkResult.status !== 0) {
+        throw new Error(checkResult.stderr || "Patch conflicts were detected and the update could not be applied cleanly.");
+      }
+
+      const applyResult = await window.electronAPI.os.execCommand(`git apply --unsafe-paths "${patchPath}"`, projectRoot);
+      if (applyResult.status !== 0) {
+        throw new Error(applyResult.stderr || "Patch application failed.");
+      }
+
+      markTaskDone(taskId);
+      await refreshData();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Patch application failed.";
+      setError(message);
+    } finally {
+      setBusyId(null);
+    }
+  }, [activeProject?.folderPath, client, gitAvailable, markTaskDone, refreshData]);
 
   const handleActivateQueue = useCallback(async () => {
     if (!client) return;
@@ -177,6 +265,16 @@ export default function BatchesPage() {
   const sortedTasks = useMemo(
     () => [...batches].sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()),
     [batches]
+  );
+
+  const visibleTasks = useMemo(
+    () =>
+      sortedTasks.filter((task) => {
+        const doneAt = doneAtByTask[task.id] ?? (task.status === "done" && (task.completed_at ?? task.updated_at)) ? (doneAtByTask[task.id] ?? (task.status === "done" ? (task.completed_at ?? task.updated_at ?? null) : null)) : null;
+        if (!doneAt) return true;
+        return Date.now() - new Date(doneAt).getTime() <= 30 * 60 * 1000;
+      }),
+    [doneAtByTask, sortedTasks]
   );
 
   return (
@@ -284,14 +382,16 @@ export default function BatchesPage() {
             </div>
 
             <div className={styles.taskList}>
-              {sortedTasks.length === 0 ? (
+              {visibleTasks.length === 0 ? (
                 <div className={styles.emptyState}>No batches yet. Create the first queued task above.</div>
               ) : (
-                sortedTasks.map((task) => {
+                visibleTasks.map((task) => {
                   const tone = statusTone[task.status] ?? statusTone.queued;
                   const canRun = ["submitted", "queued"].includes(task.status);
                   const canCancel = ["submitted", "queued", "running"].includes(task.status);
                   const canRetry = task.status === "failed" || task.status === "cancelled";
+                  const canDownload = ["completed", "failed", "done"].includes(task.status);
+                  const canApplyPatch = canDownload && gitAvailable !== false && Boolean(activeProject?.folderPath);
 
                   return (
                     <div key={task.id} className={styles.taskCard}>
@@ -353,6 +453,30 @@ export default function BatchesPage() {
                           >
                             {busyId === task.id ? <Loader2 size={14} className="spin" /> : <RotateCcw size={14} />}
                             Retry
+                          </button>
+                        )}
+
+                        {canDownload && (
+                          <button
+                            className={styles.actionButton}
+                            type="button"
+                            onClick={() => void handleDownloadZip(task.id, task.title)}
+                            disabled={busyId === task.id}
+                          >
+                            {busyId === task.id ? <Loader2 size={14} className="spin" /> : <RefreshCcw size={14} />}
+                            Download ZIP
+                          </button>
+                        )}
+
+                        {canApplyPatch && (
+                          <button
+                            className={styles.actionButton}
+                            type="button"
+                            onClick={() => void handleApplyPatch(task.id)}
+                            disabled={busyId === task.id}
+                          >
+                            {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Waypoints size={14} />}
+                            Apply patch
                           </button>
                         )}
                       </div>

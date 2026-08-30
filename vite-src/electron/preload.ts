@@ -24,7 +24,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   // os module
   os: {
     showFolderDialog: (title: string) => ipcRenderer.invoke("os:showFolderDialog", title),
+    showSaveDialog: (title: string, defaultPath?: string) => ipcRenderer.invoke("os:showSaveDialog", title, defaultPath ?? ""),
     open: (folderPath: string) => ipcRenderer.invoke("os:open", folderPath),
+    downloadFile: (url: string, targetPath: string) => ipcRenderer.invoke("os:downloadFile", url, targetPath),
     execCommand: (command: string, cwd?: string) => ipcRenderer.invoke("os:execCommand", command, cwd) as Promise<{ stdout: string; stderr: string; status: number | null; signal?: string; killed?: boolean }>,
   },
 

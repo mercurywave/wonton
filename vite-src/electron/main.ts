@@ -220,8 +220,36 @@ const osHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ...args: a
     return result.filePaths[0];
   },
 
+  async showSaveDialog(_event, title, defaultPath) {
+    const result = await dialog.showSaveDialog({
+      title,
+      defaultPath: defaultPath || undefined,
+    });
+    if (result.canceled || !result.filePath) return "";
+    return result.filePath;
+  },
+
   async open(_event, folderPath) {
     return shell.openPath(folderPath);
+  },
+
+  async downloadFile(_event, url, targetPath) {
+    if (typeof url !== "string" || !url.trim()) {
+      throw new Error("Download URL is required");
+    }
+    if (typeof targetPath !== "string" || !targetPath.trim()) {
+      throw new Error("Download destination is required");
+    }
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      const payload = await response.text().catch(() => "");
+      throw new Error(payload || `Download failed (${response.status})`);
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    await fs.writeFile(targetPath, buffer);
+    return targetPath;
   },
 
   async execCommand(_event, command, cwd) {
