@@ -4,9 +4,23 @@ import styles from "./BatchAgentSettings.module.css";
 import { useSettings } from "../contexts";
 
 export default function BatchAgentSettings() {
-  const { settings, updateSettings } = useSettings();
+  const { settings, updateSettings, servers } = useSettings();
 
   const enabled = Boolean(settings.porkbunServerUrl?.trim());
+
+  const selectedLlmServer = useMemo(
+    () => servers.find(
+      (server) =>
+        server.id === settings.porkbunLlmServerId ||
+        server.serverUrl === settings.porkbunLlmServerId
+    ),
+    [servers, settings.porkbunLlmServerId]
+  );
+
+  const maskedLlmApiKey = useMemo(() => {
+    const value = selectedLlmServer?.apiKey || settings.porkbunApiKey || "";
+    return value ? "*".repeat(Math.max(value.length, 4)) : "none";
+  }, [selectedLlmServer?.apiKey, settings.porkbunApiKey]);
 
   const queueWindow = useMemo(() => {
     const start = settings.porkbunQueueWindowStart || "09:00";
@@ -30,20 +44,46 @@ export default function BatchAgentSettings() {
             type="url"
             value={settings.porkbunServerUrl}
             onChange={(e) => updateSettings({ porkbunServerUrl: e.target.value })}
-            placeholder="http://localhost:8000"
+            placeholder="https://porkbun.example.com"
           />
         </div>
 
         <div className={styles.field}>
           <label htmlFor="porkbunLlmServerId">LLM Server Selection</label>
-          <input
+          <select
             id="porkbunLlmServerId"
             className={styles.input}
-            type="text"
-            value={settings.porkbunLlmServerId}
-            onChange={(e) => updateSettings({ porkbunLlmServerId: e.target.value })}
-            placeholder="server id or name"
-          />
+            value={selectedLlmServer?.id ?? ""}
+            onChange={(e) => {
+              const nextServer = servers.find((server) => server.id === e.target.value);
+              if (!nextServer) {
+                updateSettings({ porkbunLlmServerId: "", porkbunApiKey: "" });
+                return;
+              }
+              updateSettings({
+                porkbunLlmServerId: nextServer.serverUrl,
+                porkbunApiKey: nextServer.apiKey,
+              });
+            }}
+          >
+            <option value="">Select an LLM connection</option>
+            {servers.map((server) => (
+              <option key={server.id} value={server.id}>
+                {server.name || "Connection"}
+              </option>
+            ))}
+          </select>
+
+          <div className={styles.detailsBox}>
+            <div className={styles.detailsRow}>
+              <span className={styles.detailsLabel}>URL</span>
+              <span>{selectedLlmServer?.serverUrl || settings.porkbunLlmServerId || "Not selected"}</span>
+            </div>
+            <div className={styles.detailsRow}>
+              <span className={styles.detailsLabel}>API key</span>
+              <span>{maskedLlmApiKey}</span>
+            </div>
+          </div>
         </div>
 
         <div className={styles.field}>

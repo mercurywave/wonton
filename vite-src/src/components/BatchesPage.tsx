@@ -69,8 +69,8 @@ export default function BatchesPage() {
 
   const client = useMemo(() => {
     const baseUrl = resolvePorkbunBaseUrl(settings.porkbunServerUrl);
-    return baseUrl ? new PorkbunClient({ baseUrl }) : null;
-  }, [settings.porkbunServerUrl]);
+    return baseUrl ? new PorkbunClient({ baseUrl, apiKey: settings.porkbunApiKey || undefined }) : null;
+  }, [settings.porkbunApiKey, settings.porkbunServerUrl]);
 
   const refreshData = useCallback(async () => {
     if (!client || refreshLockRef.current) return;

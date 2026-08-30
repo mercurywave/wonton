@@ -13,6 +13,7 @@ export interface ChatSettings {
   notificationBehavior: "always" | "unfocused" | "never";
   lastProjectId: string;
   porkbunServerUrl: string;
+  porkbunApiKey: string;
   porkbunLlmServerId: string;
   porkbunModelId: string;
   porkbunQueueWindowStart: string;
@@ -42,6 +43,7 @@ const DEFAULT_SETTINGS: Omit<ChatSettings, "servers" | "activeServerId"> = {
   notificationBehavior: "unfocused",
   lastProjectId: "default",
   porkbunServerUrl: "",
+  porkbunApiKey: "",
   porkbunLlmServerId: "",
   porkbunModelId: "",
   porkbunQueueWindowStart: "09:00",
