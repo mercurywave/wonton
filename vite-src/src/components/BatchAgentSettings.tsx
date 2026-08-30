@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useMemo } from "react";
 import { Server, Clock3 } from "lucide-react";
 import styles from "./BatchAgentSettings.module.css";
 import { useSettings } from "../contexts";
@@ -28,22 +28,21 @@ export default function BatchAgentSettings() {
     [models]
   );
 
-  const modelValue = settings.porkbunModelId && modelOptions.some((model) => model.id === settings.porkbunModelId)
-    ? settings.porkbunModelId
-    : "";
+  const visibleModelOptions = useMemo(() => {
+    if (!settings.porkbunModelId?.trim()) {
+      return modelOptions;
+    }
 
+    if (modelOptions.some((model) => model.id === settings.porkbunModelId)) {
+      return modelOptions;
+    }
+
+    return [{ id: settings.porkbunModelId }, ...modelOptions];
+  }, [modelOptions, settings.porkbunModelId]);
+
+  const hasSavedModel = Boolean(settings.porkbunModelId?.trim());
+  const modelValue = hasSavedModel ? settings.porkbunModelId : "";
   const isModelSelectDisabled = !selectedLlmServer || isLoading || Boolean(modelsError) || modelOptions.length === 0;
-
-  useEffect(() => {
-    if (!selectedLlmServer && settings.porkbunModelId) {
-      updateSettings({ porkbunModelId: "" });
-      return;
-    }
-
-    if (selectedLlmServer && settings.porkbunModelId && !modelOptions.some((model) => model.id === settings.porkbunModelId)) {
-      updateSettings({ porkbunModelId: "" });
-    }
-  }, [selectedLlmServer, settings.porkbunModelId, modelOptions, updateSettings]);
 
   const maskedLlmApiKey = useMemo(() => {
     const value = selectedLlmServer?.apiKey || settings.porkbunApiKey || "";
@@ -85,12 +84,13 @@ export default function BatchAgentSettings() {
             onChange={(e) => {
               const nextServer = servers.find((server) => server.id === e.target.value);
               if (!nextServer) {
-                updateSettings({ porkbunLlmServerId: "", porkbunApiKey: "" });
+                updateSettings({ porkbunLlmServerId: "", porkbunApiKey: "", porkbunModelId: "" });
                 return;
               }
               updateSettings({
                 porkbunLlmServerId: nextServer.serverUrl,
                 porkbunApiKey: nextServer.apiKey,
+                porkbunModelId: "",
               });
             }}
           >
@@ -125,9 +125,15 @@ export default function BatchAgentSettings() {
           >
             {selectedLlmServer ? (
               isLoading ? (
-                <option value="">Loading models...</option>
+                <>
+                  {hasSavedModel && <option value={settings.porkbunModelId}>{settings.porkbunModelId}</option>}
+                  <option value="">Loading models...</option>
+                </>
               ) : modelsError ? (
-                <option value="">Server unreachable</option>
+                <>
+                  {hasSavedModel && <option value={settings.porkbunModelId}>{settings.porkbunModelId}</option>}
+                  <option value="">Server unreachable</option>
+                </>
               ) : modelOptions.length === 0 ? (
                 <option value="">No models available</option>
               ) : (
@@ -136,7 +142,7 @@ export default function BatchAgentSettings() {
             ) : (
               <option value="">Select an LLM connection</option>
             )}
-            {modelOptions.map((model) => (
+            {visibleModelOptions.map((model) => (
               <option key={model.id} value={model.id}>
                 {model.id}
               </option>
