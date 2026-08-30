@@ -237,11 +237,14 @@ export class PorkbunClient {
     return readJson<PorkbunTaskSummary>(response);
   }
 
-  async activateQueueNow(): Promise<PorkbunHealthStatus> {
+  async activateQueueNow(options?: { startHour?: number; endHour?: number }): Promise<PorkbunHealthStatus> {
+    const startHour = Number.isFinite(options?.startHour) ? Math.max(0, Math.min(23, options!.startHour!)) : 9;
+    const endHour = Number.isFinite(options?.endHour) ? Math.max(0, Math.min(23, options!.endHour!)) : 17;
+
     const response = await fetch(`${this.baseUrl}/api/v1/system/config`, {
       method: "PUT",
       headers: this.headers(),
-      body: JSON.stringify({ start_hour: 0, end_hour: 23 }),
+      body: JSON.stringify({ start_hour: startHour, end_hour: endHour }),
     });
 
     if (!response.ok) {

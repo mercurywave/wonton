@@ -80,17 +80,6 @@ export default function BatchAgentSettings() {
           />
         </div>
 
-        <div className={styles.checkboxField}>
-          <label htmlFor="porkbunAutoActivate">Auto-activate queue when focused</label>
-          <input
-            id="porkbunAutoActivate"
-            className={styles.checkboxInput}
-            type="checkbox"
-            checked={settings.porkbunAutoActivate}
-            onChange={(e) => updateSettings({ porkbunAutoActivate: e.target.checked })}
-          />
-        </div>
-
         <div className={styles.subtleBox}>
           <Clock3 size={16} />
           <span>

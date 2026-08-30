@@ -101,27 +101,12 @@ export default function BatchesPage() {
     }
   }, [client]);
 
-  const maybeActivateQueue = useCallback(async () => {
-    if (!client || !settings.porkbunAutoActivate) return;
-
-    try {
-      const currentHealth = await client.fetchHealth();
-      if (!currentHealth.time_window_active) {
-        await client.activateQueueNow();
-        await refreshData();
-      }
-    } catch {
-      // Keep the app responsive even if the queue is temporarily unavailable.
-    }
-  }, [client, refreshData, settings.porkbunAutoActivate]);
-
   useEffect(() => {
     if (!client) return;
 
     const refreshOnVisibility = async () => {
       if (document.visibilityState === "visible") {
         await refreshData();
-        await maybeActivateQueue();
       }
     };
 
@@ -151,7 +136,7 @@ export default function BatchesPage() {
       window.removeEventListener("focus", handleFocus);
       window.clearInterval(intervalId);
     };
-  }, [client, maybeActivateQueue, refreshData]);
+  }, [client, refreshData]);
 
   useEffect(() => {
     let isMounted = true;
@@ -243,7 +228,13 @@ export default function BatchesPage() {
     if (!client) return;
     setBusyId("activate");
     try {
-      await client.activateQueueNow();
+      const startHour = Number.parseInt((settings.porkbunQueueWindowStart || "09:00").split(":")[0] ?? "9", 10);
+      const endHour = Number.parseInt((settings.porkbunQueueWindowEnd || "17:00").split(":")[0] ?? "17", 10);
+
+      await client.activateQueueNow({
+        startHour: Number.isFinite(startHour) ? startHour : 9,
+        endHour: Number.isFinite(endHour) ? endHour : 17,
+      });
       await refreshData();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Queue activation failed.";
@@ -251,7 +242,7 @@ export default function BatchesPage() {
     } finally {
       setBusyId(null);
     }
-  }, [client, refreshData]);
+  }, [client, refreshData, settings.porkbunQueueWindowEnd, settings.porkbunQueueWindowStart]);
 
   const handleCreateBatch = useCallback(async () => {
     if (!client) return;
