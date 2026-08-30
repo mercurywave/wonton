@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Server, Clock3 } from "lucide-react";
-import styles from "../components/Settings.module.css";
+import styles from "./BatchAgentSettings.module.css";
 import { useSettings } from "../contexts";
 
 export default function BatchAgentSettings() {
@@ -80,11 +80,11 @@ export default function BatchAgentSettings() {
           />
         </div>
 
-        <div className={styles.field}>
+        <div className={styles.checkboxField}>
           <label htmlFor="porkbunAutoActivate">Auto-activate queue when focused</label>
           <input
             id="porkbunAutoActivate"
-            className={styles.checkbox}
+            className={styles.checkboxInput}
             type="checkbox"
             checked={settings.porkbunAutoActivate}
             onChange={(e) => updateSettings({ porkbunAutoActivate: e.target.checked })}
