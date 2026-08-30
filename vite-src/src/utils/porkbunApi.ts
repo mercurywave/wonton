@@ -9,6 +9,7 @@ export type PorkbunTaskStatus =
 
 export interface PorkbunTaskSummary {
   id: string;
+  title?: string | null;
   status: PorkbunTaskStatus;
   created_at?: string | null;
   updated_at?: string | null;
