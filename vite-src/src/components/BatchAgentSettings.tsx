@@ -1,7 +1,8 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { Server, Clock3 } from "lucide-react";
 import styles from "./BatchAgentSettings.module.css";
 import { useSettings } from "../contexts";
+import { useServerModels } from "../hooks/useServerModels";
 
 export default function BatchAgentSettings() {
   const { settings, updateSettings, servers } = useSettings();
@@ -16,6 +17,33 @@ export default function BatchAgentSettings() {
     ),
     [servers, settings.porkbunLlmServerId]
   );
+
+  const { models, isLoading, error: modelsError } = useServerModels(
+    selectedLlmServer?.serverUrl ?? "",
+    selectedLlmServer?.apiKey ?? ""
+  );
+
+  const modelOptions = useMemo(
+    () => [...models].sort((a, b) => a.id.localeCompare(b.id)),
+    [models]
+  );
+
+  const modelValue = settings.porkbunModelId && modelOptions.some((model) => model.id === settings.porkbunModelId)
+    ? settings.porkbunModelId
+    : "";
+
+  const isModelSelectDisabled = !selectedLlmServer || isLoading || Boolean(modelsError) || modelOptions.length === 0;
+
+  useEffect(() => {
+    if (!selectedLlmServer && settings.porkbunModelId) {
+      updateSettings({ porkbunModelId: "" });
+      return;
+    }
+
+    if (selectedLlmServer && settings.porkbunModelId && !modelOptions.some((model) => model.id === settings.porkbunModelId)) {
+      updateSettings({ porkbunModelId: "" });
+    }
+  }, [selectedLlmServer, settings.porkbunModelId, modelOptions, updateSettings]);
 
   const maskedLlmApiKey = useMemo(() => {
     const value = selectedLlmServer?.apiKey || settings.porkbunApiKey || "";
@@ -88,14 +116,32 @@ export default function BatchAgentSettings() {
 
         <div className={styles.field}>
           <label htmlFor="porkbunModelId">Model</label>
-          <input
+          <select
             id="porkbunModelId"
             className={styles.input}
-            type="text"
-            value={settings.porkbunModelId}
+            value={modelValue}
             onChange={(e) => updateSettings({ porkbunModelId: e.target.value })}
-            placeholder="gpt-4o-mini"
-          />
+            disabled={isModelSelectDisabled}
+          >
+            {selectedLlmServer ? (
+              isLoading ? (
+                <option value="">Loading models...</option>
+              ) : modelsError ? (
+                <option value="">Server unreachable</option>
+              ) : modelOptions.length === 0 ? (
+                <option value="">No models available</option>
+              ) : (
+                <option value="">Select a model</option>
+              )
+            ) : (
+              <option value="">Select an LLM connection</option>
+            )}
+            {modelOptions.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.id}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className={styles.field}>

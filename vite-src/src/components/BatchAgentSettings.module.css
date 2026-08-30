@@ -71,6 +71,11 @@
   box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.15);
 }
 
+.input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .input::placeholder {
   color: #555;
 }
