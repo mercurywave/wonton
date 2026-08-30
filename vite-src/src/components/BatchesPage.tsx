@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertCircle,
@@ -65,6 +65,7 @@ export default function BatchesPage() {
   const [gitAvailable, setGitAvailable] = useState<boolean | null>(null);
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
+  const refreshLockRef = useRef(false);
 
   const client = useMemo(() => {
     const baseUrl = resolvePorkbunBaseUrl(settings.porkbunServerUrl);
@@ -72,7 +73,8 @@ export default function BatchesPage() {
   }, [settings.porkbunServerUrl]);
 
   const refreshData = useCallback(async () => {
-    if (!client) return;
+    if (!client || refreshLockRef.current) return;
+    refreshLockRef.current = true;
     setIsLoading(true);
     setError(null);
 
@@ -94,14 +96,62 @@ export default function BatchesPage() {
       const message = err instanceof Error ? err.message : "Unable to load Porkbun data.";
       setError(message);
     } finally {
+      refreshLockRef.current = false;
       setIsLoading(false);
     }
   }, [client]);
 
+  const maybeActivateQueue = useCallback(async () => {
+    if (!client || !settings.porkbunAutoActivate) return;
+
+    try {
+      const currentHealth = await client.fetchHealth();
+      if (!currentHealth.time_window_active) {
+        await client.activateQueueNow();
+        await refreshData();
+      }
+    } catch {
+      // Keep the app responsive even if the queue is temporarily unavailable.
+    }
+  }, [client, refreshData, settings.porkbunAutoActivate]);
+
   useEffect(() => {
     if (!client) return;
-    void refreshData();
-  }, [client, refreshData]);
+
+    const refreshOnVisibility = async () => {
+      if (document.visibilityState === "visible") {
+        await refreshData();
+        await maybeActivateQueue();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void refreshOnVisibility();
+      }
+    };
+
+    const handleFocus = () => {
+      void refreshOnVisibility();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleFocus);
+
+    void refreshOnVisibility();
+
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === "visible") {
+        void refreshData();
+      }
+    }, 30_000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleFocus);
+      window.clearInterval(intervalId);
+    };
+  }, [client, maybeActivateQueue, refreshData]);
 
   useEffect(() => {
     let isMounted = true;
