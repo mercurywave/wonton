@@ -12,6 +12,12 @@ export interface ChatSettings {
   reasoningEffort: ReasoningEffort;
   notificationBehavior: "always" | "unfocused" | "never";
   lastProjectId: string;
+  porkbunServerUrl: string;
+  porkbunLlmServerId: string;
+  porkbunModelId: string;
+  porkbunQueueWindowStart: string;
+  porkbunQueueWindowEnd: string;
+  porkbunAutoActivate: boolean;
 }
 
 export interface ResolvedServerSettings {
@@ -36,6 +42,12 @@ const DEFAULT_SETTINGS: Omit<ChatSettings, "servers" | "activeServerId"> = {
   reasoningEffort: "none",
   notificationBehavior: "unfocused",
   lastProjectId: "default",
+  porkbunServerUrl: "",
+  porkbunLlmServerId: "",
+  porkbunModelId: "",
+  porkbunQueueWindowStart: "09:00",
+  porkbunQueueWindowEnd: "17:00",
+  porkbunAutoActivate: true,
 };
 
 let cachedSettings: ChatSettings | null = null;

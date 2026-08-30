@@ -250,7 +250,7 @@ export interface Task {
   priority?: TaskPriority;
 }
 
-export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows" | "stats" | "tasks" | "references";
+export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows" | "stats" | "batches" | "tasks" | "references";
 
 export interface ServerModel {
   id: string;

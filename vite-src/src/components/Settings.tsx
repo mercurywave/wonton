@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Settings as SettingsIcon } from "lucide-react";
-import styles from "../components/Settings.module.css";
-import ServerListSettings from "../components/ServerListSettings";
-import ModelSettings from "../components/ModelSettings";
-import PreferencesSettings from "../components/PreferencesSettings";
-import FilePermissionsSettings from "../components/FilePermissionsSettings";
+import styles from "./Settings.module.css";
+import ServerListSettings from "./ServerListSettings";
+import ModelSettings from "./ModelSettings";
+import BatchAgentSettings from "./BatchAgentSettings";
+import PreferencesSettings from "./PreferencesSettings";
+import FilePermissionsSettings from "./FilePermissionsSettings";
 import { useFilePermissions, useProjects, useNav } from "../contexts";
 
-type Tab = "connections" | "models" | "preferences" | "permissions";
+type Tab = "connections" | "models" | "batchAgent" | "preferences" | "permissions";
 
 interface SettingsProps {
   onFolderChange?: (id: string) => void;
@@ -16,6 +17,7 @@ interface SettingsProps {
 const tabs: { key: Tab; label: string }[] = [
   { key: "connections", label: "Connections" },
   { key: "models", label: "Models" },
+  { key: "batchAgent", label: "Batch Agent" },
   { key: "preferences", label: "Preferences" },
   { key: "permissions", label: "Permissions" },
 ];
@@ -51,6 +53,7 @@ export default function Settings({ onFolderChange }: SettingsProps) {
         <div className={styles.tabContent}>
           {activeTab === "connections" && <ServerListSettings />}
           {activeTab === "models" && <ModelSettings />}
+          {activeTab === "batchAgent" && <BatchAgentSettings />}
           {activeTab === "preferences" && <PreferencesSettings />}
           {activeTab === "permissions" && (
             <FilePermissionsTab

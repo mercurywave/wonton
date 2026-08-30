@@ -1,0 +1,217 @@
+export type PorkbunTaskStatus =
+  | "submitted"
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "done";
+
+export interface PorkbunTaskSummary {
+  id: string;
+  status: PorkbunTaskStatus;
+  created_at?: string | null;
+  updated_at?: string | null;
+  started_at?: string | null;
+  completed_at?: string | null;
+  error_message?: string | null;
+  output?: Record<string, unknown>;
+  task?: {
+    system_prompt?: string;
+    user_prompt?: string;
+    model?: {
+      base_url?: string;
+      api_key?: string;
+      model_name?: string;
+    };
+    max_iterations?: number;
+    iteration_prompt?: string;
+  };
+}
+
+export interface PorkbunQueueStats {
+  submitted: number;
+  queued: number;
+  running: number;
+  completed: number;
+  failed: number;
+  cancelled: number;
+  total: number;
+}
+
+export interface PorkbunHealthStatus {
+  status: string;
+  queue_len: number;
+  time_window_active: boolean;
+  timestamp: string;
+}
+
+export interface PorkbunClientOptions {
+  baseUrl: string;
+  apiKey?: string;
+}
+
+function stripTrailingSlash(value: string) {
+  return value.replace(/\/+$/, "");
+}
+
+async function readJson<T>(response: Response): Promise<T> {
+  const text = await response.text();
+  if (!text) {
+    return {} as T;
+  }
+  return JSON.parse(text) as T;
+}
+
+export class PorkbunClient {
+  private readonly baseUrl: string;
+  private readonly apiKey?: string;
+
+  constructor(options: PorkbunClientOptions) {
+    this.baseUrl = stripTrailingSlash(options.baseUrl);
+    this.apiKey = options.apiKey;
+  }
+
+  private headers(extra: Record<string, string> = {}) {
+    return {
+      "Content-Type": "application/json",
+      ...extra,
+    };
+  }
+
+  async fetchHealth(): Promise<PorkbunHealthStatus> {
+    const response = await fetch(`${this.baseUrl}/health`);
+    if (!response.ok) {
+      const payload = await readJson<{ error?: string }>(response);
+      throw new Error(payload.error || `Health check failed (${response.status})`);
+    }
+    return readJson<PorkbunHealthStatus>(response);
+  }
+
+  async fetchQueueStats(): Promise<PorkbunQueueStats> {
+    const response = await fetch(`${this.baseUrl}/api/v1/queue/stats`);
+    if (!response.ok) {
+      const payload = await readJson<{ error?: string }>(response);
+      throw new Error(payload.error || `Queue stats failed (${response.status})`);
+    }
+    return readJson<PorkbunQueueStats>(response);
+  }
+
+  async listTasks(): Promise<PorkbunTaskSummary[]> {
+    const response = await fetch(`${this.baseUrl}/api/v1/queue`);
+    if (!response.ok) {
+      const payload = await readJson<{ error?: string }>(response);
+      throw new Error(payload.error || `Queue fetch failed (${response.status})`);
+    }
+    const payload = await readJson<{ tasks?: string[] }>(response);
+    const taskIds = payload.tasks ?? [];
+
+    const tasks = await Promise.all(
+      taskIds.map(async (id) => {
+        const taskResponse = await fetch(`${this.baseUrl}/api/v1/tasks/${id}`);
+        if (!taskResponse.ok) {
+          throw new Error(`Failed to load task ${id}`);
+        }
+        return readJson<PorkbunTaskSummary>(taskResponse);
+      })
+    );
+
+    return tasks.filter(Boolean);
+  }
+
+  async createTask(input: {
+    title?: string;
+    prompt: string;
+    systemPrompt?: string;
+    model: string;
+    llmServer?: string;
+    maxIterations?: number;
+    iterationPrompt?: string;
+    projectFolderPath?: string;
+  }): Promise<PorkbunTaskSummary> {
+    const response = await fetch(`${this.baseUrl}/api/v1/tasks`, {
+      method: "POST",
+      headers: this.headers(),
+      body: JSON.stringify({
+        system_prompt: input.systemPrompt || "You are a careful coding agent.",
+        user_prompt: input.prompt,
+        base_url: input.llmServer || this.baseUrl,
+        api_key: this.apiKey || "",
+        model_name: input.model,
+        max_iterations: input.maxIterations ?? 1,
+        iteration_prompt: input.iterationPrompt || "continue improving the patch and keep the change set focused",
+        project_folder_path: input.projectFolderPath,
+        title: input.title,
+      }),
+    });
+
+    if (!response.ok) {
+      const payload = await readJson<{ error?: string }>(response);
+      throw new Error(payload.error || `Task creation failed (${response.status})`);
+    }
+
+    return readJson<PorkbunTaskSummary>(response);
+  }
+
+  async runTaskNow(taskId: string): Promise<PorkbunTaskSummary> {
+    const response = await fetch(`${this.baseUrl}/api/v1/tasks/${taskId}/run`, {
+      method: "POST",
+      headers: this.headers(),
+    });
+
+    if (!response.ok) {
+      const payload = await readJson<{ error?: string }>(response);
+      throw new Error(payload.error || `Run action failed (${response.status})`);
+    }
+
+    return readJson<PorkbunTaskSummary>(response);
+  }
+
+  async cancelTask(taskId: string): Promise<PorkbunTaskSummary> {
+    const response = await fetch(`${this.baseUrl}/api/v1/tasks/${taskId}`, {
+      method: "DELETE",
+      headers: this.headers(),
+    });
+
+    if (!response.ok) {
+      const payload = await readJson<{ error?: string }>(response);
+      throw new Error(payload.error || `Cancel action failed (${response.status})`);
+    }
+
+    return readJson<PorkbunTaskSummary>(response);
+  }
+
+  async retryTask(taskId: string): Promise<PorkbunTaskSummary> {
+    const response = await fetch(`${this.baseUrl}/api/v1/tasks/${taskId}/retry`, {
+      method: "POST",
+      headers: this.headers(),
+    });
+
+    if (!response.ok) {
+      const payload = await readJson<{ error?: string }>(response);
+      throw new Error(payload.error || `Retry action failed (${response.status})`);
+    }
+
+    return readJson<PorkbunTaskSummary>(response);
+  }
+
+  async activateQueueNow(): Promise<PorkbunHealthStatus> {
+    const response = await fetch(`${this.baseUrl}/api/v1/system/config`, {
+      method: "PUT",
+      headers: this.headers(),
+      body: JSON.stringify({ start_hour: 0, end_hour: 23 }),
+    });
+
+    if (!response.ok) {
+      const payload = await readJson<{ error?: string }>(response);
+      throw new Error(payload.error || `Queue activation failed (${response.status})`);
+    }
+
+    return this.fetchHealth();
+  }
+}
+
+export function resolvePorkbunBaseUrl(rawUrl: string): string {
+  if (!rawUrl.trim()) return "";
+  return rawUrl.replace(/\/+$/, "");
+}

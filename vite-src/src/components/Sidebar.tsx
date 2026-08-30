@@ -18,10 +18,11 @@ import {
   X,
   Book,
   Bell,
+  Waypoints,
 } from "lucide-react";
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
-import { useUI, useProjects, useChats, useTasks } from "../contexts";
+import { useUI, useProjects, useChats, useTasks, useSettings } from "../contexts";
 import { useNav } from "../contexts";
 import ProjectSelector from "../components/ProjectSelector";
 import { PRIORITY_COLORS } from "../utils/taskUtils";
@@ -49,6 +50,8 @@ export default function Sidebar({
   const { chats, getIsProcessing, selectedChatId } = useChats();
   const { state: nav, activeProjectId, navigateToPage, navigateToChat } = useNav();
   const { getSortedActiveTasks, createChatAndGraduateWithId, createTask } = useTasks();
+  const { settings } = useSettings();
+  const batchesEnabled = Boolean(settings.porkbunServerUrl?.trim());
 
   // Re-render when approval queue changes
   const [approvalTick, setApprovalTick] = useState(0);
@@ -87,12 +90,13 @@ export default function Sidebar({
   const displayTasks = windowHeight < 720 ? [] : sortedActiveTasks.slice(0, 3);
   const navItems: { page: Page; icon: React.ReactNode; label: string; filterOut?: () => boolean }[] = [
     { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => sidebarOpen },
+    ...(batchesEnabled ? [{ page: "batches" as Page, icon: <Waypoints size={18} />, label: "Batches", filterOut: () => sidebarOpen }] : []),
     { page: "tasks", icon: <Flag size={18} />, label: "Tasks", filterOut: () => sidebarOpen },
     { page: "projects", icon: <Folder size={18} />, label: "Projects" },
     { page: "references", icon: <Book size={18} />, label: "References" },
-   { page: "history",    icon: <Clock size={18} />,         label: "History", filterOut: () => sidebarOpen },
-    { page: "workflows",  icon: <GitBranch size={18} />,     label: "Workflows" },
-    { page: "stats",      icon: <BarChart3 size={18} />,     label: "Stats" },
+    { page: "history", icon: <Clock size={18} />, label: "History", filterOut: () => sidebarOpen },
+    { page: "workflows", icon: <GitBranch size={18} />, label: "Workflows" },
+    { page: "stats", icon: <BarChart3 size={18} />, label: "Stats" },
     { page: "settings", icon: <Settings size={18} />, label: "Settings" },
   ];
 

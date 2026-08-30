@@ -16,6 +16,7 @@ import ChatHistoryPage from "./components/ChatHistoryPage";
 import WorkflowsPage from "./components/WorkflowsPage";
 import StatsPage from "./components/StatsPage";
 import TasksPage from "./components/TasksPage";
+import BatchesPage from "./components/BatchesPage.tsx";
 import ReferencesPage from "./components/ReferencesPage";
 import SplitPanel from "./components/SplitPanel";
 import "./App.css";
@@ -284,6 +285,9 @@ function App() {
         )}
         {nav.page === "stats" && (
           <StatsPage />
+        )}
+        {nav.page === "batches" && (
+          <BatchesPage />
         )}
         {nav.page === "tasks" && (
           <TasksPage />
