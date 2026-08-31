@@ -140,7 +140,7 @@ export class PorkbunClient {
         api_key: this.apiKey || "",
         model_name: input.model,
         max_iterations: input.maxIterations ?? 1,
-        iteration_prompt: input.iterationPrompt || "continue improving the patch and keep the change set focused",
+        iteration_prompt: input.iterationPrompt || "",
         project_folder_path: input.projectFolderPath,
         title: input.title,
       }),

@@ -65,6 +65,7 @@ export default function BatchesPage() {
   const [gitAvailable, setGitAvailable] = useState<boolean | null>(null);
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
+  const [maxIterations, setMaxIterations] = useState(1);
   const refreshLockRef = useRef(false);
 
   const client = useMemo(() => {
@@ -257,6 +258,12 @@ export default function BatchesPage() {
       return;
     }
 
+    const normalizedMaxIterations = Number.parseInt(String(maxIterations), 10);
+    if (!Number.isFinite(normalizedMaxIterations) || normalizedMaxIterations < 1) {
+      setError("Max iterations must be a whole number greater than or equal to 1.");
+      return;
+    }
+
     setCreating(true);
     setError(null);
 
@@ -266,11 +273,13 @@ export default function BatchesPage() {
         prompt: trimmedPrompt,
         model: settings.porkbunModelId || "gpt-4o-mini",
         llmServer: settings.porkbunLlmServerId || undefined,
+        maxIterations: normalizedMaxIterations,
         projectFolderPath: activeProject.folderPath,
       });
 
       setTitle("");
       setPrompt("");
+      setMaxIterations(1);
       setBatches((prev) => [created, ...prev]);
       await refreshData();
     } catch (err) {
@@ -279,7 +288,7 @@ export default function BatchesPage() {
     } finally {
       setCreating(false);
     }
-  }, [activeProject?.folderPath, client, prompt, refreshData, settings.porkbunLlmServerId, settings.porkbunModelId, title]);
+  }, [activeProject?.folderPath, client, maxIterations, prompt, refreshData, settings.porkbunLlmServerId, settings.porkbunModelId, title]);
 
   const handleTaskAction = useCallback(async (taskId: string, action: "run" | "cancel" | "retry") => {
     if (!client) return;
@@ -410,8 +419,24 @@ export default function BatchesPage() {
                   />
                 </div>
 
+                <div className={styles.field}>
+                  <label htmlFor="batch-max-iterations">Max iterations</label>
+                  <input
+                    id="batch-max-iterations"
+                    className={styles.input}
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={maxIterations}
+                    onChange={(e) => {
+                      const next = Number.parseInt(e.target.value || "1", 10);
+                      setMaxIterations(Number.isFinite(next) && next > 0 ? next : 1);
+                    }}
+                  />
+                </div>
+
                 <div className={styles.formActions}>
-                  <button className={styles.secondaryButton} type="button" onClick={() => { setTitle(""); setPrompt(""); setError(null); }}>
+                  <button className={styles.secondaryButton} type="button" onClick={() => { setTitle(""); setPrompt(""); setMaxIterations(1); setError(null); }}>
                     Clear
                   </button>
                   <button className={styles.primaryButton} type="button" onClick={() => void handleCreateBatch()} disabled={creating || !activeProject?.folderPath}>
