@@ -90,7 +90,7 @@ export default function Sidebar({
   const displayTasks = windowHeight < 720 ? [] : sortedActiveTasks.slice(0, 3);
   const navItems: { page: Page; icon: React.ReactNode; label: string; filterOut?: () => boolean }[] = [
     { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => sidebarOpen },
-    ...(batchesEnabled ? [{ page: "batches" as Page, icon: <Waypoints size={18} />, label: "Batches", filterOut: () => sidebarOpen }] : []),
+    ...(batchesEnabled ? [{ page: "batches" as Page, icon: <Waypoints size={18} />, label: "Batches" }] : []),
     { page: "tasks", icon: <Flag size={18} />, label: "Tasks", filterOut: () => sidebarOpen },
     { page: "projects", icon: <Folder size={18} />, label: "Projects" },
     { page: "references", icon: <Book size={18} />, label: "References" },
