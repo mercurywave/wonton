@@ -182,22 +182,6 @@ export class PorkbunClient {
     return readJson<PorkbunTaskSummary>(response);
   }
 
-  async listTasks(): Promise<PorkbunTaskSummary[]> {
-    const response = await fetch(`${this.baseUrl}/api/v1/queue`);
-    if (!response.ok) {
-      const payload = await readJson<{ error?: unknown }>(response);
-      throw new Error(getErrorMessage(payload.error, `Queue fetch failed (${response.status})`));
-    }
-    const payload = await readJson<{ tasks?: string[] }>(response);
-    const taskIds = payload.tasks ?? [];
-
-    const tasks = await Promise.all(
-      taskIds.map(async (id) => this.fetchTask(id))
-    );
-
-    return tasks.filter(Boolean);
-  }
-
   async createTask(input: {
     title?: string;
     prompt: string;

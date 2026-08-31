@@ -20,6 +20,7 @@ import {
   PorkbunClient,
   PorkbunHealthStatus,
   PorkbunQueueStats,
+  PorkbunTaskSummary,
   resolvePorkbunBaseUrl,
 } from "../utils/porkbunApi";
 import styles from "./BatchesPage.module.css";
@@ -87,10 +88,9 @@ export default function BatchesPage() {
     setIsLoading(true);
 
     try {
-      const [nextHealth, nextStats, nextTasks] = await Promise.all([
+      const [nextHealth, nextStats] = await Promise.all([
         client.fetchHealth(),
         client.fetchQueueStats(),
-        client.listTasks(),
       ]);
 
       const pendingTaskIds = new Set(
@@ -111,11 +111,11 @@ export default function BatchesPage() {
           )
         : [];
 
-      const mergedTasks = [...nextTasks, ...pendingTaskDetails.filter(Boolean)];
+      const mergedTasks = [...pendingTaskDetails.filter(Boolean)];
 
       setHealth(nextHealth);
       setQueueStats(nextStats);
-      await syncBatches(mergedTasks as typeof nextTasks);
+      await syncBatches(mergedTasks as PorkbunTaskSummary[]);
     } catch (err) {
       const message = getErrorMessage(err, "Unable to load Porkbun data.");
       setError(message);
