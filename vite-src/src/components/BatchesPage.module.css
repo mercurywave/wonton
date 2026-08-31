@@ -363,6 +363,22 @@
   text-align: center;
 }
 
+.showOlderButton {
+  align-self: center;
+  background: transparent;
+  border: none;
+  color: #a9c4ff;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 8px 0;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.showOlderButton:hover {
+  color: #dfe8ff;
+}
+
 .spin {
   animation: spin 1s linear infinite;
 }

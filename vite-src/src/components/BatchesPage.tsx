@@ -69,6 +69,7 @@ export default function BatchesPage() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [doneAtByTask, setDoneAtByTask] = useState<Record<string, string>>({});
   const [collapsedTasks, setCollapsedTasks] = useState<Record<string, boolean>>({});
+  const [showOldDoneTasks, setShowOldDoneTasks] = useState(false);
   const [gitAvailable, setGitAvailable] = useState<boolean | null>(null);
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -369,14 +370,29 @@ export default function BatchesPage() {
     [batches]
   );
 
-  const visibleTasks = useMemo(
+  const hiddenOldDoneTasks = useMemo(
     () =>
       sortedTasks.filter((task) => {
         const doneAt = task.done_at ?? doneAtByTask[task.id] ?? null;
-        if (!doneAt) return true;
-        return Date.now() - new Date(doneAt).getTime() <= 30 * 60 * 1000;
+        if (!doneAt) return false;
+        return Date.now() - new Date(doneAt).getTime() > 30 * 60 * 1000;
       }),
     [doneAtByTask, sortedTasks]
+  );
+
+  const visibleTasks = useMemo(
+    () => {
+      if (showOldDoneTasks) {
+        return sortedTasks;
+      }
+
+      return sortedTasks.filter((task) => {
+        const doneAt = task.done_at ?? doneAtByTask[task.id] ?? null;
+        if (!doneAt) return true;
+        return Date.now() - new Date(doneAt).getTime() <= 30 * 60 * 1000;
+      });
+    },
+    [doneAtByTask, showOldDoneTasks, sortedTasks]
   );
 
   const getEffectiveStatus = useCallback((task: { id: string; done_at?: string | null; created_at?: string | null; updated_at?: string | null; error_message?: string | null }, remoteStatus?: { status?: string | null }) => {
@@ -512,148 +528,162 @@ export default function BatchesPage() {
             </div>
 
             <div className={styles.taskList}>
-              {visibleTasks.length === 0 ? (
+              {visibleTasks.length === 0 && hiddenOldDoneTasks.length === 0 ? (
                 <div className={styles.emptyState}>No batches yet. Create the first queued task above.</div>
               ) : (
-                visibleTasks.map((task) => {
-                  const remoteStatus = remoteStatuses[task.id];
-                  const effectiveStatus = getEffectiveStatus(task, remoteStatus);
-                  const tone = statusTone[effectiveStatus] ?? statusTone.queued;
-                  const isDoneTask = effectiveStatus === "done";
-                  const isCollapsed = isDoneTask && (collapsedTasks[task.id] ?? true);
-                  const canRun = ["created", "submitted", "queued"].includes(effectiveStatus);
-                  const canCancel = ["created", "submitted", "queued", "running"].includes(effectiveStatus);
-                  const canRetry = effectiveStatus === "failed" || effectiveStatus === "cancelled";
-                  const canDismiss = effectiveStatus === "failed";
-                  const canDownload = ["completed", "failed", "done"].includes(effectiveStatus);
-                  const canApplyPatch = canDownload && gitAvailable !== false && Boolean(activeProject?.folderPath);
+                <>
+                  {visibleTasks.map((task) => {
+                    const remoteStatus = remoteStatuses[task.id];
+                    const effectiveStatus = getEffectiveStatus(task, remoteStatus);
+                    const tone = statusTone[effectiveStatus] ?? statusTone.queued;
+                    const isDoneTask = effectiveStatus === "done";
+                    const isCollapsed = isDoneTask && (collapsedTasks[task.id] ?? true);
+                    const canRun = ["created", "submitted", "queued"].includes(effectiveStatus);
+                    const canCancel = ["created", "submitted", "queued", "running"].includes(effectiveStatus);
+                    const canRetry = effectiveStatus === "failed" || effectiveStatus === "cancelled";
+                    const canDismiss = effectiveStatus === "failed";
+                    const canDownload = ["completed", "failed", "done"].includes(effectiveStatus);
+                    const canApplyPatch = canDownload && gitAvailable !== false && Boolean(activeProject?.folderPath);
 
-                  return (
-                    <div key={task.id} className={styles.taskCard}>
-                      <div className={styles.taskHeader}>
-                        <div className={styles.taskTitleRow}>
-                          {isDoneTask && (
-                            <button
-                              type="button"
-                              className={styles.taskCollapseToggle}
-                              onClick={() => toggleTaskCollapsed(task.id)}
-                              aria-label={isCollapsed ? "Expand batch" : "Collapse batch"}
-                              aria-expanded={!isCollapsed}
-                            >
-                              {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
-                            </button>
-                          )}
-                          <h3 className={`${styles.taskTitle} ${isCollapsed ? styles.taskTitleDoneCollapsed : ""}`}>
-                            {task.task?.user_prompt ? task.title || "Batch" : task.title || "Batch"}
-                          </h3>
+                    return (
+                      <div key={task.id} className={styles.taskCard}>
+                        <div className={styles.taskHeader}>
+                          <div className={styles.taskTitleRow}>
+                            {isDoneTask && (
+                              <button
+                                type="button"
+                                className={styles.taskCollapseToggle}
+                                onClick={() => toggleTaskCollapsed(task.id)}
+                                aria-label={isCollapsed ? "Expand batch" : "Collapse batch"}
+                                aria-expanded={!isCollapsed}
+                              >
+                                {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                              </button>
+                            )}
+                            <h3 className={`${styles.taskTitle} ${isCollapsed ? styles.taskTitleDoneCollapsed : ""}`}>
+                              {task.task?.user_prompt ? task.title || "Batch" : task.title || "Batch"}
+                            </h3>
+                          </div>
+                          <span
+                            className={styles.statusBadge}
+                            style={{
+                              background: tone.background,
+                              borderColor: tone.border,
+                              color: tone.color,
+                            }}
+                          >
+                            {statusLabel(effectiveStatus)}
+                          </span>
                         </div>
-                        <span
-                          className={styles.statusBadge}
-                          style={{
-                            background: tone.background,
-                            borderColor: tone.border,
-                            color: tone.color,
-                          }}
-                        >
-                          {statusLabel(effectiveStatus)}
-                        </span>
+
+                        {isCollapsed ? (
+                          <div className={styles.taskCollapsedMeta}>
+                            {task.done_at ? <span>Done: {formatTimestamp(task.done_at)}</span> : <span>Completed</span>}
+                          </div>
+                        ) : (
+                          <>
+                            <div className={styles.taskMeta}>
+                              <span>Created: {formatTimestamp(task.created_at)}</span>
+                              <span>Updated: {formatTimestamp(task.updated_at)}</span>
+                              {task.done_at && <span>Done: {formatTimestamp(task.done_at)}</span>}
+                              {remoteStatus && <span>Remote: {statusLabel(remoteStatus.status)}</span>}
+                            </div>
+
+                            <p className={styles.taskPrompt}>{task.task?.user_prompt || "No prompt provided."}</p>
+
+                            {(task.error_message || remoteStatus?.error_message) && <p className={styles.taskError}>{task.error_message || remoteStatus?.error_message}</p>}
+
+                            <div className={styles.taskActions}>
+                              {canRun && (
+                                <button
+                                  className={`${styles.actionButton} ${styles.primary}`}
+                                  type="button"
+                                  onClick={() => void handleTaskAction(task.id, "run")}
+                                  disabled={busyId === task.id}
+                                >
+                                  {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Play size={14} />}
+                                  Run now
+                                </button>
+                              )}
+
+                              {canCancel && (
+                                <button
+                                  className={`${styles.actionButton} ${styles.danger}`}
+                                  type="button"
+                                  onClick={() => void handleTaskAction(task.id, "cancel")}
+                                  disabled={busyId === task.id}
+                                >
+                                  {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
+                                  Cancel
+                                </button>
+                              )}
+
+                              {canRetry && (
+                                <button
+                                  className={styles.actionButton}
+                                  type="button"
+                                  onClick={() => void handleTaskAction(task.id, "retry")}
+                                  disabled={busyId === task.id}
+                                >
+                                  {busyId === task.id ? <Loader2 size={14} className="spin" /> : <RotateCcw size={14} />}
+                                  Retry
+                                </button>
+                              )}
+
+                              {canDismiss && (
+                                <button
+                                  className={styles.actionButton}
+                                  type="button"
+                                  onClick={() => void handleDismissTask(task.id)}
+                                  disabled={busyId === task.id}
+                                >
+                                  {busyId === task.id ? <Loader2 size={14} className="spin" /> : <X size={14} />}
+                                  Dismiss
+                                </button>
+                              )}
+
+                              {canDownload && (
+                                <button
+                                  className={styles.actionButton}
+                                  type="button"
+                                  onClick={() => void handleDownloadZip(task.id, task.title)}
+                                  disabled={busyId === task.id}
+                                >
+                                  {busyId === task.id ? <Loader2 size={14} className="spin" /> : <RefreshCcw size={14} />}
+                                  Download ZIP
+                                </button>
+                              )}
+
+                              {canApplyPatch && (
+                                <button
+                                  className={styles.actionButton}
+                                  type="button"
+                                  onClick={() => void handleApplyPatch(task.id)}
+                                  disabled={busyId === task.id}
+                                >
+                                  {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Waypoints size={14} />}
+                                  Apply patch
+                                </button>
+                              )}
+                            </div>
+                          </>
+                        )}
                       </div>
+                    );
+                  })}
 
-                      {isCollapsed ? (
-                        <div className={styles.taskCollapsedMeta}>
-                          {task.done_at ? <span>Done: {formatTimestamp(task.done_at)}</span> : <span>Completed</span>}
-                        </div>
-                      ) : (
-                        <>
-                          <div className={styles.taskMeta}>
-                            <span>Created: {formatTimestamp(task.created_at)}</span>
-                            <span>Updated: {formatTimestamp(task.updated_at)}</span>
-                            {task.done_at && <span>Done: {formatTimestamp(task.done_at)}</span>}
-                            {remoteStatus && <span>Remote: {statusLabel(remoteStatus.status)}</span>}
-                          </div>
-
-                          <p className={styles.taskPrompt}>{task.task?.user_prompt || "No prompt provided."}</p>
-
-                          {(task.error_message || remoteStatus?.error_message) && <p className={styles.taskError}>{task.error_message || remoteStatus?.error_message}</p>}
-
-                          <div className={styles.taskActions}>
-                            {canRun && (
-                              <button
-                                className={`${styles.actionButton} ${styles.primary}`}
-                                type="button"
-                                onClick={() => void handleTaskAction(task.id, "run")}
-                                disabled={busyId === task.id}
-                              >
-                                {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Play size={14} />}
-                                Run now
-                              </button>
-                            )}
-
-                            {canCancel && (
-                              <button
-                                className={`${styles.actionButton} ${styles.danger}`}
-                                type="button"
-                                onClick={() => void handleTaskAction(task.id, "cancel")}
-                                disabled={busyId === task.id}
-                              >
-                                {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
-                                Cancel
-                              </button>
-                            )}
-
-                            {canRetry && (
-                              <button
-                                className={styles.actionButton}
-                                type="button"
-                                onClick={() => void handleTaskAction(task.id, "retry")}
-                                disabled={busyId === task.id}
-                              >
-                                {busyId === task.id ? <Loader2 size={14} className="spin" /> : <RotateCcw size={14} />}
-                                Retry
-                              </button>
-                            )}
-
-                            {canDismiss && (
-                              <button
-                                className={styles.actionButton}
-                                type="button"
-                                onClick={() => void handleDismissTask(task.id)}
-                                disabled={busyId === task.id}
-                              >
-                                {busyId === task.id ? <Loader2 size={14} className="spin" /> : <X size={14} />}
-                                Dismiss
-                              </button>
-                            )}
-
-                            {canDownload && (
-                              <button
-                                className={styles.actionButton}
-                                type="button"
-                                onClick={() => void handleDownloadZip(task.id, task.title)}
-                                disabled={busyId === task.id}
-                              >
-                                {busyId === task.id ? <Loader2 size={14} className="spin" /> : <RefreshCcw size={14} />}
-                                Download ZIP
-                              </button>
-                            )}
-
-                            {canApplyPatch && (
-                              <button
-                                className={styles.actionButton}
-                                type="button"
-                                onClick={() => void handleApplyPatch(task.id)}
-                                disabled={busyId === task.id}
-                              >
-                                {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Waypoints size={14} />}
-                                Apply patch
-                              </button>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  );
-                })
+                  {hiddenOldDoneTasks.length > 0 && (
+                    <button
+                      type="button"
+                      className={styles.showOlderButton}
+                      onClick={() => setShowOldDoneTasks((prev) => !prev)}
+                    >
+                      {showOldDoneTasks
+                        ? "Hide older completed batches"
+                        : `Show ${hiddenOldDoneTasks.length} older completed batch${hiddenOldDoneTasks.length === 1 ? "" : "es"}`}
+                    </button>
+                  )}
+                </>
               )}
             </div>
           </>
