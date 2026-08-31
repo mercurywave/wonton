@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Activity,
   AlertCircle,
+  ChevronDown,
+  ChevronRight,
   CircleDashed,
   Loader2,
   Play,
@@ -10,6 +12,7 @@ import {
   RotateCcw,
   Trash2,
   Waypoints,
+  X,
 } from "lucide-react";
 import { useNav, useProjects, useSettings, useBatches } from "../contexts";
 import {
@@ -29,7 +32,7 @@ const statusTone: Record<string, { background: string; border: string; color: st
   completed: { background: "rgba(34, 197, 94, 0.12)", border: "rgba(34, 197, 94, 0.35)", color: "#bbf7d0" },
   failed: { background: "rgba(239, 68, 68, 0.12)", border: "rgba(239, 68, 68, 0.35)", color: "#fca5a5" },
   cancelled: { background: "rgba(148, 163, 184, 0.1)", border: "rgba(148, 163, 184, 0.3)", color: "#e2e8f0" },
-  done: { background: "rgba(16, 185, 129, 0.12)", border: "rgba(16, 185, 129, 0.35)", color: "#a7f3d0" },
+  done: { background: "rgba(148, 163, 184, 0.12)", border: "rgba(148, 163, 184, 0.35)", color: "#e2e8f0" },
   missing: { background: "rgba(251, 191, 36, 0.12)", border: "rgba(251, 191, 36, 0.35)", color: "#fef3c7" },
   unavailable: { background: "rgba(239, 68, 68, 0.12)", border: "rgba(239, 68, 68, 0.35)", color: "#fecaca" },
 };
@@ -65,6 +68,7 @@ export default function BatchesPage() {
   const [creating, setCreating] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [doneAtByTask, setDoneAtByTask] = useState<Record<string, string>>({});
+  const [collapsedTasks, setCollapsedTasks] = useState<Record<string, boolean>>({});
   const [gitAvailable, setGitAvailable] = useState<boolean | null>(null);
   const [title, setTitle] = useState("");
   const [prompt, setPrompt] = useState("");
@@ -177,6 +181,13 @@ export default function BatchesPage() {
 
   const markTaskDone = useCallback((taskId: string) => {
     setDoneAtByTask((prev) => (prev[taskId] ? prev : { ...prev, [taskId]: new Date().toISOString() }));
+  }, []);
+
+  const toggleTaskCollapsed = useCallback((taskId: string) => {
+    setCollapsedTasks((prev) => ({
+      ...prev,
+      [taskId]: !(prev[taskId] ?? true),
+    }));
   }, []);
 
   const handleDownloadZip = useCallback(async (taskId: string, titleText?: string | null) => {
@@ -329,6 +340,29 @@ export default function BatchesPage() {
       setBusyId(null);
     }
   }, [client, refreshData]);
+
+  const handleDismissTask = useCallback(async (taskId: string) => {
+    const task = batches.find((entry) => entry.id === taskId);
+    if (!task) return;
+
+    setBusyId(taskId);
+    setError(null);
+
+    try {
+      const now = new Date().toISOString();
+      await persistBatch({
+        ...task,
+        done_at: now,
+        updated_at: now,
+      });
+      await refreshData();
+    } catch (err) {
+      const message = getErrorMessage(err, "Failed to dismiss batch.");
+      setError(message);
+    } finally {
+      setBusyId(null);
+    }
+  }, [batches, persistBatch, refreshData]);
 
   const sortedTasks = useMemo(
     () => [...batches].sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()),
@@ -483,16 +517,34 @@ export default function BatchesPage() {
                   const remoteStatus = remoteStatuses[task.id];
                   const effectiveStatus = getEffectiveStatus(task, remoteStatus);
                   const tone = statusTone[effectiveStatus] ?? statusTone.queued;
+                  const isDoneTask = effectiveStatus === "done";
+                  const isCollapsed = isDoneTask && (collapsedTasks[task.id] ?? true);
                   const canRun = ["created", "submitted", "queued"].includes(effectiveStatus);
                   const canCancel = ["created", "submitted", "queued", "running"].includes(effectiveStatus);
                   const canRetry = effectiveStatus === "failed" || effectiveStatus === "cancelled";
+                  const canDismiss = effectiveStatus === "failed";
                   const canDownload = ["completed", "failed", "done"].includes(effectiveStatus);
                   const canApplyPatch = canDownload && gitAvailable !== false && Boolean(activeProject?.folderPath);
 
                   return (
                     <div key={task.id} className={styles.taskCard}>
                       <div className={styles.taskHeader}>
-                        <h3 className={styles.taskTitle}>{task.task?.user_prompt ? task.title || "Batch" : task.title || "Batch"}</h3>
+                        <div className={styles.taskTitleRow}>
+                          {isDoneTask && (
+                            <button
+                              type="button"
+                              className={styles.taskCollapseToggle}
+                              onClick={() => toggleTaskCollapsed(task.id)}
+                              aria-label={isCollapsed ? "Expand batch" : "Collapse batch"}
+                              aria-expanded={!isCollapsed}
+                            >
+                              {isCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                            </button>
+                          )}
+                          <h3 className={`${styles.taskTitle} ${isCollapsed ? styles.taskTitleDoneCollapsed : ""}`}>
+                            {task.task?.user_prompt ? task.title || "Batch" : task.title || "Batch"}
+                          </h3>
+                        </div>
                         <span
                           className={styles.statusBadge}
                           style={{
@@ -505,78 +557,98 @@ export default function BatchesPage() {
                         </span>
                       </div>
 
-                      <div className={styles.taskMeta}>
-                        <span>Created: {formatTimestamp(task.created_at)}</span>
-                        <span>Updated: {formatTimestamp(task.updated_at)}</span>
-                        {task.done_at && <span>Done: {formatTimestamp(task.done_at)}</span>}
-                        {remoteStatus && <span>Remote: {statusLabel(remoteStatus.status)}</span>}
-                      </div>
+                      {isCollapsed ? (
+                        <div className={styles.taskCollapsedMeta}>
+                          {task.done_at ? <span>Done: {formatTimestamp(task.done_at)}</span> : <span>Completed</span>}
+                        </div>
+                      ) : (
+                        <>
+                          <div className={styles.taskMeta}>
+                            <span>Created: {formatTimestamp(task.created_at)}</span>
+                            <span>Updated: {formatTimestamp(task.updated_at)}</span>
+                            {task.done_at && <span>Done: {formatTimestamp(task.done_at)}</span>}
+                            {remoteStatus && <span>Remote: {statusLabel(remoteStatus.status)}</span>}
+                          </div>
 
-                      <p className={styles.taskPrompt}>{task.task?.user_prompt || "No prompt provided."}</p>
+                          <p className={styles.taskPrompt}>{task.task?.user_prompt || "No prompt provided."}</p>
 
-                      {(task.error_message || remoteStatus?.error_message) && <p className={styles.taskError}>{task.error_message || remoteStatus?.error_message}</p>}
+                          {(task.error_message || remoteStatus?.error_message) && <p className={styles.taskError}>{task.error_message || remoteStatus?.error_message}</p>}
 
-                      <div className={styles.taskActions}>
-                        {canRun && (
-                          <button
-                            className={`${styles.actionButton} ${styles.primary}`}
-                            type="button"
-                            onClick={() => void handleTaskAction(task.id, "run")}
-                            disabled={busyId === task.id}
-                          >
-                            {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Play size={14} />}
-                            Run now
-                          </button>
-                        )}
+                          <div className={styles.taskActions}>
+                            {canRun && (
+                              <button
+                                className={`${styles.actionButton} ${styles.primary}`}
+                                type="button"
+                                onClick={() => void handleTaskAction(task.id, "run")}
+                                disabled={busyId === task.id}
+                              >
+                                {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Play size={14} />}
+                                Run now
+                              </button>
+                            )}
 
-                        {canCancel && (
-                          <button
-                            className={`${styles.actionButton} ${styles.danger}`}
-                            type="button"
-                            onClick={() => void handleTaskAction(task.id, "cancel")}
-                            disabled={busyId === task.id}
-                          >
-                            {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
-                            Cancel
-                          </button>
-                        )}
+                            {canCancel && (
+                              <button
+                                className={`${styles.actionButton} ${styles.danger}`}
+                                type="button"
+                                onClick={() => void handleTaskAction(task.id, "cancel")}
+                                disabled={busyId === task.id}
+                              >
+                                {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Trash2 size={14} />}
+                                Cancel
+                              </button>
+                            )}
 
-                        {canRetry && (
-                          <button
-                            className={styles.actionButton}
-                            type="button"
-                            onClick={() => void handleTaskAction(task.id, "retry")}
-                            disabled={busyId === task.id}
-                          >
-                            {busyId === task.id ? <Loader2 size={14} className="spin" /> : <RotateCcw size={14} />}
-                            Retry
-                          </button>
-                        )}
+                            {canRetry && (
+                              <button
+                                className={styles.actionButton}
+                                type="button"
+                                onClick={() => void handleTaskAction(task.id, "retry")}
+                                disabled={busyId === task.id}
+                              >
+                                {busyId === task.id ? <Loader2 size={14} className="spin" /> : <RotateCcw size={14} />}
+                                Retry
+                              </button>
+                            )}
 
-                        {canDownload && (
-                          <button
-                            className={styles.actionButton}
-                            type="button"
-                            onClick={() => void handleDownloadZip(task.id, task.title)}
-                            disabled={busyId === task.id}
-                          >
-                            {busyId === task.id ? <Loader2 size={14} className="spin" /> : <RefreshCcw size={14} />}
-                            Download ZIP
-                          </button>
-                        )}
+                            {canDismiss && (
+                              <button
+                                className={styles.actionButton}
+                                type="button"
+                                onClick={() => void handleDismissTask(task.id)}
+                                disabled={busyId === task.id}
+                              >
+                                {busyId === task.id ? <Loader2 size={14} className="spin" /> : <X size={14} />}
+                                Dismiss
+                              </button>
+                            )}
 
-                        {canApplyPatch && (
-                          <button
-                            className={styles.actionButton}
-                            type="button"
-                            onClick={() => void handleApplyPatch(task.id)}
-                            disabled={busyId === task.id}
-                          >
-                            {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Waypoints size={14} />}
-                            Apply patch
-                          </button>
-                        )}
-                      </div>
+                            {canDownload && (
+                              <button
+                                className={styles.actionButton}
+                                type="button"
+                                onClick={() => void handleDownloadZip(task.id, task.title)}
+                                disabled={busyId === task.id}
+                              >
+                                {busyId === task.id ? <Loader2 size={14} className="spin" /> : <RefreshCcw size={14} />}
+                                Download ZIP
+                              </button>
+                            )}
+
+                            {canApplyPatch && (
+                              <button
+                                className={styles.actionButton}
+                                type="button"
+                                onClick={() => void handleApplyPatch(task.id)}
+                                disabled={busyId === task.id}
+                              >
+                                {busyId === task.id ? <Loader2 size={14} className="spin" /> : <Waypoints size={14} />}
+                                Apply patch
+                              </button>
+                            )}
+                          </div>
+                        </>
+                      )}
                     </div>
                   );
                 })

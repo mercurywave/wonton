@@ -249,11 +249,47 @@
   margin-bottom: 10px;
 }
 
+.taskTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.taskCollapseToggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid #2a2a4a;
+  background: #10101b;
+  color: #b7bfdc;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 .taskTitle {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
   color: #edf3ff;
+}
+
+.taskTitleDoneCollapsed {
+  color: #aeb9d8;
+  font-weight: 500;
+}
+
+.taskCollapsedMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #9aa3c9;
+  font-size: 11px;
+  margin-top: 2px;
 }
 
 .statusBadge {
