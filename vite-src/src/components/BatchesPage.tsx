@@ -1,10 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  Activity,
   AlertCircle,
   ChevronDown,
   ChevronRight,
-  CircleDashed,
   Loader2,
   Play,
   Plus,
@@ -53,6 +51,30 @@ function formatTimestamp(value?: string | null): string {
 
 function statusLabel(value: string): string {
   return value.replace(/_/g, " ").replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+type ServerState = "checking" | "running" | "idle" | "asleep" | "error";
+
+function getServerState(health: PorkbunHealthStatus | null, queueStats: PorkbunQueueStats | null): ServerState {
+  if (!health) {
+    return "checking";
+  }
+
+  const normalizedStatus = String(health.status ?? "").trim().toLowerCase();
+  const isErrorStatus = /error|unhealthy|down|fail|offline/.test(normalizedStatus);
+  if (isErrorStatus) {
+    return "error";
+  }
+
+  if ((queueStats?.running ?? 0) > 0) {
+    return "running";
+  }
+
+  if (health.time_window_active) {
+    return "idle";
+  }
+
+  return "asleep";
 }
 
 export default function BatchesPage() {
@@ -406,6 +428,45 @@ export default function BatchesPage() {
   }, []);
 
   const activeQueueTotal = queueStats ? queueStats.submitted + queueStats.queued + queueStats.running : health?.queue_len ?? 0;
+  const serverState = useMemo(() => getServerState(health, queueStats), [health, queueStats]);
+
+  const serverStateLabel = useMemo(() => {
+    switch (serverState) {
+      case "running":
+        return "Running";
+      case "idle":
+        return "Idle";
+      case "asleep":
+        return "Asleep";
+      case "error":
+        return "Error";
+      default:
+        return "Checking";
+    }
+  }, [serverState]);
+
+  const serverStateTone: Record<ServerState, { background: string; border: string; color: string }> = useMemo(
+    () => ({
+      checking: { background: "rgba(148, 163, 184, 0.12)", border: "rgba(148, 163, 184, 0.35)", color: "#dfe6ff" },
+      running: { background: "rgba(168, 85, 247, 0.12)", border: "rgba(168, 85, 247, 0.35)", color: "#e9d5ff" },
+      idle: { background: "rgba(34, 197, 94, 0.12)", border: "rgba(34, 197, 94, 0.35)", color: "#bbf7d0" },
+      asleep: { background: "rgba(148, 163, 184, 0.12)", border: "rgba(148, 163, 184, 0.35)", color: "#e2e8f0" },
+      error: { background: "rgba(239, 68, 68, 0.12)", border: "rgba(239, 68, 68, 0.35)", color: "#fecaca" },
+    }),
+    []
+  );
+
+  const serverErrorMessage = useMemo(() => {
+    if (serverState !== "error") {
+      return null;
+    }
+
+    if (health && String(health.status ?? "").trim()) {
+      return `Batch server is ${statusLabel(String(health.status))}.`;
+    }
+
+    return "Batch server is in an error state.";
+  }, [health, serverState]);
 
   return (
     <div className={styles.container}>
@@ -415,59 +476,45 @@ export default function BatchesPage() {
             <Waypoints size={20} />
             <h2>Batch Agent</h2>
           </div>
-          <div className={styles.headerActions}>
-            <button className={styles.secondaryButton} onClick={() => void refreshData()} disabled={isLoading || !client}>
-              {isLoading || batchesLoading ? <Loader2 size={14} className="spin" /> : <RefreshCcw size={14} />}
-              Refresh
-            </button>
-            <button className={styles.primaryButton} onClick={() => void handleActivateQueue()} disabled={busyId === "activate" || !client || batchesLoading}>
-              {busyId === "activate" ? <Loader2 size={14} className="spin" /> : <Play size={14} />}
-              Activate Queue
-            </button>
-          </div>
         </div>
 
         {!client ? (
           <div className={styles.notice}>Configure a Porkbun server URL in settings to enable the batch queue.</div>
         ) : (
           <>
-            <div className={styles.statusPanel}>
-              <div className={styles.panel}>
-                <div className={styles.panelHeader}>
-                  <span>Server</span>
-                  <Activity size={14} />
+            <div className={styles.statusRow}>
+              <div className={styles.statusInfo}>
+                <div
+                  className={styles.statusPill}
+                  style={{
+                    background: serverStateTone[serverState].background,
+                    borderColor: serverStateTone[serverState].border,
+                    color: serverStateTone[serverState].color,
+                  }}
+                >
+                  {serverStateLabel}
                 </div>
-                <div className={styles.panelValue}>{health?.status ?? "checking"}</div>
+                <div className={styles.statusMeta}>Queue depth: {activeQueueTotal}</div>
               </div>
-              <div className={styles.panel}>
-                <div className={styles.panelHeader}>
-                  <span>Queue</span>
-                  <CircleDashed size={14} />
-                </div>
-                <div className={styles.panelValue}>{activeQueueTotal}</div>
-              </div>
-              <div className={styles.panel}>
-                <div className={styles.panelHeader}>
-                  <span>Running</span>
-                  <Play size={14} />
-                </div>
-                <div className={styles.panelValue}>{queueStats?.running ?? 0}</div>
-              </div>
-              <div className={styles.panel}>
-                <div className={styles.panelHeader}>
-                  <span>Window</span>
-                  <RefreshCcw size={14} />
-                </div>
-                <div className={styles.panelValue}>
-                  {health?.time_window_active ? "Open" : "Closed"}
-                </div>
+
+              <div className={styles.statusActions}>
+                <button className={styles.secondaryButton} onClick={() => void refreshData()} disabled={isLoading || !client}>
+                  {isLoading || batchesLoading ? <Loader2 size={14} className="spin" /> : <RefreshCcw size={14} />}
+                  Refresh
+                </button>
+                {serverState === "asleep" && (
+                  <button className={styles.primaryButton} onClick={() => void handleActivateQueue()} disabled={busyId === "activate" || !client || batchesLoading}>
+                    {busyId === "activate" ? <Loader2 size={14} className="spin" /> : <Play size={14} />}
+                    Activate Queue
+                  </button>
+                )}
               </div>
             </div>
 
-            {error && (
+            {(error || serverErrorMessage) && (
               <div className={`${styles.notice} ${styles.noticeError}`}>
                 <AlertCircle size={16} />
-                <span>{error}</span>
+                <span>{error || serverErrorMessage}</span>
               </div>
             )}
 

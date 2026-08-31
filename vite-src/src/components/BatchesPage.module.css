@@ -104,40 +104,51 @@
   color: #b9bdd8;
 }
 
-.statusPanel {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.panel {
-  background: #16162a;
-  border: 1px solid #2a2a4a;
-  border-radius: 10px;
-  padding: 14px 16px;
-}
-
-.panelHeader {
+.statusRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
-  color: #b0b9d6;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+}
+
+.statusInfo {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 92px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 6px 10px;
   font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.panelValue {
-  font-size: 22px;
   font-weight: 700;
-  color: #f2f4ff;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.panelValue small {
-  font-size: 12px;
-  color: #9ca7d3;
+.statusMeta {
+  color: #dfe6ff;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.statusActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .notice {
