@@ -17,6 +17,7 @@ export const AGENTS_FILE_NAME = "agents.json";
 export const FLOWS_DIR_NAME = "flows";
 export const TOOLS_DIR_NAME = "tools";
 export const TASKS_DIR_NAME = "tasks";
+export const BATCHES_DIR_NAME = "batches";
 export const DEFAULT_PROJECT_ID = "default";
 
 let _cachedPlatform: string | undefined;

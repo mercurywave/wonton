@@ -11,12 +11,11 @@ import {
   Trash2,
   Waypoints,
 } from "lucide-react";
-import { useNav, useProjects, useSettings } from "../contexts";
+import { useNav, useProjects, useSettings, useBatches } from "../contexts";
 import {
   PorkbunClient,
   PorkbunHealthStatus,
   PorkbunQueueStats,
-  PorkbunTaskSummary,
   resolvePorkbunBaseUrl,
 } from "../utils/porkbunApi";
 import styles from "./BatchesPage.module.css";
@@ -52,11 +51,11 @@ export default function BatchesPage() {
   const { settings } = useSettings();
   const { activeProjectId } = useNav();
   const { getProjectById } = useProjects();
+  const { batches, isLoading: batchesLoading, syncBatches, persistBatch } = useBatches();
   const activeProject = activeProjectId ? getProjectById(activeProjectId) : undefined;
 
   const [health, setHealth] = useState<PorkbunHealthStatus | null>(null);
   const [queueStats, setQueueStats] = useState<PorkbunQueueStats | null>(null);
-  const [batches, setBatches] = useState<PorkbunTaskSummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -88,11 +87,7 @@ export default function BatchesPage() {
 
       setHealth(nextHealth);
       setQueueStats(nextStats);
-      setBatches(
-        [...nextTasks].sort(
-          (a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
-        )
-      );
+      await syncBatches(nextTasks);
     } catch (err) {
       const message = err instanceof Error ? err.message : "Unable to load Porkbun data.";
       setError(message);
@@ -100,7 +95,7 @@ export default function BatchesPage() {
       refreshLockRef.current = false;
       setIsLoading(false);
     }
-  }, [client]);
+  }, [client, syncBatches]);
 
   useEffect(() => {
     if (!client) return;
@@ -280,7 +275,7 @@ export default function BatchesPage() {
       setTitle("");
       setPrompt("");
       setMaxIterations(1);
-      setBatches((prev) => [created, ...prev]);
+      await persistBatch(created);
       await refreshData();
     } catch (err) {
       const message = err instanceof Error ? err.message : "Batch creation failed.";
@@ -288,7 +283,7 @@ export default function BatchesPage() {
     } finally {
       setCreating(false);
     }
-  }, [activeProject?.folderPath, client, maxIterations, prompt, refreshData, settings.porkbunLlmServerId, settings.porkbunModelId, title]);
+  }, [activeProject?.folderPath, client, maxIterations, persistBatch, prompt, refreshData, settings.porkbunLlmServerId, settings.porkbunModelId, title]);
 
   const handleTaskAction = useCallback(async (taskId: string, action: "run" | "cancel" | "retry") => {
     if (!client) return;
@@ -337,10 +332,10 @@ export default function BatchesPage() {
           </div>
           <div className={styles.headerActions}>
             <button className={styles.secondaryButton} onClick={() => void refreshData()} disabled={isLoading || !client}>
-              {isLoading ? <Loader2 size={14} className="spin" /> : <RefreshCcw size={14} />}
+              {isLoading || batchesLoading ? <Loader2 size={14} className="spin" /> : <RefreshCcw size={14} />}
               Refresh
             </button>
-            <button className={styles.primaryButton} onClick={() => void handleActivateQueue()} disabled={busyId === "activate" || !client}>
+            <button className={styles.primaryButton} onClick={() => void handleActivateQueue()} disabled={busyId === "activate" || !client || batchesLoading}>
               {busyId === "activate" ? <Loader2 size={14} className="spin" /> : <Play size={14} />}
               Activate Queue
             </button>

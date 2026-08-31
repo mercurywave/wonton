@@ -6,6 +6,7 @@ import { FlowsProvider } from "./FlowsContext";
 import { ToolsProvider } from "./ToolsContext";
 import { ChatsProvider } from "./ChatsContext";
 import { TasksProvider } from "./TasksContext";
+import { BatchesProvider } from "./BatchesContext.tsx";
 import { UIProvider } from "./UIContext";
 import { NavProvider } from "./NavContext";
 import { EventBusProvider } from "./EventBusContext";
@@ -20,6 +21,7 @@ export { FlowsProvider, useFlowsContext } from "./FlowsContext";
 export { ToolsProvider, useToolsContext } from "./ToolsContext";
 export { ChatsProvider, useChats } from "./ChatsContext";
 export { TasksProvider, useTasks } from "./TasksContext";
+export { BatchesProvider, useBatches } from "./BatchesContext.tsx";
 export { UIProvider, useUI } from "./UIContext";
 export { NavProvider, useNav } from "./NavContext";
 export { EventBusProvider, useEventBus, emit, on } from "./EventBusContext";
@@ -42,9 +44,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
                       <FeedbackProvider>
                         <ChatsProvider>
                           <TasksProvider>
-                            <UIProvider>
-                              {children}
-                            </UIProvider>
+                            <BatchesProvider>
+                              <UIProvider>
+                                {children}
+                              </UIProvider>
+                            </BatchesProvider>
                           </TasksProvider>
                         </ChatsProvider>
                       </FeedbackProvider>

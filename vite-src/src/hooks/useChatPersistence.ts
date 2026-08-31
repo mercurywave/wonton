@@ -7,6 +7,7 @@ import {
   TMP_DIR_NAME,
   FLOWS_DIR_NAME,
   TOOLS_DIR_NAME,
+  BATCHES_DIR_NAME,
   isBackendConnected,
   getProjectDataDir
 } from "../utils/platformUtils";
@@ -80,6 +81,15 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   } catch (err: any) {
     if (err.code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create tools dir", err);
+    }
+  }
+
+  const batchesDir = `${projectDir}/${BATCHES_DIR_NAME}`;
+  try {
+    await filesystem.createDirectory(batchesDir);
+  } catch (err: any) {
+    if (err.code !== "EEXIST") {
+      console.error("ensureChatFolder: failed to create batches dir", err);
     }
   }
 
