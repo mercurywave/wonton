@@ -56,6 +56,42 @@ function stripTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
 }
 
+export function getErrorMessage(value: unknown, fallback: string): string {
+  if (value == null) return fallback;
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed || fallback;
+  }
+
+  if (value instanceof Error) {
+    const trimmed = value.message.trim();
+    return trimmed || fallback;
+  }
+
+  if (typeof value === "object") {
+    const record = value as Record<string, unknown>;
+
+    for (const key of ["message", "error", "detail", "details", "msg"]) {
+      const nested = getErrorMessage(record[key], "");
+      if (nested) {
+        return nested;
+      }
+    }
+
+    try {
+      const json = JSON.stringify(value);
+      if (json && json !== "{}" && json !== "[object Object]") {
+        return json;
+      }
+    } catch {
+      // Ignore stringify failures; we only need a best-effort fallback.
+    }
+  }
+
+  return fallback;
+}
+
 async function readJson<T>(response: Response): Promise<T> {
   const text = await response.text();
   if (!text) {
@@ -83,8 +119,8 @@ export class PorkbunClient {
   async fetchHealth(): Promise<PorkbunHealthStatus> {
     const response = await fetch(`${this.baseUrl}/health`);
     if (!response.ok) {
-      const payload = await readJson<{ error?: string }>(response);
-      throw new Error(payload.error || `Health check failed (${response.status})`);
+      const payload = await readJson<{ error?: unknown }>(response);
+      throw new Error(getErrorMessage(payload.error, `Health check failed (${response.status})`));
     }
     return readJson<PorkbunHealthStatus>(response);
   }
@@ -92,8 +128,8 @@ export class PorkbunClient {
   async fetchQueueStats(): Promise<PorkbunQueueStats> {
     const response = await fetch(`${this.baseUrl}/api/v1/queue/stats`);
     if (!response.ok) {
-      const payload = await readJson<{ error?: string }>(response);
-      throw new Error(payload.error || `Queue stats failed (${response.status})`);
+      const payload = await readJson<{ error?: unknown }>(response);
+      throw new Error(getErrorMessage(payload.error, `Queue stats failed (${response.status})`));
     }
     return readJson<PorkbunQueueStats>(response);
   }
@@ -101,8 +137,8 @@ export class PorkbunClient {
   async listTasks(): Promise<PorkbunTaskSummary[]> {
     const response = await fetch(`${this.baseUrl}/api/v1/queue`);
     if (!response.ok) {
-      const payload = await readJson<{ error?: string }>(response);
-      throw new Error(payload.error || `Queue fetch failed (${response.status})`);
+      const payload = await readJson<{ error?: unknown }>(response);
+      throw new Error(getErrorMessage(payload.error, `Queue fetch failed (${response.status})`));
     }
     const payload = await readJson<{ tasks?: string[] }>(response);
     const taskIds = payload.tasks ?? [];
@@ -111,7 +147,8 @@ export class PorkbunClient {
       taskIds.map(async (id) => {
         const taskResponse = await fetch(`${this.baseUrl}/api/v1/tasks/${id}`);
         if (!taskResponse.ok) {
-          throw new Error(`Failed to load task ${id}`);
+          const payload = await readJson<{ error?: unknown }>(taskResponse);
+          throw new Error(getErrorMessage(payload.error, `Failed to load task ${id}`));
         }
         return readJson<PorkbunTaskSummary>(taskResponse);
       })
@@ -147,8 +184,8 @@ export class PorkbunClient {
     });
 
     if (!response.ok) {
-      const payload = await readJson<{ error?: string }>(response);
-      throw new Error(payload.error || `Task creation failed (${response.status})`);
+      const payload = await readJson<{ error?: unknown }>(response);
+      throw new Error(getErrorMessage(payload.error, `Task creation failed (${response.status})`));
     }
 
     return readJson<PorkbunTaskSummary>(response);
@@ -161,8 +198,8 @@ export class PorkbunClient {
     });
 
     if (!response.ok) {
-      const payload = await readJson<{ error?: string }>(response);
-      throw new Error(payload.error || `Run action failed (${response.status})`);
+      const payload = await readJson<{ error?: unknown }>(response);
+      throw new Error(getErrorMessage(payload.error, `Run action failed (${response.status})`));
     }
 
     return readJson<PorkbunTaskSummary>(response);
@@ -185,8 +222,8 @@ export class PorkbunClient {
 
     const response = await fetch(`${this.baseUrl}/api/v1/tasks/${taskId}/${kind}`);
     if (!response.ok) {
-      const payload = await readJson<{ error?: string }>(response);
-      throw new Error(payload.error || `Artifact download failed (${response.status})`);
+      const payload = await readJson<{ error?: unknown }>(response);
+      throw new Error(getErrorMessage(payload.error, `Artifact download failed (${response.status})`));
     }
 
     const blob = await response.blob();
@@ -216,8 +253,8 @@ export class PorkbunClient {
     });
 
     if (!response.ok) {
-      const payload = await readJson<{ error?: string }>(response);
-      throw new Error(payload.error || `Cancel action failed (${response.status})`);
+      const payload = await readJson<{ error?: unknown }>(response);
+      throw new Error(getErrorMessage(payload.error, `Cancel action failed (${response.status})`));
     }
 
     return readJson<PorkbunTaskSummary>(response);
@@ -230,8 +267,8 @@ export class PorkbunClient {
     });
 
     if (!response.ok) {
-      const payload = await readJson<{ error?: string }>(response);
-      throw new Error(payload.error || `Retry action failed (${response.status})`);
+      const payload = await readJson<{ error?: unknown }>(response);
+      throw new Error(getErrorMessage(payload.error, `Retry action failed (${response.status})`));
     }
 
     return readJson<PorkbunTaskSummary>(response);
@@ -248,8 +285,8 @@ export class PorkbunClient {
     });
 
     if (!response.ok) {
-      const payload = await readJson<{ error?: string }>(response);
-      throw new Error(payload.error || `Queue activation failed (${response.status})`);
+      const payload = await readJson<{ error?: unknown }>(response);
+      throw new Error(getErrorMessage(payload.error, `Queue activation failed (${response.status})`));
     }
 
     return this.fetchHealth();

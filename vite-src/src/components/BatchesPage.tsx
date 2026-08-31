@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { useNav, useProjects, useSettings, useBatches } from "../contexts";
 import {
+  getErrorMessage,
   PorkbunClient,
   PorkbunHealthStatus,
   PorkbunQueueStats,
@@ -76,7 +77,6 @@ export default function BatchesPage() {
     if (!client || refreshLockRef.current) return;
     refreshLockRef.current = true;
     setIsLoading(true);
-    setError(null);
 
     try {
       const [nextHealth, nextStats, nextTasks] = await Promise.all([
@@ -89,7 +89,7 @@ export default function BatchesPage() {
       setQueueStats(nextStats);
       await syncBatches(nextTasks);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Unable to load Porkbun data.";
+      const message = getErrorMessage(err, "Unable to load Porkbun data.");
       setError(message);
     } finally {
       refreshLockRef.current = false;
@@ -167,7 +167,7 @@ export default function BatchesPage() {
         markTaskDone(taskId);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : "ZIP download failed.";
+      const message = getErrorMessage(err, "ZIP download failed.");
       setError(message);
     } finally {
       setBusyId(null);
@@ -213,7 +213,7 @@ export default function BatchesPage() {
       markTaskDone(taskId);
       await refreshData();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Patch application failed.";
+      const message = getErrorMessage(err, "Patch application failed.");
       setError(message);
     } finally {
       setBusyId(null);
@@ -233,7 +233,7 @@ export default function BatchesPage() {
       });
       await refreshData();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Queue activation failed.";
+      const message = getErrorMessage(err, "Queue activation failed.");
       setError(message);
     } finally {
       setBusyId(null);
@@ -278,7 +278,7 @@ export default function BatchesPage() {
       await persistBatch(created);
       await refreshData();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Batch creation failed.";
+      const message = getErrorMessage(err, "Batch creation failed.");
       setError(message);
     } finally {
       setCreating(false);
@@ -300,7 +300,7 @@ export default function BatchesPage() {
       }
       await refreshData();
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Task action failed.";
+      const message = getErrorMessage(err, "Task action failed.");
       setError(message);
     } finally {
       setBusyId(null);
