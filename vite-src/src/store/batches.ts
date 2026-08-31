@@ -1,4 +1,8 @@
-import { PorkbunTaskSummary } from "../utils/porkbunApi";
+import {
+  BatchRemoteCacheEntry,
+  PorkbunTaskSummary,
+  WontonBatchRecord,
+} from "../utils/porkbunApi";
 import {
   BATCHES_DIR_NAME,
   isBackendConnected,
@@ -9,11 +13,43 @@ import { filesystem } from "../utils/electronFs";
 type Listener = () => void;
 
 interface BatchState {
-  batches: PorkbunTaskSummary[];
+  batches: WontonBatchRecord[];
+  remoteCache: Record<string, BatchRemoteCacheEntry>;
   isLoaded: boolean;
 }
 
-async function listBatches(projectId: string): Promise<PorkbunTaskSummary[]> {
+function normalizePersistedBatch(batch: Partial<WontonBatchRecord> & Pick<WontonBatchRecord, "id">): WontonBatchRecord {
+  const now = new Date().toISOString();
+  return {
+    id: batch.id,
+    title: batch.title ?? null,
+    created_at: batch.created_at ?? now,
+    updated_at: batch.updated_at ?? batch.created_at ?? now,
+    done_at: batch.done_at ?? null,
+    error_message: batch.error_message ?? null,
+    task: batch.task,
+  };
+}
+
+function isPorkbunTaskSummary(value: WontonBatchRecord | PorkbunTaskSummary): value is PorkbunTaskSummary {
+  return "status" in value;
+}
+
+function toLocalBatchFromRemote(task: PorkbunTaskSummary): WontonBatchRecord {
+  const now = new Date().toISOString();
+
+  return normalizePersistedBatch({
+    id: task.id,
+    title: task.title,
+    created_at: task.created_at ?? now,
+    updated_at: task.updated_at ?? task.created_at ?? now,
+    done_at: task.status === "done" ? (task.completed_at ?? task.updated_at ?? task.created_at ?? now) : null,
+    error_message: task.error_message ?? null,
+    task: task.task,
+  });
+}
+
+async function listBatches(projectId: string): Promise<WontonBatchRecord[]> {
   if (!isBackendConnected()) return [];
 
   const projectDir = await getProjectDataDir(projectId);
@@ -21,7 +57,7 @@ async function listBatches(projectId: string): Promise<PorkbunTaskSummary[]> {
 
   try {
     const entries = await filesystem.readDirectory(batchesDir);
-    const batches: PorkbunTaskSummary[] = [];
+    const batches: WontonBatchRecord[] = [];
 
     for (const entry of entries) {
       const name = entry.entry;
@@ -29,12 +65,13 @@ async function listBatches(projectId: string): Promise<PorkbunTaskSummary[]> {
 
       try {
         const content = await filesystem.readFile(`${batchesDir}/${name}`);
-        const batch = JSON.parse(content) as PorkbunTaskSummary;
+        const batch = JSON.parse(content) as Partial<WontonBatchRecord>;
         if (batch && typeof batch === "object") {
-          if (!batch.id) {
-            batch.id = name.replace(/\.json$/, "");
-          }
-          batches.push(batch);
+          const normalized = normalizePersistedBatch({
+            ...batch,
+            id: batch.id ?? name.replace(/\.json$/, ""),
+          });
+          batches.push(normalized);
         }
       } catch {
         // ignore malformed json files
@@ -80,23 +117,30 @@ const batchStore = {
     return state.get(projectId)?.batches ?? [];
   },
 
+  getRemoteStatuses(projectId: string) {
+    return state.get(projectId)?.remoteCache ?? {};
+  },
+
   async load(projectId: string) {
     const existing = state.get(projectId);
     if (existing?.isLoaded) return;
 
     await ensureBatchesDir(projectId);
     const batches = await listBatches(projectId);
-    state.set(projectId, { batches, isLoaded: true });
+    state.set(projectId, { batches, remoteCache: {}, isLoaded: true });
     dispatch();
   },
 
-  async upsertBatch(projectId: string, batch: PorkbunTaskSummary) {
-    if (!batch.id) return;
+  async upsertBatch(projectId: string, batch: WontonBatchRecord | PorkbunTaskSummary) {
+    const localBatch = isPorkbunTaskSummary(batch)
+      ? toLocalBatchFromRemote(batch)
+      : normalizePersistedBatch({ ...batch, id: batch.id });
+    if (!localBatch.id) return;
 
     const current = state.get(projectId);
     const nextBatchList = current
-      ? [batch, ...current.batches.filter((item) => item.id !== batch.id)]
-      : [batch];
+      ? [localBatch, ...current.batches.filter((item) => item.id !== localBatch.id)]
+      : [localBatch];
 
     state.set(projectId, {
       batches: nextBatchList.sort(
@@ -104,6 +148,7 @@ const batchStore = {
           new Date(b.updated_at ?? b.created_at ?? 0).getTime() -
           new Date(a.updated_at ?? a.created_at ?? 0).getTime()
       ),
+      remoteCache: current?.remoteCache ?? {},
       isLoaded: true,
     });
 
@@ -113,8 +158,8 @@ const batchStore = {
 
       try {
         await filesystem.writeFile(
-          `${batchesDir}/${batch.id}.json`,
-          JSON.stringify(batch, null, 2)
+          `${batchesDir}/${localBatch.id}.json`,
+          JSON.stringify(localBatch, null, 2)
         );
       } catch (err) {
         console.error("batchStore: failed to write batch", err);
@@ -125,51 +170,24 @@ const batchStore = {
   },
 
   async replaceAll(projectId: string, batches: PorkbunTaskSummary[]) {
-    const incoming = [...batches].sort(
-      (a, b) =>
-        new Date(b.updated_at ?? b.created_at ?? 0).getTime() -
-        new Date(a.updated_at ?? a.created_at ?? 0).getTime()
-    );
+    const current = state.get(projectId) ?? { batches: [], remoteCache: {}, isLoaded: true };
+    const nextRemoteCache: Record<string, BatchRemoteCacheEntry> = { ...current.remoteCache };
 
-    const current = state.get(projectId)?.batches ?? [];
-    const byId = new Map(current.map((batch) => [batch.id, batch]));
-
-    for (const batch of incoming) {
+    for (const batch of batches) {
       if (!batch.id) continue;
-      const existing = byId.get(batch.id);
-      if (!existing || new Date(existing.updated_at ?? existing.created_at ?? 0).getTime() <= new Date(batch.updated_at ?? batch.created_at ?? 0).getTime()) {
-        byId.set(batch.id, batch);
-      }
+      nextRemoteCache[batch.id] = {
+        status: batch.status,
+        updated_at: batch.updated_at ?? batch.created_at ?? null,
+        error_message: batch.error_message ?? null,
+        last_checked_at: new Date().toISOString(),
+      };
     }
 
-    const merged = [...byId.values()].sort(
-      (a, b) =>
-        new Date(b.updated_at ?? b.created_at ?? 0).getTime() -
-        new Date(a.updated_at ?? a.created_at ?? 0).getTime()
-    );
-
-    state.set(projectId, { batches: merged, isLoaded: true });
-
-    if (isBackendConnected()) {
-      await ensureBatchesDir(projectId);
-      const projectDir = await getProjectDataDir(projectId);
-      const batchesDir = `${projectDir}/${BATCHES_DIR_NAME}`;
-
-      for (const batch of incoming) {
-        if (!batch.id) continue;
-        try {
-          await filesystem.writeFile(
-            `${batchesDir}/${batch.id}.json`,
-            JSON.stringify(batch, null, 2)
-          );
-        } catch (err) {
-          console.error("batchStore: failed to persist batch", err);
-        }
-      }
-
-      // Wonton owns the batch registry locally. Remote task listings are advisory
-      // and may contain only a subset of jobs, so we do not prune local entries here.
-    }
+    state.set(projectId, {
+      batches: current.batches,
+      remoteCache: nextRemoteCache,
+      isLoaded: true,
+    });
 
     dispatch();
   },
@@ -179,7 +197,10 @@ const batchStore = {
     if (!current) return;
 
     const next = current.batches.filter((batch) => batch.id !== batchId);
-    state.set(projectId, { batches: next, isLoaded: true });
+    const nextRemoteCache = { ...current.remoteCache };
+    delete nextRemoteCache[batchId];
+
+    state.set(projectId, { batches: next, remoteCache: nextRemoteCache, isLoaded: true });
 
     if (isBackendConnected()) {
       const projectDir = await getProjectDataDir(projectId);

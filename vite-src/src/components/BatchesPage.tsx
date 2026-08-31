@@ -22,6 +22,7 @@ import {
 import styles from "./BatchesPage.module.css";
 
 const statusTone: Record<string, { background: string; border: string; color: string }> = {
+  created: { background: "rgba(148, 163, 184, 0.1)", border: "rgba(148, 163, 184, 0.35)", color: "#e2e8f0" },
   submitted: { background: "rgba(148, 163, 184, 0.12)", border: "rgba(148, 163, 184, 0.4)", color: "#dfe6ff" },
   queued: { background: "rgba(59, 130, 246, 0.12)", border: "rgba(59, 130, 246, 0.35)", color: "#bfdbfe" },
   running: { background: "rgba(168, 85, 247, 0.12)", border: "rgba(168, 85, 247, 0.35)", color: "#e9d5ff" },
@@ -29,6 +30,8 @@ const statusTone: Record<string, { background: string; border: string; color: st
   failed: { background: "rgba(239, 68, 68, 0.12)", border: "rgba(239, 68, 68, 0.35)", color: "#fca5a5" },
   cancelled: { background: "rgba(148, 163, 184, 0.1)", border: "rgba(148, 163, 184, 0.3)", color: "#e2e8f0" },
   done: { background: "rgba(16, 185, 129, 0.12)", border: "rgba(16, 185, 129, 0.35)", color: "#a7f3d0" },
+  missing: { background: "rgba(251, 191, 36, 0.12)", border: "rgba(251, 191, 36, 0.35)", color: "#fef3c7" },
+  unavailable: { background: "rgba(239, 68, 68, 0.12)", border: "rgba(239, 68, 68, 0.35)", color: "#fecaca" },
 };
 
 function formatTimestamp(value?: string | null): string {
@@ -52,7 +55,7 @@ export default function BatchesPage() {
   const { settings } = useSettings();
   const { activeProjectId } = useNav();
   const { getProjectById } = useProjects();
-  const { batches, isLoading: batchesLoading, syncBatches, persistBatch } = useBatches();
+  const { batches, remoteStatuses, isLoading: batchesLoading, syncBatches, persistBatch } = useBatches();
   const activeProject = activeProjectId ? getProjectById(activeProjectId) : undefined;
 
   const [health, setHealth] = useState<PorkbunHealthStatus | null>(null);
@@ -85,9 +88,29 @@ export default function BatchesPage() {
         client.listTasks(),
       ]);
 
+      const pendingTaskIds = new Set(
+        batches
+          .filter((task) => !task.done_at)
+          .map((task) => task.id)
+      );
+
+      const pendingTaskDetails = pendingTaskIds.size
+        ? await Promise.all(
+            [...pendingTaskIds].map(async (taskId) => {
+              try {
+                return await client.fetchTask(taskId);
+              } catch {
+                return null;
+              }
+            })
+          )
+        : [];
+
+      const mergedTasks = [...nextTasks, ...pendingTaskDetails.filter(Boolean)];
+
       setHealth(nextHealth);
       setQueueStats(nextStats);
-      await syncBatches(nextTasks);
+      await syncBatches(mergedTasks as typeof nextTasks);
     } catch (err) {
       const message = getErrorMessage(err, "Unable to load Porkbun data.");
       setError(message);
@@ -95,7 +118,7 @@ export default function BatchesPage() {
       refreshLockRef.current = false;
       setIsLoading(false);
     }
-  }, [client, syncBatches]);
+  }, [batches, client, syncBatches]);
 
   useEffect(() => {
     if (!client) return;
@@ -315,12 +338,22 @@ export default function BatchesPage() {
   const visibleTasks = useMemo(
     () =>
       sortedTasks.filter((task) => {
-        const doneAt = doneAtByTask[task.id] ?? (task.status === "done" && (task.completed_at ?? task.updated_at)) ? (doneAtByTask[task.id] ?? (task.status === "done" ? (task.completed_at ?? task.updated_at ?? null) : null)) : null;
+        const doneAt = task.done_at ?? doneAtByTask[task.id] ?? null;
         if (!doneAt) return true;
         return Date.now() - new Date(doneAt).getTime() <= 30 * 60 * 1000;
       }),
     [doneAtByTask, sortedTasks]
   );
+
+  const getEffectiveStatus = useCallback((task: { id: string; done_at?: string | null; created_at?: string | null; updated_at?: string | null; error_message?: string | null }, remoteStatus?: { status?: string | null }) => {
+    if (task.done_at) return "done";
+    if (!remoteStatus) {
+      return "created";
+    }
+    if (remoteStatus.status === "missing") return "missing";
+    if (remoteStatus.status === "unavailable") return "unavailable";
+    return remoteStatus.status || "created";
+  }, []);
 
   return (
     <div className={styles.container}>
@@ -447,11 +480,13 @@ export default function BatchesPage() {
                 <div className={styles.emptyState}>No batches yet. Create the first queued task above.</div>
               ) : (
                 visibleTasks.map((task) => {
-                  const tone = statusTone[task.status] ?? statusTone.queued;
-                  const canRun = ["submitted", "queued"].includes(task.status);
-                  const canCancel = ["submitted", "queued", "running"].includes(task.status);
-                  const canRetry = task.status === "failed" || task.status === "cancelled";
-                  const canDownload = ["completed", "failed", "done"].includes(task.status);
+                  const remoteStatus = remoteStatuses[task.id];
+                  const effectiveStatus = getEffectiveStatus(task, remoteStatus);
+                  const tone = statusTone[effectiveStatus] ?? statusTone.queued;
+                  const canRun = ["created", "submitted", "queued"].includes(effectiveStatus);
+                  const canCancel = ["created", "submitted", "queued", "running"].includes(effectiveStatus);
+                  const canRetry = effectiveStatus === "failed" || effectiveStatus === "cancelled";
+                  const canDownload = ["completed", "failed", "done"].includes(effectiveStatus);
                   const canApplyPatch = canDownload && gitAvailable !== false && Boolean(activeProject?.folderPath);
 
                   return (
@@ -466,19 +501,20 @@ export default function BatchesPage() {
                             color: tone.color,
                           }}
                         >
-                          {statusLabel(task.status)}
+                          {statusLabel(effectiveStatus)}
                         </span>
                       </div>
 
                       <div className={styles.taskMeta}>
                         <span>Created: {formatTimestamp(task.created_at)}</span>
                         <span>Updated: {formatTimestamp(task.updated_at)}</span>
-                        {task.completed_at && <span>Completed: {formatTimestamp(task.completed_at)}</span>}
+                        {task.done_at && <span>Done: {formatTimestamp(task.done_at)}</span>}
+                        {remoteStatus && <span>Remote: {statusLabel(remoteStatus.status)}</span>}
                       </div>
 
                       <p className={styles.taskPrompt}>{task.task?.user_prompt || "No prompt provided."}</p>
 
-                      {task.error_message && <p className={styles.taskError}>{task.error_message}</p>}
+                      {(task.error_message || remoteStatus?.error_message) && <p className={styles.taskError}>{task.error_message || remoteStatus?.error_message}</p>}
 
                       <div className={styles.taskActions}>
                         {canRun && (

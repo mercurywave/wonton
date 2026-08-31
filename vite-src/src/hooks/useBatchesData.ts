@@ -1,17 +1,20 @@
 import { useState, useEffect, useCallback } from "react";
-import { PorkbunTaskSummary } from "../utils/porkbunApi";
+import { BatchRemoteCacheEntry, PorkbunTaskSummary, WontonBatchRecord } from "../utils/porkbunApi";
 import { batchStore } from "../store/batches";
 
 export function useBatchesData(projectId: string | undefined) {
-  const [batches, setBatches] = useState<PorkbunTaskSummary[]>([]);
+  const [batches, setBatches] = useState<WontonBatchRecord[]>([]);
+  const [remoteStatuses, setRemoteStatuses] = useState<Record<string, BatchRemoteCacheEntry>>({});
   const [isLoading, setIsLoading] = useState(true);
 
   const refresh = useCallback(() => {
     if (!projectId) {
       setBatches([]);
+      setRemoteStatuses({});
       return;
     }
     setBatches(batchStore.getBatches(projectId));
+    setRemoteStatuses(batchStore.getRemoteStatuses(projectId));
   }, [projectId]);
 
   useEffect(() => {
@@ -21,6 +24,7 @@ export function useBatchesData(projectId: string | undefined) {
       if (!projectId) {
         setIsLoading(false);
         setBatches([]);
+        setRemoteStatuses({});
         return;
       }
 
@@ -50,7 +54,7 @@ export function useBatchesData(projectId: string | undefined) {
   );
 
   const persistBatch = useCallback(
-    async (batch: PorkbunTaskSummary) => {
+    async (batch: WontonBatchRecord | PorkbunTaskSummary) => {
       if (!projectId) return;
       await batchStore.upsertBatch(projectId, batch);
       refresh();
@@ -69,6 +73,7 @@ export function useBatchesData(projectId: string | undefined) {
 
   return {
     batches,
+    remoteStatuses,
     isLoading,
     syncBatches,
     persistBatch,

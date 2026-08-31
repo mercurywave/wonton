@@ -7,6 +7,45 @@ export type PorkbunTaskStatus =
   | "cancelled"
   | "done";
 
+export type WontonBatchStatus =
+  | "created"
+  | "submitted"
+  | "queued"
+  | "running"
+  | "completed"
+  | "failed"
+  | "cancelled"
+  | "done"
+  | "missing"
+  | "unavailable";
+
+export interface WontonBatchRecord {
+  id: string;
+  title?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+  done_at?: string | null;
+  error_message?: string | null;
+  task?: {
+    system_prompt?: string;
+    user_prompt?: string;
+    model?: {
+      base_url?: string;
+      api_key?: string;
+      model_name?: string;
+    };
+    max_iterations?: number;
+    iteration_prompt?: string;
+  };
+}
+
+export interface BatchRemoteCacheEntry {
+  status: PorkbunTaskStatus | "missing" | "unavailable";
+  updated_at?: string | null;
+  error_message?: string | null;
+  last_checked_at?: string | null;
+}
+
 export interface PorkbunTaskSummary {
   id: string;
   title?: string | null;
@@ -134,6 +173,15 @@ export class PorkbunClient {
     return readJson<PorkbunQueueStats>(response);
   }
 
+  async fetchTask(taskId: string): Promise<PorkbunTaskSummary> {
+    const response = await fetch(`${this.baseUrl}/api/v1/tasks/${taskId}`);
+    if (!response.ok) {
+      const payload = await readJson<{ error?: unknown }>(response);
+      throw new Error(getErrorMessage(payload.error, `Failed to load task ${taskId}`));
+    }
+    return readJson<PorkbunTaskSummary>(response);
+  }
+
   async listTasks(): Promise<PorkbunTaskSummary[]> {
     const response = await fetch(`${this.baseUrl}/api/v1/queue`);
     if (!response.ok) {
@@ -144,14 +192,7 @@ export class PorkbunClient {
     const taskIds = payload.tasks ?? [];
 
     const tasks = await Promise.all(
-      taskIds.map(async (id) => {
-        const taskResponse = await fetch(`${this.baseUrl}/api/v1/tasks/${id}`);
-        if (!taskResponse.ok) {
-          const payload = await readJson<{ error?: unknown }>(taskResponse);
-          throw new Error(getErrorMessage(payload.error, `Failed to load task ${id}`));
-        }
-        return readJson<PorkbunTaskSummary>(taskResponse);
-      })
+      taskIds.map(async (id) => this.fetchTask(id))
     );
 
     return tasks.filter(Boolean);
