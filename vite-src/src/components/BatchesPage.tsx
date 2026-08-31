@@ -389,6 +389,8 @@ export default function BatchesPage() {
     return remoteStatus.status || "created";
   }, []);
 
+  const activeQueueTotal = queueStats ? queueStats.submitted + queueStats.queued + queueStats.running : health?.queue_len ?? 0;
+
   return (
     <div className={styles.container}>
       <div className={styles.content}>
@@ -426,7 +428,7 @@ export default function BatchesPage() {
                   <span>Queue</span>
                   <CircleDashed size={14} />
                 </div>
-                <div className={styles.panelValue}>{queueStats?.total ?? health?.queue_len ?? 0}</div>
+                <div className={styles.panelValue}>{activeQueueTotal}</div>
               </div>
               <div className={styles.panel}>
                 <div className={styles.panelHeader}>
