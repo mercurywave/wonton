@@ -347,11 +347,31 @@ export default function BatchesPage() {
     setBusyId(taskId);
     setError(null);
 
+    const task = batches.find((entry) => entry.id === taskId);
+
     try {
       if (action === "run") {
         await client.runTaskNow(taskId);
       } else if (action === "cancel") {
-        await client.cancelTask(taskId);
+        try {
+          await client.cancelTask(taskId);
+        } catch (cancelErr) {
+          const now = new Date().toISOString();
+          const message = getErrorMessage(cancelErr, "Remote cancellation failed, but the batch was marked done locally.");
+
+          if (task) {
+            await persistBatch({
+              ...task,
+              done_at: now,
+              updated_at: now,
+              error_message: message,
+            });
+          }
+
+          setError(message);
+          await refreshData();
+          return;
+        }
       } else {
         await client.retryTask(taskId);
       }
@@ -362,7 +382,7 @@ export default function BatchesPage() {
     } finally {
       setBusyId(null);
     }
-  }, [client, refreshData]);
+  }, [batches, client, persistBatch, refreshData]);
 
   const handleDismissTask = useCallback(async (taskId: string) => {
     const task = batches.find((entry) => entry.id === taskId);
