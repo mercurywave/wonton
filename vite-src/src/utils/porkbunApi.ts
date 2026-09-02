@@ -1,4 +1,6 @@
 export type PorkbunTaskStatus =
+  | "awaiting_input"
+  | "preparing_repo"
   | "submitted"
   | "queued"
   | "running"
@@ -9,6 +11,8 @@ export type PorkbunTaskStatus =
 
 export type WontonBatchStatus =
   | "created"
+  | "awaiting_input"
+  | "preparing_repo"
   | "submitted"
   | "queued"
   | "running"
@@ -70,6 +74,8 @@ export interface PorkbunTaskSummary {
 }
 
 export interface PorkbunQueueStats {
+  awaiting_input: number;
+  preparing_repo: number;
   submitted: number;
   queued: number;
   running: number;
@@ -182,6 +188,100 @@ export class PorkbunClient {
     return readJson<PorkbunTaskSummary>(response);
   }
 
+  private async shellQuote(value: string): Promise<string> {
+    const platform = await window.electronAPI.dataDir.getPlatform();
+    if (platform === "win32") {
+      return `"${value.replace(/"/g, '""')}"`;
+    }
+    return `'${value.replace(/'/g, `'\\''`)}'`;
+  }
+
+  private async resolveGitRepo(folderPath: string): Promise<{ repoRoot: string; repoUrl: string }> {
+    const quotedFolderPath = await this.shellQuote(folderPath);
+    const repoRootResult = await window.electronAPI.os.execCommand(`git -C ${quotedFolderPath} rev-parse --show-toplevel`, folderPath);
+    if (repoRootResult.status !== 0) {
+      throw new Error(repoRootResult.stderr || "The selected project is not a valid git repository.");
+    }
+
+    const repoRoot = repoRootResult.stdout.trim();
+    if (!repoRoot) {
+      throw new Error("The selected project does not expose a git repository root.");
+    }
+
+    const quotedRepoRoot = await this.shellQuote(repoRoot);
+    const remoteResult = await window.electronAPI.os.execCommand(`git -C ${quotedRepoRoot} remote get-url origin`, repoRoot);
+    const repoUrl = remoteResult.status === 0 ? remoteResult.stdout.trim() : "";
+
+    if (!repoUrl) {
+      throw new Error("The selected project repository has no origin remote configured.");
+    }
+
+    return { repoRoot, repoUrl };
+  }
+
+  private async generatePatchFile(projectFolderPath: string, taskId: string): Promise<string | null> {
+    if (typeof window === "undefined" || !("electronAPI" in window)) {
+      throw new Error("Patch generation requires a local Electron environment.");
+    }
+
+    const appPath = await window.electronAPI.dataDir.getAppPath();
+    const tmpDir = await window.electronAPI.filesystem.getJoinedPath(appPath, "tmp");
+    await window.electronAPI.filesystem.createDirectory(tmpDir);
+    const patchPath = await window.electronAPI.filesystem.getJoinedPath(tmpDir, `porkbun-${taskId}.patch`);
+
+    const quotedProjectFolderPath = await this.shellQuote(projectFolderPath);
+    const repoCheck = await window.electronAPI.os.execCommand(`git -C ${quotedProjectFolderPath} rev-parse --is-inside-work-tree`, projectFolderPath);
+    if (repoCheck.status !== 0 || !repoCheck.stdout.trim().includes("true")) {
+      throw new Error("The selected project is not a git repository, so no patch can be uploaded.");
+    }
+
+    const quotedPatchPath = await this.shellQuote(patchPath);
+    const commands = [
+      `git -C ${quotedProjectFolderPath} add -N -A`,
+      `git -C ${quotedProjectFolderPath} diff --binary -- . > ${quotedPatchPath}`,
+    ];
+
+    for (const command of commands) {
+      const result = await window.electronAPI.os.execCommand(command, projectFolderPath);
+      if (result.status !== 0 && !result.stderr?.includes("nothing to commit")) {
+        throw new Error(result.stderr || "Failed to generate the local patch file.");
+      }
+    }
+
+    const patchContent = await window.electronAPI.filesystem.readFile(patchPath);
+    if (!patchContent.trim()) {
+      return null;
+    }
+
+    return patchPath;
+  }
+
+  async uploadPatch(taskId: string, patchFilePath: string): Promise<PorkbunTaskSummary> {
+    if (typeof window === "undefined" || !("electronAPI" in window)) {
+      throw new Error("Patch upload requires a local Electron environment.");
+    }
+
+    const patchContent = await window.electronAPI.filesystem.readFile(patchFilePath);
+    if (!patchContent.trim()) {
+      throw new Error("The generated patch is empty and cannot be uploaded.");
+    }
+
+    const form = new FormData();
+    form.append("patch_file", new File([patchContent], "local.patch", { type: "application/octet-stream" }));
+
+    const response = await fetch(`${this.baseUrl}/api/v1/tasks/${taskId}/patch`, {
+      method: "POST",
+      body: form,
+    });
+
+    if (!response.ok) {
+      const payload = await readJson<{ error?: unknown }>(response);
+      throw new Error(getErrorMessage(payload.error, `Patch upload failed (${response.status})`));
+    }
+
+    return readJson<PorkbunTaskSummary>(response);
+  }
+
   async createTask(input: {
     title?: string;
     prompt: string;
@@ -191,7 +291,29 @@ export class PorkbunClient {
     maxIterations?: number;
     iterationPrompt?: string;
     projectFolderPath?: string;
+    repoUrl?: string;
+    sourceType?: "git" | "git_patch" | "zip";
   }): Promise<PorkbunTaskSummary> {
+    const requestedSourceType = input.sourceType ?? "git_patch";
+    let effectiveSourceType = requestedSourceType;
+    let preflightPatchPath: string | null = null;
+
+    if ((requestedSourceType === "git" || requestedSourceType === "git_patch") && input.projectFolderPath) {
+      const resolvedRepo = await this.resolveGitRepo(input.projectFolderPath);
+      const repoUrl = resolvedRepo.repoUrl;
+
+      if (requestedSourceType === "git_patch") {
+        preflightPatchPath = await this.generatePatchFile(input.projectFolderPath, `preflight-${Date.now()}`);
+        if (preflightPatchPath === null) {
+          effectiveSourceType = "git";
+        }
+      }
+
+      if (!input.repoUrl) {
+        input.repoUrl = repoUrl;
+      }
+    }
+
     const response = await fetch(`${this.baseUrl}/api/v1/tasks`, {
       method: "POST",
       headers: this.headers(),
@@ -205,6 +327,8 @@ export class PorkbunClient {
         iteration_prompt: input.iterationPrompt || "",
         project_folder_path: input.projectFolderPath,
         title: input.title,
+        source_type: effectiveSourceType,
+        repo_url: input.repoUrl || "",
       }),
     });
 
@@ -213,7 +337,17 @@ export class PorkbunClient {
       throw new Error(getErrorMessage(payload.error, `Task creation failed (${response.status})`));
     }
 
-    return readJson<PorkbunTaskSummary>(response);
+    const created = await readJson<PorkbunTaskSummary>(response);
+
+    if (effectiveSourceType === "git_patch" && input.projectFolderPath && created.id) {
+      const patchPath = await this.generatePatchFile(input.projectFolderPath, created.id);
+      if (patchPath) {
+        await this.uploadPatch(created.id, patchPath);
+      }
+      return this.fetchTask(created.id);
+    }
+
+    return created;
   }
 
   async runTaskNow(taskId: string): Promise<PorkbunTaskSummary> {

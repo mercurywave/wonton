@@ -25,6 +25,8 @@ import styles from "./BatchesPage.module.css";
 
 const statusTone: Record<string, { background: string; border: string; color: string }> = {
   created: { background: "rgba(148, 163, 184, 0.1)", border: "rgba(148, 163, 184, 0.35)", color: "#e2e8f0" },
+  awaiting_input: { background: "rgba(251, 191, 36, 0.12)", border: "rgba(251, 191, 36, 0.35)", color: "#fef3c7" },
+  preparing_repo: { background: "rgba(59, 130, 246, 0.12)", border: "rgba(59, 130, 246, 0.35)", color: "#bfdbfe" },
   submitted: { background: "rgba(148, 163, 184, 0.12)", border: "rgba(148, 163, 184, 0.4)", color: "#dfe6ff" },
   queued: { background: "rgba(59, 130, 246, 0.12)", border: "rgba(59, 130, 246, 0.35)", color: "#bfdbfe" },
   running: { background: "rgba(168, 85, 247, 0.12)", border: "rgba(168, 85, 247, 0.35)", color: "#e9d5ff" },
@@ -605,8 +607,8 @@ export default function BatchesPage() {
                     const tone = statusTone[effectiveStatus] ?? statusTone.queued;
                     const isDoneTask = effectiveStatus === "done";
                     const isCollapsed = isDoneTask && (collapsedTasks[task.id] ?? true);
-                    const canRun = ["created", "submitted", "queued"].includes(effectiveStatus);
-                    const canCancel = ["created", "submitted", "queued", "running"].includes(effectiveStatus);
+                    const canRun = ["created", "submitted", "queued", "awaiting_input", "preparing_repo"].includes(effectiveStatus);
+                    const canCancel = ["created", "submitted", "queued", "running", "awaiting_input", "preparing_repo"].includes(effectiveStatus);
                     const canRetry = effectiveStatus === "failed" || effectiveStatus === "cancelled";
                     const canDismiss = effectiveStatus === "failed";
                     const canDownload = ["completed", "failed", "done"].includes(effectiveStatus);
