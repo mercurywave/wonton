@@ -43,6 +43,11 @@ let mainWindow: BrowserWindow;
 app.whenReady().then(() => {
   mainWindow = createWindow();
 
+  purgeWontonTmpDirectories();
+  setInterval(() => {
+    purgeWontonTmpDirectories();
+  }, TMP_PURGE_INTERVAL_MS);
+
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       mainWindow = createWindow();
@@ -366,3 +371,85 @@ ipcMain.handle("watch:stop", async (_event, key) => {
     watchedFiles.delete(key);
   }
 });
+
+const TMP_STALE_AGE_MS = 24 * 60 * 60 * 1000;
+const TMP_PURGE_INTERVAL_MS = 60 * 60 * 1000;
+
+async function purgeStaleTempFiles(tmpDir: string): Promise<number> {
+  try {
+    const entries = await fs.readdir(tmpDir, { withFileTypes: true });
+    const now = Date.now();
+    let deletedCount = 0;
+
+    for (const entry of entries) {
+      const entryPath = path.join(tmpDir, entry.name);
+
+      try {
+        const stat = await fs.stat(entryPath);
+        const lastModified = stat.mtimeMs || stat.birthtimeMs || 0;
+        const isStale = now - lastModified > TMP_STALE_AGE_MS;
+
+        if (!isStale) continue;
+
+        await fs.rm(entryPath, { recursive: entry.isDirectory(), force: true });
+        deletedCount += 1;
+      } catch {
+        // Ignore individual remove failures; a stale cleanup pass should be best effort.
+      }
+    }
+
+    return deletedCount;
+  } catch {
+    // Ignore when the temp dir does not exist yet.
+    return 0;
+  }
+}
+
+async function purgeTempTree(rootDir: string): Promise<number> {
+  let deletedCount = 0;
+
+  try {
+    const entries = await fs.readdir(rootDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+      const fullPath = path.join(rootDir, entry.name);
+
+      if (!entry.isDirectory()) continue;
+
+      if (entry.name === "tmp") {
+        deletedCount += await purgeStaleTempFiles(fullPath);
+        continue;
+      }
+
+      deletedCount += await purgeTempTree(fullPath);
+    }
+  } catch {
+    // Ignore unreadable directories during the cleanup sweep.
+  }
+
+  return deletedCount;
+}
+
+async function purgeWontonTmpDirectories(): Promise<void> {
+  const userDataDir = app.getPath("userData");
+  const tmpRoots = [
+    path.join(userDataDir, "tmp"),
+    path.join(userDataDir, "wonton"),
+  ];
+
+  let deletedCount = 0;
+
+  for (const rootPath of tmpRoots) {
+    if (path.basename(rootPath) === "tmp") {
+      deletedCount += await purgeStaleTempFiles(rootPath);
+    } else {
+      deletedCount += await purgeTempTree(rootPath);
+    }
+  }
+
+  if (deletedCount > 0) {
+    console.log(`[wonton tmp cleanup] removed ${deletedCount} stale file(s) under ${userDataDir}`);
+  } else {
+    console.log(`[wonton tmp cleanup] no stale temp files found under ${userDataDir}`);
+  }
+}

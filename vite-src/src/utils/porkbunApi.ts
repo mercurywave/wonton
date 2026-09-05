@@ -273,10 +273,23 @@ export class PorkbunClient {
 
     const patchContent = await window.electronAPI.filesystem.readFile(patchPath);
     if (!patchContent.trim()) {
+      await this.cleanupPatchFile(patchPath);
       return null;
     }
 
     return patchPath;
+  }
+
+  private async cleanupPatchFile(filePath: string | null): Promise<void> {
+    if (!filePath) {
+      return;
+    }
+
+    try {
+      await window.electronAPI.filesystem.remove(filePath);
+    } catch {
+      // Best-effort cleanup for transient patch artifacts.
+    }
   }
 
   async uploadPatch(taskId: string, patchFilePath: string): Promise<PorkbunTaskSummary> {
@@ -335,6 +348,14 @@ export class PorkbunClient {
       if (!input.repoUrl) {
         input.repoUrl = repoUrl;
       }
+
+      if (preflightPatchPath) {
+        try {
+          await this.cleanupPatchFile(preflightPatchPath);
+        } catch {
+          // Best effort cleanup after the preflight check completes.
+        }
+      }
     }
 
     const response = await fetch(`${this.baseUrl}/api/v1/tasks`, {
@@ -364,8 +385,12 @@ export class PorkbunClient {
 
     if (effectiveSourceType === "git_patch" && input.projectFolderPath && created.id) {
       const patchPath = await this.generatePatchFile(input.projectFolderPath, created.id);
-      if (patchPath) {
-        await this.uploadPatch(created.id, patchPath);
+      try {
+        if (patchPath) {
+          await this.uploadPatch(created.id, patchPath);
+        }
+      } finally {
+        await this.cleanupPatchFile(patchPath);
       }
       return this.fetchTask(created.id);
     }
