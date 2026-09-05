@@ -72,6 +72,12 @@
   min-width: 70px;
 }
 
+.pendingInput {
+  border-color: rgba(251, 146, 60, 0.8);
+  box-shadow: 0 0 0 3px rgba(251, 146, 60, 0.12);
+  background: rgba(251, 146, 60, 0.06);
+}
+
 .input:focus {
   outline: none;
   border-color: #4a6cf7;
@@ -121,6 +127,16 @@
   color: #c8d0e0;
   font-size: 14px;
   line-height: 1.4;
+}
+
+.pendingBox {
+  background: rgba(251, 146, 60, 0.08);
+  border-color: rgba(251, 146, 60, 0.35);
+  color: #fcd7a4;
+}
+
+.pendingBox svg {
+  color: #fbbf24;
 }
 
 .subtleBox svg {

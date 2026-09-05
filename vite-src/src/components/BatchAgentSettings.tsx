@@ -3,7 +3,13 @@ import { Server, Clock3 } from "lucide-react";
 import styles from "./BatchAgentSettings.module.css";
 import { useSettings } from "../contexts";
 import { useServerModels } from "../hooks/useServerModels";
-import { getErrorMessage, PorkbunClient, resolvePorkbunBaseUrl } from "../utils/porkbunApi";
+import {
+  getErrorMessage,
+  PorkbunClient,
+  PorkbunHealthStatus,
+  PorkbunQueueStats,
+  resolvePorkbunBaseUrl,
+} from "../utils/porkbunApi";
 
 function utcTimeToLocalTime(value: number | undefined, fallbackHour: number): string {
   const utcMinutes = (Number.isFinite(value) ? Number(value) : fallbackHour) * 60;
@@ -23,14 +29,42 @@ function localTimeToUtcHour(value: string, fallbackHour: number): number {
   return Math.trunc(utcMinutes / 60) % 24;
 }
 
+type ServerState = "checking" | "running" | "idle" | "asleep" | "error";
+
+function getServerState(health: PorkbunHealthStatus | null, queueStats: PorkbunQueueStats | null): ServerState {
+  if (!health) {
+    return "checking";
+  }
+
+  const normalizedStatus = String(health.status ?? "").trim().toLowerCase();
+  const isErrorStatus = /error|unhealthy|down|fail|offline/.test(normalizedStatus);
+  if (isErrorStatus) {
+    return "error";
+  }
+
+  if ((queueStats?.running ?? 0) > 0) {
+    return "running";
+  }
+
+  if (health.time_window_active) {
+    return "idle";
+  }
+
+  return "asleep";
+}
+
 export default function BatchAgentSettings() {
   const { settings, updateSettings, servers } = useSettings();
 
   const enabled = Boolean(settings.porkbunServerUrl?.trim());
   const [queueStart, setQueueStart] = useState("09:00");
   const [queueEnd, setQueueEnd] = useState("17:00");
+  const [savedQueueStart, setSavedQueueStart] = useState("09:00");
+  const [savedQueueEnd, setSavedQueueEnd] = useState("17:00");
   const [queueLoading, setQueueLoading] = useState(false);
   const [queueError, setQueueError] = useState<string | null>(null);
+  const [health, setHealth] = useState<PorkbunHealthStatus | null>(null);
+  const [queueStats, setQueueStats] = useState<PorkbunQueueStats | null>(null);
   const queueStartRef = useRef<HTMLInputElement | null>(null);
   const queueEndRef = useRef<HTMLInputElement | null>(null);
   const saveQueueTimerRef = useRef<number | null>(null);
@@ -40,11 +74,36 @@ export default function BatchAgentSettings() {
     return baseUrl ? new PorkbunClient({ baseUrl, apiKey: settings.porkbunApiKey || undefined }) : null;
   }, [settings.porkbunApiKey, settings.porkbunServerUrl]);
 
+  const refreshQueueStatus = useCallback(async () => {
+    if (!client) {
+      setHealth(null);
+      setQueueStats(null);
+      return;
+    }
+
+    try {
+      const [nextHealth, nextStats] = await Promise.all([
+        client.fetchHealth(),
+        client.fetchQueueStats(),
+      ]);
+      setHealth(nextHealth);
+      setQueueStats(nextStats);
+    } catch (err) {
+      setHealth(null);
+      setQueueStats(null);
+      setQueueError(getErrorMessage(err, "Unable to refresh queue status."));
+    }
+  }, [client]);
+
   useEffect(() => {
     if (!client) {
       setQueueStart("09:00");
       setQueueEnd("17:00");
+      setSavedQueueStart("09:00");
+      setSavedQueueEnd("17:00");
       setQueueError(null);
+      setHealth(null);
+      setQueueStats(null);
       return;
     }
 
@@ -55,8 +114,13 @@ export default function BatchAgentSettings() {
         setQueueError(null);
         const config = await client.fetchQueueConfig();
         if (cancelled) return;
-        setQueueStart(utcTimeToLocalTime(config.start_hour, 9));
-        setQueueEnd(utcTimeToLocalTime(config.end_hour, 17));
+        const nextStart = utcTimeToLocalTime(config.start_hour, 9);
+        const nextEnd = utcTimeToLocalTime(config.end_hour, 17);
+        setQueueStart(nextStart);
+        setQueueEnd(nextEnd);
+        setSavedQueueStart(nextStart);
+        setSavedQueueEnd(nextEnd);
+        await refreshQueueStatus();
       } catch (err) {
         if (cancelled) return;
         setQueueError(getErrorMessage(err, "Unable to load queue window."));
@@ -71,7 +135,7 @@ export default function BatchAgentSettings() {
     return () => {
       cancelled = true;
     };
-  }, [client]);
+  }, [client, refreshQueueStatus]);
 
   const applyQueueConfig = async (nextStart: string, nextEnd: string) => {
     if (!client) return;
@@ -86,9 +150,15 @@ export default function BatchAgentSettings() {
         startHour: Number.isFinite(startHour) ? startHour : 9,
         endHour: Number.isFinite(endHour) ? endHour : 17,
       });
+
       const config = await client.fetchQueueConfig();
-      setQueueStart(utcTimeToLocalTime(config.start_hour, 9));
-      setQueueEnd(utcTimeToLocalTime(config.end_hour, 17));
+      const nextStart = utcTimeToLocalTime(config.start_hour, 9);
+      const nextEnd = utcTimeToLocalTime(config.end_hour, 17);
+      setQueueStart(nextStart);
+      setQueueEnd(nextEnd);
+      setSavedQueueStart(nextStart);
+      setSavedQueueEnd(nextEnd);
+      await refreshQueueStatus();
     } catch (err) {
       setQueueError(getErrorMessage(err, "Unable to update queue window."));
     } finally {
@@ -137,7 +207,24 @@ export default function BatchAgentSettings() {
   }, [selectedLlmServer?.apiKey, settings.porkbunApiKey]);
 
   const queueWindow = useMemo(() => `${queueStart} - ${queueEnd}`, [queueEnd, queueStart]);
+  const hasPendingRemoteConfig = queueStart !== savedQueueStart || queueEnd !== savedQueueEnd;
   const queueInputsDisabled = !enabled || !client || queueLoading || Boolean(queueError);
+  const activeQueueTotal = queueStats ? queueStats.submitted + queueStats.queued + queueStats.running : health?.queue_len ?? 0;
+  const serverState = useMemo(() => getServerState(health, queueStats), [health, queueStats]);
+  const serverStateLabel = useMemo(() => {
+    switch (serverState) {
+      case "running":
+        return "Running";
+      case "idle":
+        return "Idle";
+      case "asleep":
+        return "Asleep";
+      case "error":
+        return "Error";
+      default:
+        return "Checking";
+    }
+  }, [serverState]);
 
   const scheduleQueueSave = useCallback(() => {
     if (!client) return;
@@ -267,7 +354,7 @@ export default function BatchAgentSettings() {
             <input
               ref={queueStartRef}
               id="porkbunQueueWindowStart"
-              className={styles.input}
+              className={`${styles.input} ${hasPendingRemoteConfig ? styles.pendingInput : ""}`}
               type="time"
               value={queueStart}
               disabled={queueInputsDisabled}
@@ -278,6 +365,7 @@ export default function BatchAgentSettings() {
                 }
               }}
               onChange={(e) => {
+                setQueueError(null);
                 setQueueStart(e.target.value);
               }}
               onBlur={() => {
@@ -291,7 +379,7 @@ export default function BatchAgentSettings() {
             <input
               ref={queueEndRef}
               id="porkbunQueueWindowEnd"
-              className={styles.input}
+              className={`${styles.input} ${hasPendingRemoteConfig ? styles.pendingInput : ""}`}
               type="time"
               value={queueEnd}
               disabled={queueInputsDisabled}
@@ -302,6 +390,7 @@ export default function BatchAgentSettings() {
                 }
               }}
               onChange={(e) => {
+                setQueueError(null);
                 setQueueEnd(e.target.value);
               }}
               onBlur={() => {
@@ -311,13 +400,21 @@ export default function BatchAgentSettings() {
           </div>
         </div>
 
-        <div className={styles.subtleBox}>
+        <div className={`${styles.subtleBox} ${hasPendingRemoteConfig ? styles.pendingBox : ""}`}>
           <Clock3 size={16} />
           <span>
             {enabled
-              ? queueError
-                ? `Queue settings are read-only because Porkbun is unavailable: ${queueError}`
-                : `Porkbun is enabled. Queue window: ${queueWindow}`
+              ? hasPendingRemoteConfig
+                ? "Remote config changes are pending while the server applies the new queue window."
+                : queueError
+                  ? `Queue settings are read-only because Porkbun is unavailable: ${queueError}`
+                  : (
+                      <>
+                        <strong style={{ marginRight: 8 }}>{serverStateLabel}</strong>
+                        <span>Queue window: {queueWindow}</span>
+                        <span style={{ marginLeft: 8 }}>• Queue depth: {activeQueueTotal}</span>
+                      </>
+                    )
               : "Porkbun is not configured yet."}
           </span>
         </div>
