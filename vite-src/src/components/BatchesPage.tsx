@@ -100,11 +100,30 @@ export default function BatchesPage() {
   const [prompt, setPrompt] = useState("");
   const [maxIterations, setMaxIterations] = useState(1);
   const refreshLockRef = useRef(false);
+  const batchesRef = useRef(batches);
+  const remoteStatusesRef = useRef(remoteStatuses);
+
+  const terminalRemoteStatuses = useMemo(() => new Set(["completed", "failed", "cancelled", "done"]), []);
+
+  useEffect(() => {
+    batchesRef.current = batches;
+  }, [batches]);
+
+  useEffect(() => {
+    remoteStatusesRef.current = remoteStatuses;
+  }, [remoteStatuses]);
 
   const client = useMemo(() => {
     const baseUrl = resolvePorkbunBaseUrl(settings.porkbunServerUrl);
     return baseUrl ? new PorkbunClient({ baseUrl, apiKey: settings.porkbunApiKey || undefined }) : null;
   }, [settings.porkbunApiKey, settings.porkbunServerUrl]);
+
+  const hasActivePendingTasks = useCallback(() => {
+    return batchesRef.current.some((task) => {
+      const remoteStatus = remoteStatusesRef.current[task.id]?.status;
+      return !task.done_at && !terminalRemoteStatuses.has(String(remoteStatus ?? ""));
+    });
+  }, [terminalRemoteStatuses]);
 
   const refreshData = useCallback(async () => {
     if (!client || refreshLockRef.current) return;
@@ -118,8 +137,11 @@ export default function BatchesPage() {
       ]);
 
       const pendingTaskIds = new Set(
-        batches
-          .filter((task) => !task.done_at)
+        batchesRef.current
+          .filter((task) => {
+            const remoteStatus = remoteStatusesRef.current[task.id]?.status;
+            return !task.done_at && !terminalRemoteStatuses.has(String(remoteStatus ?? ""));
+          })
           .map((task) => task.id)
       );
 
@@ -147,13 +169,13 @@ export default function BatchesPage() {
       refreshLockRef.current = false;
       setIsLoading(false);
     }
-  }, [batches, client, syncBatches]);
+  }, [client, syncBatches, terminalRemoteStatuses]);
 
   useEffect(() => {
     if (!client) return;
 
     const refreshOnVisibility = async () => {
-      if (document.visibilityState === "visible") {
+      if (document.visibilityState === "visible" && hasActivePendingTasks()) {
         await refreshData();
       }
     };
@@ -174,7 +196,7 @@ export default function BatchesPage() {
     void refreshOnVisibility();
 
     const intervalId = window.setInterval(() => {
-      if (document.visibilityState === "visible") {
+      if (document.visibilityState === "visible" && hasActivePendingTasks()) {
         void refreshData();
       }
     }, 30_000);
@@ -184,7 +206,7 @@ export default function BatchesPage() {
       window.removeEventListener("focus", handleFocus);
       window.clearInterval(intervalId);
     };
-  }, [client, refreshData]);
+  }, [client, hasActivePendingTasks, refreshData]);
 
   useEffect(() => {
     let isMounted = true;
@@ -208,6 +230,20 @@ export default function BatchesPage() {
     setDoneAtByTask((prev) => (prev[taskId] ? prev : { ...prev, [taskId]: new Date().toISOString() }));
   }, []);
 
+  const markBatchDoneLocally = useCallback(async (taskId: string) => {
+    const task = batches.find((entry) => entry.id === taskId);
+    if (!task) return;
+
+    const now = new Date().toISOString();
+    await persistBatch({
+      ...task,
+      done_at: now,
+      updated_at: now,
+    });
+    markTaskDone(taskId);
+    await refreshData();
+  }, [batches, markTaskDone, persistBatch, refreshData]);
+
   const toggleTaskCollapsed = useCallback((taskId: string) => {
     setCollapsedTasks((prev) => ({
       ...prev,
@@ -223,6 +259,7 @@ export default function BatchesPage() {
     try {
       const resolvedPath = await client.downloadTaskZip(taskId, titleText ? `${titleText.replace(/[^a-z0-9-_]+/gi, "-").toLowerCase()}.zip` : undefined);
       if (resolvedPath) {
+        await markBatchDoneLocally(taskId);
         markTaskDone(taskId);
       }
     } catch (err) {
@@ -269,8 +306,8 @@ export default function BatchesPage() {
         throw new Error(applyResult.stderr || "Patch application failed.");
       }
 
+      await markBatchDoneLocally(taskId);
       markTaskDone(taskId);
-      await refreshData();
     } catch (err) {
       const message = getErrorMessage(err, "Patch application failed.");
       setError(message);
@@ -409,6 +446,23 @@ export default function BatchesPage() {
       setBusyId(null);
     }
   }, [batches, persistBatch, refreshData]);
+
+  const handleCompletedTaskDone = useCallback(async (taskId: string) => {
+    const task = batches.find((entry) => entry.id === taskId);
+    if (!task) return;
+
+    setBusyId(taskId);
+    setError(null);
+
+    try {
+      await markBatchDoneLocally(taskId);
+    } catch (err) {
+      const message = getErrorMessage(err, "Failed to mark completed batch as done.");
+      setError(message);
+    } finally {
+      setBusyId(null);
+    }
+  }, [batches, markBatchDoneLocally]);
 
   const sortedTasks = useMemo(
     () => [...batches].sort((a, b) => new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()),
@@ -611,7 +665,7 @@ export default function BatchesPage() {
                     const canRun = ["created", "submitted", "queued", "awaiting_input", "preparing_repo"].includes(effectiveStatus);
                     const canCancel = ["created", "submitted", "queued", "running", "awaiting_input", "preparing_repo"].includes(effectiveStatus);
                     const canRetry = effectiveStatus === "failed" || effectiveStatus === "cancelled";
-                    const canDismiss = effectiveStatus === "failed";
+                    const canDismiss = effectiveStatus === "failed" || effectiveStatus === "completed";
                     const canDownload = ["completed", "failed", "done"].includes(effectiveStatus);
                     const canApplyPatch = canDownload && gitAvailable !== false && Boolean(activeProject?.folderPath);
 
@@ -704,11 +758,17 @@ export default function BatchesPage() {
                                 <button
                                   className={styles.actionButton}
                                   type="button"
-                                  onClick={() => void handleDismissTask(task.id)}
+                                  onClick={() => {
+                                    if (effectiveStatus === "completed") {
+                                      void handleCompletedTaskDone(task.id);
+                                      return;
+                                    }
+                                    void handleDismissTask(task.id);
+                                  }}
                                   disabled={busyId === task.id}
                                 >
                                   {busyId === task.id ? <Loader2 size={14} className="spin" /> : <X size={14} />}
-                                  Dismiss
+                                  {effectiveStatus === "completed" ? "" : "Dismiss"}
                                 </button>
                               )}
 
