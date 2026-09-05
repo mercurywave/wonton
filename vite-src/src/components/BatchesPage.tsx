@@ -119,13 +119,6 @@ export default function BatchesPage() {
     return baseUrl ? new PorkbunClient({ baseUrl, apiKey: settings.porkbunApiKey || undefined }) : null;
   }, [settings.porkbunApiKey, settings.porkbunServerUrl]);
 
-  const hasActivePendingTasks = useCallback(() => {
-    return batchesRef.current.some((task) => {
-      const remoteStatus = remoteStatusesRef.current[task.id]?.status;
-      return !task.done_at && !terminalRemoteStatuses.has(String(remoteStatus ?? ""));
-    });
-  }, [terminalRemoteStatuses]);
-
   const refreshData = useCallback(async () => {
     if (!client || refreshLockRef.current) return;
     refreshLockRef.current = true;
@@ -176,7 +169,7 @@ export default function BatchesPage() {
     if (!client) return;
 
     const refreshOnVisibility = async () => {
-      if (document.visibilityState === "visible" && hasActivePendingTasks()) {
+      if (document.visibilityState === "visible") {
         await refreshData();
       }
     };
@@ -197,7 +190,7 @@ export default function BatchesPage() {
     void refreshOnVisibility();
 
     const intervalId = window.setInterval(() => {
-      if (document.visibilityState === "visible" && hasActivePendingTasks()) {
+      if (document.visibilityState === "visible") {
         void refreshData();
       }
     }, 30_000);
@@ -207,7 +200,7 @@ export default function BatchesPage() {
       window.removeEventListener("focus", handleFocus);
       window.clearInterval(intervalId);
     };
-  }, [client, hasActivePendingTasks, refreshData]);
+  }, [client, refreshData]);
 
   useEffect(() => {
     let isMounted = true;
