@@ -54,7 +54,7 @@ export function useBatchesData(projectId: string | undefined) {
   );
 
   const persistBatch = useCallback(
-    async (batch: WontonBatchRecord | PorkbunTaskSummary) => {
+    async (batch: WontonBatchRecord) => {
       if (!projectId) return;
       await batchStore.upsertBatch(projectId, batch);
       refresh();

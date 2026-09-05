@@ -97,6 +97,34 @@ export interface PorkbunQueueConfig {
   end_hour?: number;
 }
 
+export function toWontonBatchRecord(
+  source: Partial<WontonBatchRecord> & Partial<PorkbunTaskSummary> & { id: string },
+  overrides: Partial<WontonBatchRecord> = {}
+): WontonBatchRecord {
+  const now = new Date().toISOString();
+  const mergedTask = {
+    ...(source.task ?? {}),
+    ...(overrides.task ?? {}),
+  };
+
+  const batchTask = Object.keys(mergedTask).length > 0 ? mergedTask : undefined;
+
+  const remoteDoneAt =
+    "status" in source && source.status === "done"
+      ? source.completed_at ?? source.updated_at ?? source.created_at ?? now
+      : null;
+
+  return {
+    id: overrides.id ?? source.id,
+    title: overrides.title ?? source.title ?? null,
+    created_at: overrides.created_at ?? source.created_at ?? now,
+    updated_at: overrides.updated_at ?? source.updated_at ?? source.created_at ?? now,
+    done_at: overrides.done_at ?? source.done_at ?? remoteDoneAt ?? null,
+    error_message: overrides.error_message ?? source.error_message ?? null,
+    task: batchTask,
+  };
+}
+
 export interface PorkbunClientOptions {
   baseUrl: string;
   apiKey?: string;

@@ -20,6 +20,7 @@ import {
   PorkbunQueueStats,
   PorkbunTaskSummary,
   resolvePorkbunBaseUrl,
+  toWontonBatchRecord,
 } from "../utils/porkbunApi";
 import styles from "./BatchesPage.module.css";
 
@@ -345,8 +346,8 @@ export default function BatchesPage() {
     }
     const trimmedTitle = title.trim();
     const trimmedPrompt = prompt.trim();
-    if (!trimmedTitle || !trimmedPrompt) {
-      setError("Both a title and a prompt are required before creating a batch.");
+    if (!trimmedPrompt) {
+      setError("A prompt is required before creating a batch.");
       return;
     }
 
@@ -356,12 +357,14 @@ export default function BatchesPage() {
       return;
     }
 
+    const userTitle = trimmedTitle || undefined;
+
     setCreating(true);
     setError(null);
 
     try {
       const created = await client.createTask({
-        title: trimmedTitle,
+        title: userTitle,
         prompt: trimmedPrompt,
         model: settings.porkbunModelId || "gpt-4o-mini",
         llmServer: settings.porkbunLlmServerId || undefined,
@@ -369,10 +372,19 @@ export default function BatchesPage() {
         projectFolderPath: activeProject.folderPath,
       });
 
+      const nextBatch = toWontonBatchRecord(created, {
+        title: userTitle ?? created.title ?? null,
+        task: {
+          ...(created.task ?? {}),
+          user_prompt: trimmedPrompt,
+          max_iterations: normalizedMaxIterations,
+        },
+      });
+
       setTitle("");
       setPrompt("");
       setMaxIterations(1);
-      await persistBatch(created);
+      await persistBatch(nextBatch);
       await refreshData();
     } catch (err) {
       const message = getErrorMessage(err, "Batch creation failed.");

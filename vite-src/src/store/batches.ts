@@ -2,6 +2,7 @@ import {
   BatchRemoteCacheEntry,
   PorkbunTaskSummary,
   WontonBatchRecord,
+  toWontonBatchRecord,
 } from "../utils/porkbunApi";
 import {
   BATCHES_DIR_NAME,
@@ -29,24 +30,6 @@ function normalizePersistedBatch(batch: Partial<WontonBatchRecord> & Pick<Wonton
     error_message: batch.error_message ?? null,
     task: batch.task,
   };
-}
-
-function isPorkbunTaskSummary(value: WontonBatchRecord | PorkbunTaskSummary): value is PorkbunTaskSummary {
-  return "status" in value;
-}
-
-function toLocalBatchFromRemote(task: PorkbunTaskSummary): WontonBatchRecord {
-  const now = new Date().toISOString();
-
-  return normalizePersistedBatch({
-    id: task.id,
-    title: task.title,
-    created_at: task.created_at ?? now,
-    updated_at: task.updated_at ?? task.created_at ?? now,
-    done_at: task.status === "done" ? (task.completed_at ?? task.updated_at ?? task.created_at ?? now) : null,
-    error_message: task.error_message ?? null,
-    task: task.task,
-  });
 }
 
 async function listBatches(projectId: string): Promise<WontonBatchRecord[]> {
@@ -131,10 +114,8 @@ const batchStore = {
     dispatch();
   },
 
-  async upsertBatch(projectId: string, batch: WontonBatchRecord | PorkbunTaskSummary) {
-    const localBatch = isPorkbunTaskSummary(batch)
-      ? toLocalBatchFromRemote(batch)
-      : normalizePersistedBatch({ ...batch, id: batch.id });
+  async upsertBatch(projectId: string, batch: WontonBatchRecord) {
+    const localBatch = normalizePersistedBatch({ ...batch, id: batch.id });
     if (!localBatch.id) return;
 
     const current = state.get(projectId);
@@ -172,9 +153,27 @@ const batchStore = {
   async replaceAll(projectId: string, batches: PorkbunTaskSummary[]) {
     const current = state.get(projectId) ?? { batches: [], remoteCache: {}, isLoaded: true };
     const nextRemoteCache: Record<string, BatchRemoteCacheEntry> = { ...current.remoteCache };
+    const mergedById = new Map<string, WontonBatchRecord>();
+
+    for (const local of current.batches) {
+      mergedById.set(local.id, local);
+    }
 
     for (const batch of batches) {
       if (!batch.id) continue;
+
+      const existing = mergedById.get(batch.id);
+      const localFromRemote = toWontonBatchRecord(batch, {
+        id: batch.id,
+        title: existing?.title ?? batch.title ?? null,
+        created_at: existing?.created_at ?? batch.created_at ?? null,
+        updated_at: existing?.updated_at ?? batch.updated_at ?? batch.created_at ?? null,
+        done_at: existing?.done_at ?? (batch.status === "done" ? batch.completed_at ?? batch.updated_at ?? batch.created_at ?? null : null),
+        error_message: existing?.error_message ?? batch.error_message ?? null,
+        task: { ...(existing?.task ?? {}), ...(batch.task ?? {}) },
+      });
+
+      mergedById.set(batch.id, localFromRemote);
       nextRemoteCache[batch.id] = {
         status: batch.status,
         updated_at: batch.updated_at ?? batch.created_at ?? null,
@@ -184,7 +183,11 @@ const batchStore = {
     }
 
     state.set(projectId, {
-      batches: current.batches,
+      batches: [...mergedById.values()].sort(
+        (a, b) =>
+          new Date(b.updated_at ?? b.created_at ?? 0).getTime() -
+          new Date(a.updated_at ?? a.created_at ?? 0).getTime()
+      ),
       remoteCache: nextRemoteCache,
       isLoaded: true,
     });

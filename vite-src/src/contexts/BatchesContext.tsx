@@ -9,7 +9,7 @@ interface BatchesContextValue {
   remoteStatuses: Record<string, BatchRemoteCacheEntry>;
   isLoading: boolean;
   syncBatches: (nextBatches: PorkbunTaskSummary[]) => Promise<void>;
-  persistBatch: (batch: WontonBatchRecord | PorkbunTaskSummary) => Promise<void>;
+  persistBatch: (batch: WontonBatchRecord) => Promise<void>;
   deleteBatch: (taskId: string) => Promise<void>;
 }
 
