@@ -5,8 +5,10 @@ import { useSettings } from "../contexts";
 import { useServerModels } from "../hooks/useServerModels";
 import {
   getErrorMessage,
+  normalizeQueueBehavior,
   PorkbunClient,
   PorkbunHealthStatus,
+  PorkbunQueueBehavior,
   PorkbunQueueStats,
   resolvePorkbunBaseUrl,
 } from "../utils/porkbunApi";
@@ -75,8 +77,10 @@ export default function BatchAgentSettings() {
   const enabled = Boolean(settings.porkbunServerUrl?.trim());
   const [queueStart, setQueueStart] = useState("09:00");
   const [queueEnd, setQueueEnd] = useState("17:00");
+  const [queueBehavior, setQueueBehavior] = useState<PorkbunQueueBehavior>("schedule");
   const [savedQueueStart, setSavedQueueStart] = useState("09:00");
   const [savedQueueEnd, setSavedQueueEnd] = useState("17:00");
+  const [savedQueueBehavior, setSavedQueueBehavior] = useState<PorkbunQueueBehavior>("schedule");
   const [queueLoading, setQueueLoading] = useState(false);
   const [queueError, setQueueError] = useState<string | null>(null);
   const [health, setHealth] = useState<PorkbunHealthStatus | null>(null);
@@ -115,8 +119,10 @@ export default function BatchAgentSettings() {
     if (!client) {
       setQueueStart("09:00");
       setQueueEnd("17:00");
+      setQueueBehavior("schedule");
       setSavedQueueStart("09:00");
       setSavedQueueEnd("17:00");
+      setSavedQueueBehavior("schedule");
       setQueueError(null);
       setHealth(null);
       setQueueStats(null);
@@ -132,10 +138,13 @@ export default function BatchAgentSettings() {
         if (cancelled) return;
         const nextStart = utcTimeToLocalTime(config.start_time ?? config.start_hour, 9);
         const nextEnd = utcTimeToLocalTime(config.end_time ?? config.end_hour, 17);
+        const nextBehavior = normalizeQueueBehavior(config.queue_behavior ?? "schedule");
         setQueueStart(nextStart);
         setQueueEnd(nextEnd);
+        setQueueBehavior(nextBehavior);
         setSavedQueueStart(nextStart);
         setSavedQueueEnd(nextEnd);
+        setSavedQueueBehavior(nextBehavior);
         await refreshQueueStatus();
       } catch (err) {
         if (cancelled) return;
@@ -153,7 +162,7 @@ export default function BatchAgentSettings() {
     };
   }, [client, refreshQueueStatus]);
 
-  const applyQueueConfig = async (nextStart: string, nextEnd: string) => {
+  const applyQueueConfig = async (nextStart: string, nextEnd: string, nextBehavior: PorkbunQueueBehavior = queueBehavior) => {
     if (!client) return;
 
     const startTime = localTimeToUtcTime(nextStart, 9);
@@ -165,15 +174,19 @@ export default function BatchAgentSettings() {
       await client.updateQueueConfig({
         startTime: Number.isFinite(startTime) ? startTime : 900,
         endTime: Number.isFinite(endTime) ? endTime : 1700,
+        queueBehavior: nextBehavior,
       });
 
       const config = await client.fetchQueueConfig();
-      const nextStart = utcTimeToLocalTime(config.start_time ?? config.start_hour, 9);
-      const nextEnd = utcTimeToLocalTime(config.end_time ?? config.end_hour, 17);
-      setQueueStart(nextStart);
-      setQueueEnd(nextEnd);
-      setSavedQueueStart(nextStart);
-      setSavedQueueEnd(nextEnd);
+      const nextStartValue = utcTimeToLocalTime(config.start_time ?? config.start_hour, 9);
+      const nextEndValue = utcTimeToLocalTime(config.end_time ?? config.end_hour, 17);
+      const resolvedBehavior = normalizeQueueBehavior(config.queue_behavior ?? "schedule");
+      setQueueStart(nextStartValue);
+      setQueueEnd(nextEndValue);
+      setQueueBehavior(resolvedBehavior);
+      setSavedQueueStart(nextStartValue);
+      setSavedQueueEnd(nextEndValue);
+      setSavedQueueBehavior(resolvedBehavior);
       await refreshQueueStatus();
     } catch (err) {
       setQueueError(getErrorMessage(err, "Unable to update queue window."));
@@ -223,8 +236,8 @@ export default function BatchAgentSettings() {
   }, [selectedLlmServer?.apiKey, settings.porkbunApiKey]);
 
   const queueWindow = useMemo(() => `${queueStart} - ${queueEnd}`, [queueEnd, queueStart]);
-  const hasPendingRemoteConfig = queueStart !== savedQueueStart || queueEnd !== savedQueueEnd;
-  const queueInputsDisabled = !enabled || !client || queueLoading || Boolean(queueError);
+  const hasPendingRemoteConfig = queueStart !== savedQueueStart || queueEnd !== savedQueueEnd || queueBehavior !== savedQueueBehavior;
+  const queueInputsDisabled = !enabled || !client || queueLoading || Boolean(queueError) || queueBehavior !== "schedule";
   const activeQueueTotal = queueStats ? queueStats.submitted + queueStats.queued + queueStats.running : health?.queue_len ?? 0;
   const serverState = useMemo(() => getServerState(health, queueStats), [health, queueStats]);
   const serverStateLabel = useMemo(() => {
@@ -361,6 +374,26 @@ export default function BatchAgentSettings() {
                 {model.id}
               </option>
             ))}
+          </select>
+        </div>
+
+        <div className={styles.field}>
+          <label htmlFor="porkbunQueueBehavior">Queue behavior</label>
+          <select
+            id="porkbunQueueBehavior"
+            className={styles.input}
+            value={queueBehavior}
+            disabled={!enabled || !client || queueLoading || Boolean(queueError)}
+            onChange={(e) => {
+              const nextBehavior = normalizeQueueBehavior(e.target.value);
+              setQueueError(null);
+              setQueueBehavior(nextBehavior);
+              void applyQueueConfig(queueStart, queueEnd, nextBehavior);
+            }}
+          >
+            <option value="schedule">Use time schedule</option>
+            <option value="active">Always active</option>
+            <option value="manual">Manual control</option>
           </select>
         </div>
 

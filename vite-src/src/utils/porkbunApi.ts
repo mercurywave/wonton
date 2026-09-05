@@ -85,6 +85,8 @@ export interface PorkbunQueueStats {
   total: number;
 }
 
+export type PorkbunQueueBehavior = "manual" | "active" | "schedule";
+
 export interface PorkbunHealthStatus {
   status: string;
   queue_len: number;
@@ -97,6 +99,11 @@ export interface PorkbunQueueConfig {
   end_time?: number;
   start_hour?: number;
   end_hour?: number;
+  queue_behavior?: PorkbunQueueBehavior;
+}
+
+export function normalizeQueueBehavior(value: unknown): PorkbunQueueBehavior {
+  return value === "manual" || value === "active" || value === "schedule" ? value : "schedule";
 }
 
 function timeValueToMinutes(value: number | undefined, fallback: number): number {
@@ -259,6 +266,7 @@ export class PorkbunClient {
       end_time: minutesToTimeValue(endMinutes, 1700),
       start_hour: Number.isFinite(startHour) ? startHour : 9,
       end_hour: Number.isFinite(endHour) ? endHour : 17,
+      queue_behavior: normalizeQueueBehavior(config.queue_behavior),
     };
   }
 
@@ -541,7 +549,13 @@ export class PorkbunClient {
     return readJson<PorkbunTaskSummary>(response);
   }
 
-  async updateQueueConfig(options?: { startHour?: number; endHour?: number; startTime?: number; endTime?: number }): Promise<PorkbunHealthStatus> {
+  async updateQueueConfig(options?: {
+    startHour?: number;
+    endHour?: number;
+    startTime?: number;
+    endTime?: number;
+    queueBehavior?: PorkbunQueueBehavior;
+  }): Promise<PorkbunHealthStatus> {
     const startRaw = Number.isFinite(options?.startTime)
       ? options!.startTime!
       : Number.isFinite(options?.startHour)
@@ -555,11 +569,18 @@ export class PorkbunClient {
 
     const startTime = minutesToTimeValue(timeValueToMinutes(startRaw, 9 * 60), 900);
     const endTime = minutesToTimeValue(timeValueToMinutes(endRaw, 17 * 60), 1700);
+    const queueBehavior = normalizeQueueBehavior(options?.queueBehavior ?? "schedule");
+    const payload: Record<string, number | string> = { queue_behavior: queueBehavior };
+
+    if (queueBehavior === "schedule") {
+      payload.start_time = startTime;
+      payload.end_time = endTime;
+    }
 
     const response = await fetch(`${this.baseUrl}/api/v1/system/config`, {
       method: "PUT",
       headers: this.headers(),
-      body: JSON.stringify({ start_time: startTime, end_time: endTime }),
+      body: JSON.stringify(payload),
     });
 
     if (!response.ok) {
@@ -570,7 +591,7 @@ export class PorkbunClient {
     return this.fetchHealth();
   }
 
-  async activateQueueNow(options?: { startHour?: number; endHour?: number; startTime?: number; endTime?: number }): Promise<PorkbunHealthStatus> {
+  async activateQueueNow(options?: { startHour?: number; endHour?: number; startTime?: number; endTime?: number; queueBehavior?: PorkbunQueueBehavior }): Promise<PorkbunHealthStatus> {
     return this.updateQueueConfig(options);
   }
 }
