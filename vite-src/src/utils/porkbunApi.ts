@@ -93,8 +93,33 @@ export interface PorkbunHealthStatus {
 }
 
 export interface PorkbunQueueConfig {
+  start_time?: number;
+  end_time?: number;
   start_hour?: number;
   end_hour?: number;
+}
+
+function timeValueToMinutes(value: number | undefined, fallback: number): number {
+  if (!Number.isFinite(value)) {
+    return fallback;
+  }
+
+  const numeric = Number(value);
+  if (numeric <= 23 && Number.isInteger(numeric)) {
+    return numeric * 60;
+  }
+
+  const hours = Math.trunc(numeric / 100) || 0;
+  const minutes = Math.trunc(numeric % 100) || 0;
+  return hours * 60 + minutes;
+}
+
+function minutesToTimeValue(value: number, fallback: number): number {
+  const normalized = ((Math.round(value) % (24 * 60)) + 24 * 60) % (24 * 60);
+  const hours = Math.trunc(normalized / 60) % 24;
+  const minutes = normalized % 60;
+  const result = hours * 100 + minutes;
+  return Number.isFinite(result) ? result : fallback;
 }
 
 export function toWontonBatchRecord(
@@ -221,12 +246,19 @@ export class PorkbunClient {
 
     const payload = await readJson<Record<string, unknown> & { config?: PorkbunQueueConfig }>(response);
     const config = payload?.config && typeof payload.config === "object" ? payload.config : payload;
-    const startHour = Number(config.start_hour ?? 9);
-    const endHour = Number(config.end_hour ?? 17);
+    const startRaw = Number(config.start_time ?? config.start_hour ?? 900);
+    const endRaw = Number(config.end_time ?? config.end_hour ?? 1700);
+
+    const startMinutes = timeValueToMinutes(startRaw, 9 * 60);
+    const endMinutes = timeValueToMinutes(endRaw, 17 * 60);
+    const startHour = Math.trunc(startMinutes / 60) % 24;
+    const endHour = Math.trunc(endMinutes / 60) % 24;
 
     return {
-      start_hour: Number.isFinite(startHour) ? Math.max(0, Math.min(23, startHour)) : 9,
-      end_hour: Number.isFinite(endHour) ? Math.max(0, Math.min(23, endHour)) : 17,
+      start_time: minutesToTimeValue(startMinutes, 900),
+      end_time: minutesToTimeValue(endMinutes, 1700),
+      start_hour: Number.isFinite(startHour) ? startHour : 9,
+      end_hour: Number.isFinite(endHour) ? endHour : 17,
     };
   }
 
@@ -509,14 +541,25 @@ export class PorkbunClient {
     return readJson<PorkbunTaskSummary>(response);
   }
 
-  async updateQueueConfig(options?: { startHour?: number; endHour?: number }): Promise<PorkbunHealthStatus> {
-    const startHour = Number.isFinite(options?.startHour) ? Math.max(0, Math.min(23, options!.startHour!)) : 9;
-    const endHour = Number.isFinite(options?.endHour) ? Math.max(0, Math.min(23, options!.endHour!)) : 17;
+  async updateQueueConfig(options?: { startHour?: number; endHour?: number; startTime?: number; endTime?: number }): Promise<PorkbunHealthStatus> {
+    const startRaw = Number.isFinite(options?.startTime)
+      ? options!.startTime!
+      : Number.isFinite(options?.startHour)
+        ? options!.startHour!
+        : 9;
+    const endRaw = Number.isFinite(options?.endTime)
+      ? options!.endTime!
+      : Number.isFinite(options?.endHour)
+        ? options!.endHour!
+        : 17;
+
+    const startTime = minutesToTimeValue(timeValueToMinutes(startRaw, 9 * 60), 900);
+    const endTime = minutesToTimeValue(timeValueToMinutes(endRaw, 17 * 60), 1700);
 
     const response = await fetch(`${this.baseUrl}/api/v1/system/config`, {
       method: "PUT",
       headers: this.headers(),
-      body: JSON.stringify({ start_hour: startHour, end_hour: endHour }),
+      body: JSON.stringify({ start_time: startTime, end_time: endTime }),
     });
 
     if (!response.ok) {
@@ -527,7 +570,7 @@ export class PorkbunClient {
     return this.fetchHealth();
   }
 
-  async activateQueueNow(options?: { startHour?: number; endHour?: number }): Promise<PorkbunHealthStatus> {
+  async activateQueueNow(options?: { startHour?: number; endHour?: number; startTime?: number; endTime?: number }): Promise<PorkbunHealthStatus> {
     return this.updateQueueConfig(options);
   }
 }

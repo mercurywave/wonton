@@ -11,22 +11,38 @@ import {
   resolvePorkbunBaseUrl,
 } from "../utils/porkbunApi";
 
+function timeValueToMinutes(value: number | undefined, fallbackMinutes: number): number {
+  if (!Number.isFinite(value)) {
+    return fallbackMinutes;
+  }
+
+  const numeric = Number(value);
+  if (numeric <= 23 && Number.isInteger(numeric)) {
+    return numeric * 60;
+  }
+
+  const hours = Math.trunc(numeric / 100) || 0;
+  const minutes = Math.trunc(numeric % 100) || 0;
+  return hours * 60 + minutes;
+}
+
 function utcTimeToLocalTime(value: number | undefined, fallbackHour: number): string {
-  const utcMinutes = (Number.isFinite(value) ? Number(value) : fallbackHour) * 60;
+  const utcMinutes = timeValueToMinutes(value, fallbackHour * 60);
   const localMinutes = (utcMinutes - new Date().getTimezoneOffset() + 24 * 60 * 60) % (24 * 60);
   const hours = Math.trunc(localMinutes / 60) % 24;
   const minutes = localMinutes % 60;
   return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
 }
 
-function localTimeToUtcHour(value: string, fallbackHour: number): number {
+function localTimeToUtcTime(value: string, fallbackHour: number): number {
   const [rawHour, rawMinute = "0"] = value.split(":");
   const hour = Number.parseInt(rawHour ?? String(fallbackHour), 10);
   const minute = Number.parseInt(rawMinute, 10);
   const localMinutes = ((Number.isFinite(hour) ? hour : fallbackHour) * 60) + (Number.isFinite(minute) ? minute : 0);
   const utcMinutes = (localMinutes + new Date().getTimezoneOffset() + 24 * 60 * 60) % (24 * 60);
-
-  return Math.trunc(utcMinutes / 60) % 24;
+  const hours = Math.trunc(utcMinutes / 60) % 24;
+  const minutes = utcMinutes % 60;
+  return hours * 100 + minutes;
 }
 
 type ServerState = "checking" | "running" | "idle" | "asleep" | "error";
@@ -114,8 +130,8 @@ export default function BatchAgentSettings() {
         setQueueError(null);
         const config = await client.fetchQueueConfig();
         if (cancelled) return;
-        const nextStart = utcTimeToLocalTime(config.start_hour, 9);
-        const nextEnd = utcTimeToLocalTime(config.end_hour, 17);
+        const nextStart = utcTimeToLocalTime(config.start_time ?? config.start_hour, 9);
+        const nextEnd = utcTimeToLocalTime(config.end_time ?? config.end_hour, 17);
         setQueueStart(nextStart);
         setQueueEnd(nextEnd);
         setSavedQueueStart(nextStart);
@@ -140,20 +156,20 @@ export default function BatchAgentSettings() {
   const applyQueueConfig = async (nextStart: string, nextEnd: string) => {
     if (!client) return;
 
-    const startHour = localTimeToUtcHour(nextStart, 9);
-    const endHour = localTimeToUtcHour(nextEnd, 17);
+    const startTime = localTimeToUtcTime(nextStart, 9);
+    const endTime = localTimeToUtcTime(nextEnd, 17);
 
     try {
       setQueueLoading(true);
       setQueueError(null);
       await client.updateQueueConfig({
-        startHour: Number.isFinite(startHour) ? startHour : 9,
-        endHour: Number.isFinite(endHour) ? endHour : 17,
+        startTime: Number.isFinite(startTime) ? startTime : 900,
+        endTime: Number.isFinite(endTime) ? endTime : 1700,
       });
 
       const config = await client.fetchQueueConfig();
-      const nextStart = utcTimeToLocalTime(config.start_hour, 9);
-      const nextEnd = utcTimeToLocalTime(config.end_hour, 17);
+      const nextStart = utcTimeToLocalTime(config.start_time ?? config.start_hour, 9);
+      const nextEnd = utcTimeToLocalTime(config.end_time ?? config.end_hour, 17);
       setQueueStart(nextStart);
       setQueueEnd(nextEnd);
       setSavedQueueStart(nextStart);

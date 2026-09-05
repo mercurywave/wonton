@@ -322,12 +322,12 @@ export default function BatchesPage() {
     setBusyId("activate");
     try {
       const config = await client.fetchQueueConfig();
-      const startHour = Number.isFinite(config.start_hour) ? config.start_hour : 9;
-      const endHour = Number.isFinite(config.end_hour) ? config.end_hour : 17;
+      const startTime = Number.isFinite(config.start_time) ? config.start_time : config.start_hour ?? 9;
+      const endTime = Number.isFinite(config.end_time) ? config.end_time : config.end_hour ?? 17;
 
       await client.activateQueueNow({
-        startHour,
-        endHour,
+        startTime,
+        endTime,
       });
       await refreshData();
     } catch (err) {
