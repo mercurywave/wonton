@@ -16,8 +16,6 @@ export interface ChatSettings {
   porkbunApiKey: string;
   porkbunLlmServerId: string;
   porkbunModelId: string;
-  porkbunQueueWindowStart: string;
-  porkbunQueueWindowEnd: string;
 }
 
 export interface ResolvedServerSettings {
@@ -46,8 +44,6 @@ const DEFAULT_SETTINGS: Omit<ChatSettings, "servers" | "activeServerId"> = {
   porkbunApiKey: "",
   porkbunLlmServerId: "",
   porkbunModelId: "",
-  porkbunQueueWindowStart: "09:00",
-  porkbunQueueWindowEnd: "17:00",
 };
 
 let cachedSettings: ChatSettings | null = null;

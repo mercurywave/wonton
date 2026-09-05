@@ -8,6 +8,13 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  flex: 1;
+}
+
+.queueWindowRow {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
 }
 
 .form {

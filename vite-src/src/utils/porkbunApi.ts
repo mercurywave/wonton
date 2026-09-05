@@ -92,6 +92,11 @@ export interface PorkbunHealthStatus {
   timestamp: string;
 }
 
+export interface PorkbunQueueConfig {
+  start_hour?: number;
+  end_hour?: number;
+}
+
 export interface PorkbunClientOptions {
   baseUrl: string;
   apiKey?: string;
@@ -177,6 +182,24 @@ export class PorkbunClient {
       throw new Error(getErrorMessage(payload.error, `Queue stats failed (${response.status})`));
     }
     return readJson<PorkbunQueueStats>(response);
+  }
+
+  async fetchQueueConfig(): Promise<PorkbunQueueConfig> {
+    const response = await fetch(`${this.baseUrl}/api/v1/system/config`);
+    if (!response.ok) {
+      const payload = await readJson<{ error?: unknown }>(response);
+      throw new Error(getErrorMessage(payload.error, `Queue config fetch failed (${response.status})`));
+    }
+
+    const payload = await readJson<Record<string, unknown> & { config?: PorkbunQueueConfig }>(response);
+    const config = payload?.config && typeof payload.config === "object" ? payload.config : payload;
+    const startHour = Number(config.start_hour ?? 9);
+    const endHour = Number(config.end_hour ?? 17);
+
+    return {
+      start_hour: Number.isFinite(startHour) ? Math.max(0, Math.min(23, startHour)) : 9,
+      end_hour: Number.isFinite(endHour) ? Math.max(0, Math.min(23, endHour)) : 17,
+    };
   }
 
   async fetchTask(taskId: string): Promise<PorkbunTaskSummary> {
@@ -433,7 +456,7 @@ export class PorkbunClient {
     return readJson<PorkbunTaskSummary>(response);
   }
 
-  async activateQueueNow(options?: { startHour?: number; endHour?: number }): Promise<PorkbunHealthStatus> {
+  async updateQueueConfig(options?: { startHour?: number; endHour?: number }): Promise<PorkbunHealthStatus> {
     const startHour = Number.isFinite(options?.startHour) ? Math.max(0, Math.min(23, options!.startHour!)) : 9;
     const endHour = Number.isFinite(options?.endHour) ? Math.max(0, Math.min(23, options!.endHour!)) : 17;
 
@@ -445,10 +468,14 @@ export class PorkbunClient {
 
     if (!response.ok) {
       const payload = await readJson<{ error?: unknown }>(response);
-      throw new Error(getErrorMessage(payload.error, `Queue activation failed (${response.status})`));
+      throw new Error(getErrorMessage(payload.error, `Queue config update failed (${response.status})`));
     }
 
     return this.fetchHealth();
+  }
+
+  async activateQueueNow(options?: { startHour?: number; endHour?: number }): Promise<PorkbunHealthStatus> {
+    return this.updateQueueConfig(options);
   }
 }
 

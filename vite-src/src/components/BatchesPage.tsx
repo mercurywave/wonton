@@ -283,12 +283,13 @@ export default function BatchesPage() {
     if (!client) return;
     setBusyId("activate");
     try {
-      const startHour = Number.parseInt((settings.porkbunQueueWindowStart || "09:00").split(":")[0] ?? "9", 10);
-      const endHour = Number.parseInt((settings.porkbunQueueWindowEnd || "17:00").split(":")[0] ?? "17", 10);
+      const config = await client.fetchQueueConfig();
+      const startHour = Number.isFinite(config.start_hour) ? config.start_hour : 9;
+      const endHour = Number.isFinite(config.end_hour) ? config.end_hour : 17;
 
       await client.activateQueueNow({
-        startHour: Number.isFinite(startHour) ? startHour : 9,
-        endHour: Number.isFinite(endHour) ? endHour : 17,
+        startHour,
+        endHour,
       });
       await refreshData();
     } catch (err) {
@@ -297,7 +298,7 @@ export default function BatchesPage() {
     } finally {
       setBusyId(null);
     }
-  }, [client, refreshData, settings.porkbunQueueWindowEnd, settings.porkbunQueueWindowStart]);
+  }, [client, refreshData]);
 
   const handleCreateBatch = useCallback(async () => {
     if (!client) return;

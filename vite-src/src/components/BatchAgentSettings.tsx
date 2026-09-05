@@ -1,13 +1,100 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Server, Clock3 } from "lucide-react";
 import styles from "./BatchAgentSettings.module.css";
 import { useSettings } from "../contexts";
 import { useServerModels } from "../hooks/useServerModels";
+import { getErrorMessage, PorkbunClient, resolvePorkbunBaseUrl } from "../utils/porkbunApi";
+
+function utcTimeToLocalTime(value: number | undefined, fallbackHour: number): string {
+  const utcMinutes = (Number.isFinite(value) ? Number(value) : fallbackHour) * 60;
+  const localMinutes = (utcMinutes - new Date().getTimezoneOffset() + 24 * 60 * 60) % (24 * 60);
+  const hours = Math.trunc(localMinutes / 60) % 24;
+  const minutes = localMinutes % 60;
+  return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+}
+
+function localTimeToUtcHour(value: string, fallbackHour: number): number {
+  const [rawHour, rawMinute = "0"] = value.split(":");
+  const hour = Number.parseInt(rawHour ?? String(fallbackHour), 10);
+  const minute = Number.parseInt(rawMinute, 10);
+  const localMinutes = ((Number.isFinite(hour) ? hour : fallbackHour) * 60) + (Number.isFinite(minute) ? minute : 0);
+  const utcMinutes = (localMinutes + new Date().getTimezoneOffset() + 24 * 60 * 60) % (24 * 60);
+
+  return Math.trunc(utcMinutes / 60) % 24;
+}
 
 export default function BatchAgentSettings() {
   const { settings, updateSettings, servers } = useSettings();
 
   const enabled = Boolean(settings.porkbunServerUrl?.trim());
+  const [queueStart, setQueueStart] = useState("09:00");
+  const [queueEnd, setQueueEnd] = useState("17:00");
+  const [queueLoading, setQueueLoading] = useState(false);
+  const [queueError, setQueueError] = useState<string | null>(null);
+  const queueStartRef = useRef<HTMLInputElement | null>(null);
+  const queueEndRef = useRef<HTMLInputElement | null>(null);
+  const saveQueueTimerRef = useRef<number | null>(null);
+
+  const client = useMemo(() => {
+    const baseUrl = resolvePorkbunBaseUrl(settings.porkbunServerUrl);
+    return baseUrl ? new PorkbunClient({ baseUrl, apiKey: settings.porkbunApiKey || undefined }) : null;
+  }, [settings.porkbunApiKey, settings.porkbunServerUrl]);
+
+  useEffect(() => {
+    if (!client) {
+      setQueueStart("09:00");
+      setQueueEnd("17:00");
+      setQueueError(null);
+      return;
+    }
+
+    let cancelled = false;
+    const loadQueueConfig = async () => {
+      try {
+        setQueueLoading(true);
+        setQueueError(null);
+        const config = await client.fetchQueueConfig();
+        if (cancelled) return;
+        setQueueStart(utcTimeToLocalTime(config.start_hour, 9));
+        setQueueEnd(utcTimeToLocalTime(config.end_hour, 17));
+      } catch (err) {
+        if (cancelled) return;
+        setQueueError(getErrorMessage(err, "Unable to load queue window."));
+      } finally {
+        if (!cancelled) {
+          setQueueLoading(false);
+        }
+      }
+    };
+
+    void loadQueueConfig();
+    return () => {
+      cancelled = true;
+    };
+  }, [client]);
+
+  const applyQueueConfig = async (nextStart: string, nextEnd: string) => {
+    if (!client) return;
+
+    const startHour = localTimeToUtcHour(nextStart, 9);
+    const endHour = localTimeToUtcHour(nextEnd, 17);
+
+    try {
+      setQueueLoading(true);
+      setQueueError(null);
+      await client.updateQueueConfig({
+        startHour: Number.isFinite(startHour) ? startHour : 9,
+        endHour: Number.isFinite(endHour) ? endHour : 17,
+      });
+      const config = await client.fetchQueueConfig();
+      setQueueStart(utcTimeToLocalTime(config.start_hour, 9));
+      setQueueEnd(utcTimeToLocalTime(config.end_hour, 17));
+    } catch (err) {
+      setQueueError(getErrorMessage(err, "Unable to update queue window."));
+    } finally {
+      setQueueLoading(false);
+    }
+  };
 
   const selectedLlmServer = useMemo(
     () => servers.find(
@@ -49,11 +136,35 @@ export default function BatchAgentSettings() {
     return value ? "*".repeat(Math.max(value.length, 4)) : "none";
   }, [selectedLlmServer?.apiKey, settings.porkbunApiKey]);
 
-  const queueWindow = useMemo(() => {
-    const start = settings.porkbunQueueWindowStart || "09:00";
-    const end = settings.porkbunQueueWindowEnd || "17:00";
-    return `${start} - ${end}`;
-  }, [settings.porkbunQueueWindowStart, settings.porkbunQueueWindowEnd]);
+  const queueWindow = useMemo(() => `${queueStart} - ${queueEnd}`, [queueEnd, queueStart]);
+  const queueInputsDisabled = !enabled || !client || queueLoading || Boolean(queueError);
+
+  const scheduleQueueSave = useCallback(() => {
+    if (!client) return;
+
+    if (saveQueueTimerRef.current !== null) {
+      window.clearTimeout(saveQueueTimerRef.current);
+    }
+
+    saveQueueTimerRef.current = window.setTimeout(() => {
+      const startFocused = document.activeElement === queueStartRef.current;
+      const endFocused = document.activeElement === queueEndRef.current;
+      if (startFocused || endFocused) {
+        scheduleQueueSave();
+        return;
+      }
+
+      void applyQueueConfig(queueStart, queueEnd);
+    }, 2000);
+  }, [applyQueueConfig, client, queueEnd, queueStart]);
+
+  useEffect(() => {
+    return () => {
+      if (saveQueueTimerRef.current !== null) {
+        window.clearTimeout(saveQueueTimerRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div>
@@ -150,32 +261,64 @@ export default function BatchAgentSettings() {
           </select>
         </div>
 
-        <div className={styles.field}>
-          <label htmlFor="porkbunQueueWindowStart">Queue Active Window Start</label>
-          <input
-            id="porkbunQueueWindowStart"
-            className={styles.input}
-            type="time"
-            value={settings.porkbunQueueWindowStart}
-            onChange={(e) => updateSettings({ porkbunQueueWindowStart: e.target.value })}
-          />
-        </div>
+        <div className={styles.queueWindowRow}>
+          <div className={styles.field}>
+            <label htmlFor="porkbunQueueWindowStart">Queue Active Window Start</label>
+            <input
+              ref={queueStartRef}
+              id="porkbunQueueWindowStart"
+              className={styles.input}
+              type="time"
+              value={queueStart}
+              disabled={queueInputsDisabled}
+              onFocus={() => {
+                if (saveQueueTimerRef.current !== null) {
+                  window.clearTimeout(saveQueueTimerRef.current);
+                  saveQueueTimerRef.current = null;
+                }
+              }}
+              onChange={(e) => {
+                setQueueStart(e.target.value);
+              }}
+              onBlur={() => {
+                scheduleQueueSave();
+              }}
+            />
+          </div>
 
-        <div className={styles.field}>
-          <label htmlFor="porkbunQueueWindowEnd">Queue Active Window End</label>
-          <input
-            id="porkbunQueueWindowEnd"
-            className={styles.input}
-            type="time"
-            value={settings.porkbunQueueWindowEnd}
-            onChange={(e) => updateSettings({ porkbunQueueWindowEnd: e.target.value })}
-          />
+          <div className={styles.field}>
+            <label htmlFor="porkbunQueueWindowEnd">Queue Active Window End</label>
+            <input
+              ref={queueEndRef}
+              id="porkbunQueueWindowEnd"
+              className={styles.input}
+              type="time"
+              value={queueEnd}
+              disabled={queueInputsDisabled}
+              onFocus={() => {
+                if (saveQueueTimerRef.current !== null) {
+                  window.clearTimeout(saveQueueTimerRef.current);
+                  saveQueueTimerRef.current = null;
+                }
+              }}
+              onChange={(e) => {
+                setQueueEnd(e.target.value);
+              }}
+              onBlur={() => {
+                scheduleQueueSave();
+              }}
+            />
+          </div>
         </div>
 
         <div className={styles.subtleBox}>
           <Clock3 size={16} />
           <span>
-            {enabled ? `Porkbun is enabled. Queue window: ${queueWindow}` : "Porkbun is not configured yet."}
+            {enabled
+              ? queueError
+                ? `Queue settings are read-only because Porkbun is unavailable: ${queueError}`
+                : `Porkbun is enabled. Queue window: ${queueWindow}`
+              : "Porkbun is not configured yet."}
           </span>
         </div>
       </div>
