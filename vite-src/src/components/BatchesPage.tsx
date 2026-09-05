@@ -13,6 +13,7 @@ import {
   X,
 } from "lucide-react";
 import { useNav, useProjects, useSettings, useBatches } from "../contexts";
+import { useServerModels } from "../hooks/useServerModels";
 import {
   getErrorMessage,
   PorkbunClient,
@@ -81,11 +82,52 @@ function getServerState(health: PorkbunHealthStatus | null, queueStats: PorkbunQ
 }
 
 export default function BatchesPage() {
-  const { settings } = useSettings();
+  const { settings, servers } = useSettings();
   const { activeProjectId } = useNav();
   const { getProjectById } = useProjects();
   const { batches, remoteStatuses, isLoading: batchesLoading, syncBatches, persistBatch } = useBatches();
   const activeProject = activeProjectId ? getProjectById(activeProjectId) : undefined;
+
+  const selectedLlmServer = useMemo(
+    () => servers.find(
+      (server) =>
+        server.id === settings.porkbunLlmServerId ||
+        server.serverUrl === settings.porkbunLlmServerId
+    ),
+    [servers, settings.porkbunLlmServerId]
+  );
+
+  const { models, isLoading: modelsLoading, error: modelsError } = useServerModels(
+    selectedLlmServer?.serverUrl ?? "",
+    selectedLlmServer?.apiKey ?? ""
+  );
+
+  const modelOptions = useMemo(
+    () => [...models].sort((a, b) => a.id.localeCompare(b.id)),
+    [models]
+  );
+
+  const [batchModel, setBatchModel] = useState(settings.porkbunModelId || "");
+
+  useEffect(() => {
+    setBatchModel(settings.porkbunModelId || "");
+  }, [settings.porkbunModelId]);
+
+  const visibleModelOptions = useMemo(() => {
+    const currentValue = batchModel.trim();
+    if (!currentValue) {
+      return modelOptions;
+    }
+
+    if (modelOptions.some((model) => model.id === currentValue)) {
+      return modelOptions;
+    }
+
+    return [{ id: currentValue }, ...modelOptions];
+  }, [batchModel, modelOptions]);
+
+  const hasSelectedModel = Boolean(batchModel.trim());
+  const isModelSelectDisabled = !selectedLlmServer || modelsLoading || Boolean(modelsError) || modelOptions.length === 0;
 
   const [health, setHealth] = useState<PorkbunHealthStatus | null>(null);
   const [queueStats, setQueueStats] = useState<PorkbunQueueStats | null>(null);
@@ -351,6 +393,7 @@ export default function BatchesPage() {
     }
 
     const userTitle = trimmedTitle || undefined;
+    const resolvedBatchModel = batchModel.trim() || settings.porkbunModelId || "gpt-4o-mini";
 
     setCreating(true);
     setError(null);
@@ -359,7 +402,7 @@ export default function BatchesPage() {
       const created = await client.createTask({
         title: userTitle,
         prompt: trimmedPrompt,
-        model: settings.porkbunModelId || "gpt-4o-mini",
+        model: resolvedBatchModel,
         llmServer: settings.porkbunLlmServerId || undefined,
         maxIterations: normalizedMaxIterations,
         projectFolderPath: activeProject.folderPath,
@@ -371,12 +414,17 @@ export default function BatchesPage() {
           ...(created.task ?? {}),
           user_prompt: trimmedPrompt,
           max_iterations: normalizedMaxIterations,
+          model: {
+            ...(created.task?.model ?? {}),
+            model_name: resolvedBatchModel,
+          },
         },
       });
 
       setTitle("");
       setPrompt("");
       setMaxIterations(1);
+      setBatchModel(settings.porkbunModelId || "");
       await persistBatch(nextBatch);
       await refreshData();
     } catch (err) {
@@ -385,7 +433,7 @@ export default function BatchesPage() {
     } finally {
       setCreating(false);
     }
-  }, [activeProject?.folderPath, client, maxIterations, persistBatch, prompt, refreshData, settings.porkbunLlmServerId, settings.porkbunModelId, title]);
+  }, [activeProject?.folderPath, batchModel, client, maxIterations, persistBatch, prompt, refreshData, settings.porkbunLlmServerId, settings.porkbunModelId, title]);
 
   const handleTaskAction = useCallback(async (taskId: string, action: "run" | "cancel" | "retry") => {
     if (!client) return;
@@ -628,24 +676,62 @@ export default function BatchesPage() {
                   />
                 </div>
 
-                <div className={styles.field}>
-                  <label htmlFor="batch-max-iterations">Max iterations</label>
-                  <input
-                    id="batch-max-iterations"
-                    className={styles.input}
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={maxIterations}
-                    onChange={(e) => {
-                      const next = Number.parseInt(e.target.value || "1", 10);
-                      setMaxIterations(Number.isFinite(next) && next > 0 ? next : 1);
-                    }}
-                  />
+                <div className={styles.formRow}>
+                  <div className={`${styles.field} ${styles.iterationField}`}>
+                    <label htmlFor="batch-max-iterations">Max iterations</label>
+                    <input
+                      id="batch-max-iterations"
+                      className={styles.input}
+                      type="number"
+                      min={1}
+                      step={1}
+                      value={maxIterations}
+                      onChange={(e) => {
+                        const next = Number.parseInt(e.target.value || "1", 10);
+                        setMaxIterations(Number.isFinite(next) && next > 0 ? next : 1);
+                      }}
+                    />
+                  </div>
+
+                  <div className={`${styles.field} ${styles.modelField}`}>
+                    <label htmlFor="batch-model">Model</label>
+                    <select
+                      id="batch-model"
+                      className={styles.input}
+                      value={batchModel}
+                      onChange={(e) => setBatchModel(e.target.value)}
+                      disabled={isModelSelectDisabled}
+                    >
+                      {selectedLlmServer ? (
+                        modelsLoading ? (
+                          <>
+                            {hasSelectedModel && <option value={batchModel}>{batchModel}</option>}
+                            <option value="">Loading models...</option>
+                          </>
+                        ) : modelsError ? (
+                          <>
+                            {hasSelectedModel && <option value={batchModel}>{batchModel}</option>}
+                            <option value="">Server unreachable</option>
+                          </>
+                        ) : modelOptions.length === 0 ? (
+                          <option value="">No models available</option>
+                        ) : (
+                          <option value="">Select a model</option>
+                        )
+                      ) : (
+                        <option value="">Select an LLM connection</option>
+                      )}
+                      {visibleModelOptions.map((model) => (
+                        <option key={model.id} value={model.id}>
+                          {model.id}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div className={styles.formActions}>
-                  <button className={styles.secondaryButton} type="button" onClick={() => { setTitle(""); setPrompt(""); setMaxIterations(1); setError(null); }}>
+                  <button className={styles.secondaryButton} type="button" onClick={() => { setTitle(""); setPrompt(""); setMaxIterations(1); setBatchModel(settings.porkbunModelId || ""); setError(null); }}>
                     Clear
                   </button>
                   <button className={styles.primaryButton} type="button" onClick={() => void handleCreateBatch()} disabled={creating || !activeProject?.folderPath}>
@@ -716,6 +802,7 @@ export default function BatchesPage() {
                               <span>Updated: {formatTimestamp(task.updated_at)}</span>
                               {task.done_at && <span>Done: {formatTimestamp(task.done_at)}</span>}
                               {remoteStatus && <span>Remote: {statusLabel(remoteStatus.status)}</span>}
+                              {task.task?.model?.model_name && <span>Model: {task.task.model.model_name}</span>}
                             </div>
 
                             <p className={styles.taskPrompt}>{task.task?.user_prompt || "No prompt provided."}</p>

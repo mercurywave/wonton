@@ -196,10 +196,26 @@
   gap: 12px;
 }
 
+.formRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
 .field {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.iterationField {
+  flex: 0 0 180px;
+  min-width: 0;
+}
+
+.modelField {
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .field label {
