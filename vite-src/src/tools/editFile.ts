@@ -8,6 +8,33 @@ import { projectMetaStore } from "../store/projectMeta";
 
 export const EDIT_FILE_TOOL_NAME = "edit";
 
+function detectLineEnding(content: string): "\r\n" | "\n" | "\r" | "" {
+  if (!content) return "";
+
+  const crlfMatch = content.match(/\r\n/g);
+  const lfMatch = content.match(/\n/g);
+  const crMatch = content.match(/\r/g);
+
+  if (crlfMatch && crlfMatch.length > 0 && (!lfMatch || lfMatch.length < crlfMatch.length)) {
+    return "\r\n";
+  }
+
+  if (lfMatch && lfMatch.length > 0) {
+    return "\n";
+  }
+
+  if (crMatch && crMatch.length > 0) {
+    return "\r";
+  }
+
+  return "";
+}
+
+function normalizeLineEndings(content: string, newline: string): string {
+  if (!newline) return content;
+  return content.replace(/\r\n|\r|\n/g, newline);
+}
+
 export class EditFileHandler implements ToolHandler {
   private static instance: EditFileHandler;
 
@@ -166,13 +193,20 @@ export class EditFileHandler implements ToolHandler {
         };
       }
 
+      const fileLineEnding = detectLineEnding(content);
+      const normalizedContent = normalizeLineEndings(content, fileLineEnding || "\n");
+      const normalizedEdits = edits.map((edit) => ({
+        oldText: normalizeLineEndings(edit.oldText, fileLineEnding || "\n"),
+        newText: normalizeLineEndings(edit.newText, fileLineEnding || "\n"),
+      }));
+
       // Validate that each oldText appears exactly once in the file
-      for (let i = 0; i < edits.length; i++) {
-        const oldText = edits[i].oldText;
+      for (let i = 0; i < normalizedEdits.length; i++) {
+        const oldText = normalizedEdits[i].oldText;
         let startIndex = 0;
         let matchCount = 0;
         while (true) {
-          const idx = content.indexOf(oldText, startIndex);
+          const idx = normalizedContent.indexOf(oldText, startIndex);
           if (idx === -1) break;
           matchCount++;
           startIndex = idx + 1;
@@ -195,8 +229,8 @@ export class EditFileHandler implements ToolHandler {
 
       // Check for duplicate oldText values across edits
       const seenOldText = new Map<string, number>();
-      for (let i = 0; i < edits.length; i++) {
-        const existing = seenOldText.get(edits[i].oldText);
+      for (let i = 0; i < normalizedEdits.length; i++) {
+        const existing = seenOldText.get(normalizedEdits[i].oldText);
         if (existing !== undefined) {
           return {
             callId: "",
@@ -204,14 +238,14 @@ export class EditFileHandler implements ToolHandler {
             isError: true,
           };
         }
-        seenOldText.set(edits[i].oldText, i);
+        seenOldText.set(normalizedEdits[i].oldText, i);
       }
 
       // Check for overlapping edits using the single confirmed position of each oldText
-      const positions = edits.map((edit, index) => ({
+      const positions = normalizedEdits.map((edit, index) => ({
         ...edit,
         originalIndex: index,
-        start: content.indexOf(edit.oldText),
+        start: normalizedContent.indexOf(edit.oldText),
       }));
 
       for (let i = 0; i < positions.length; i++) {
@@ -232,13 +266,16 @@ export class EditFileHandler implements ToolHandler {
       }
 
       // Apply edits in reverse order to preserve positions
-      let newContent = content;
-      for (let i = edits.length - 1; i >= 0; i--) {
-        newContent = newContent.replace(edits[i].oldText, edits[i].newText);
+      let newContent = normalizedContent;
+      for (let i = normalizedEdits.length - 1; i >= 0; i--) {
+        newContent = newContent.replace(normalizedEdits[i].oldText, normalizedEdits[i].newText);
       }
 
+      // Preserve the file's existing line-ending convention when writing back.
+      const finalContent = normalizeLineEndings(newContent, fileLineEnding || "\n");
+
       // Write the modified content back
-      await filesystem.writeFile(fullPath, newContent);
+      await filesystem.writeFile(fullPath, finalContent);
 
       const stat = await filesystem.getStats(fullPath);
 
