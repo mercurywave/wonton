@@ -21,6 +21,8 @@ import FeedbackPopup from "./FeedbackPopup";
 import ToastPopup from "./ToastPopup";
 import { getDisplayName } from "../utils/modelUtils";
 import { getAvailableTools } from "../tools";
+import { projectMetaStore } from "../store/projectMeta";
+import { ProjectMeta } from "../types/chat";
 import ToolCallSection from "./ToolCallSection";
 
 interface ChatPanelProps {
@@ -429,6 +431,43 @@ export default function ChatPanel({
     [commandFlows, disabledFlows]
   );
   const activeProject = projects.find((p) => p.id === activeProjectId);
+  const [projectMeta, setProjectMeta] = useState<ProjectMeta | null>(null);
+
+  useEffect(() => {
+    if (!activeProjectId) {
+      setProjectMeta(null);
+      return;
+    }
+
+    const loadMeta = async () => {
+      await projectMetaStore.load(activeProjectId);
+      setProjectMeta(projectMetaStore.getProjectMeta(activeProjectId));
+    };
+
+    loadMeta();
+    const unsubscribe = projectMetaStore.subscribe(activeProjectId, () => {
+      setProjectMeta(projectMetaStore.getProjectMeta(activeProjectId));
+    });
+
+    return unsubscribe;
+  }, [activeProjectId]);
+
+  const presetTools = useMemo(() => {
+    if (!projectMeta) return [] as { name: string; command: string }[];
+
+    const presets = [
+      { key: "presetBuildCommand" as const, name: "build" },
+      { key: "presetRunCommand" as const, name: "run" },
+      { key: "presetLintCommand" as const, name: "lint" },
+      { key: "presetTestCommand" as const, name: "test" },
+    ];
+
+    return presets.flatMap((preset) => {
+      const command = projectMeta[preset.key];
+      if (!command || !command.trim()) return [];
+      return [{ name: preset.name, command: command.trim() }];
+    });
+  }, [projectMeta]);
 
   // Resolve the effective system prompt for display
   const resolvedSystemPrompt = useMemo(() => {
@@ -738,7 +777,7 @@ export default function ChatPanel({
           <summary className={styles.systemPromptSummary}>system prompt</summary>
           <pre className={styles.systemPromptContent}>{resolvedSystemPrompt}</pre>
         </details>
-        {availableTools.length > 0 && (
+        {(availableTools.length > 0 || presetTools.length > 0) && (
           <details className={styles.systemPromptCollapse}>
             <summary className={styles.systemPromptSummary}>tools</summary>
             <div className={styles.toolsGrid}>
@@ -749,6 +788,18 @@ export default function ChatPanel({
                 </div>
               ))}
             </div>
+            {presetTools.length > 0 && (
+              <div className={styles.presetToolsSection}>
+                <div className={styles.toolsGrid}>
+                  {presetTools.map((tool) => (
+                    <div key={tool.name} className={styles.toolCard}>
+                      <div className={styles.toolCardName}>{tool.name}</div>
+                      <div className={styles.toolCardDesc} title={tool.command}>{tool.command}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </details>
         )}
         <div className={styles.messages} ref={messagesContainerRef}>

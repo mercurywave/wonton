@@ -815,6 +815,11 @@
   margin-top: 8px;
 }
 
+.presetToolsSection {
+  margin-top: 10px;
+  padding-top: 10px;
+}
+
 .toolCard {
   background: rgba(0, 0, 0, 0.15);
   border-radius: 6px;
