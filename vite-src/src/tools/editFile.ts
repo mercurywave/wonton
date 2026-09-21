@@ -9,30 +9,86 @@ import { projectMetaStore } from "../store/projectMeta";
 export const EDIT_FILE_TOOL_NAME = "edit";
 
 function detectLineEnding(content: string): "\r\n" | "\n" | "\r" | "" {
-  if (!content) return "";
+  const lineEndings = content.match(/\r\n|\n|\r/g) as Array<"\r\n" | "\n" | "\r"> | null;
+  if (!lineEndings) return "";
 
-  const crlfMatch = content.match(/\r\n/g);
-  const lfMatch = content.match(/\n/g);
-  const crMatch = content.match(/\r/g);
-
-  if (crlfMatch && crlfMatch.length > 0 && (!lfMatch || lfMatch.length < crlfMatch.length)) {
-    return "\r\n";
+  const counts = new Map<"\r\n" | "\n" | "\r", number>();
+  for (const lineEnding of lineEndings as Array<"\r\n" | "\n" | "\r">) {
+    counts.set(lineEnding, (counts.get(lineEnding) ?? 0) + 1);
   }
 
-  if (lfMatch && lfMatch.length > 0) {
-    return "\n";
+  let predominant = lineEndings[0];
+  for (const lineEnding of lineEndings) {
+    if ((counts.get(lineEnding) ?? 0) > (counts.get(predominant) ?? 0)) {
+      predominant = lineEnding;
+    }
   }
-
-  if (crMatch && crMatch.length > 0) {
-    return "\r";
-  }
-
-  return "";
+  return predominant;
 }
 
-function normalizeLineEndings(content: string, newline: string): string {
-  if (!newline) return content;
-  return content.replace(/\r\n|\r|\n/g, newline);
+function normalizeLineEndings(content: string): string {
+  return content.replace(/\r\n|\r|\n/g, "\n");
+}
+
+function applyLineEnding(content: string, newline: "\r\n" | "\n" | "\r" | ""): string {
+  return newline ? content.replace(/\n/g, newline) : content;
+}
+
+function formatCharacterForError(character: string | undefined): string {
+  return character === undefined ? "end of text" : JSON.stringify(character);
+}
+
+function formatContextForError(content: string, position: number, radius = 20): string {
+  return JSON.stringify(content.slice(Math.max(0, position - radius), position + radius + 1));
+}
+
+function describeClosestMismatch(expected: string, content: string): string {
+  const lines = expected.split("\n");
+  let anchor = "";
+  let anchorOffset = 0;
+  let offset = 0;
+
+  for (const line of lines) {
+    if (line.trim().length > anchor.trim().length) {
+      anchor = line;
+      anchorOffset = offset;
+    }
+    offset += line.length + 1;
+  }
+
+  if (!anchor) {
+    return "No non-blank line was available to locate a close match.";
+  }
+
+  let closestStart = -1;
+  let longestPrefix = -1;
+  let anchorIndex = content.indexOf(anchor);
+  while (anchorIndex !== -1) {
+    const candidateStart = anchorIndex - anchorOffset;
+    if (candidateStart >= 0) {
+      let prefixLength = 0;
+      while (
+        prefixLength < expected.length &&
+        candidateStart + prefixLength < content.length &&
+        expected[prefixLength] === content[candidateStart + prefixLength]
+      ) {
+        prefixLength++;
+      }
+      if (prefixLength > longestPrefix) {
+        closestStart = candidateStart;
+        longestPrefix = prefixLength;
+      }
+    }
+    anchorIndex = content.indexOf(anchor, anchorIndex + 1);
+  }
+
+  if (closestStart === -1) {
+    return "No matching non-blank line was found; the file may have changed since it was read.";
+  }
+
+  const mismatchPosition = longestPrefix;
+  const actualPosition = closestStart + mismatchPosition;
+  return `Closest match differs at character ${mismatchPosition + 1}: expected ${formatCharacterForError(expected[mismatchPosition])}, found ${formatCharacterForError(content[actualPosition])}. Expected context: ${formatContextForError(expected, mismatchPosition)}. File context: ${formatContextForError(content, actualPosition)}.`;
 }
 
 export class EditFileHandler implements ToolHandler {
@@ -194,10 +250,10 @@ export class EditFileHandler implements ToolHandler {
       }
 
       const fileLineEnding = detectLineEnding(content);
-      const normalizedContent = normalizeLineEndings(content, fileLineEnding || "\n");
+      const normalizedContent = normalizeLineEndings(content);
       const normalizedEdits = edits.map((edit) => ({
-        oldText: normalizeLineEndings(edit.oldText, fileLineEnding || "\n"),
-        newText: normalizeLineEndings(edit.newText, fileLineEnding || "\n"),
+        oldText: normalizeLineEndings(edit.oldText),
+        newText: normalizeLineEndings(edit.newText),
       }));
 
       // Validate that each oldText appears exactly once in the file
@@ -214,7 +270,7 @@ export class EditFileHandler implements ToolHandler {
         if (matchCount === 0) {
           return {
             callId: "",
-            content: `Error: edits[${i}].oldText not found in file: ${responsePath}`,
+            content: `Error: edits[${i}].oldText not found in file: ${responsePath}. ${describeClosestMismatch(oldText, normalizedContent)}`,
             isError: true,
           };
         }
@@ -272,7 +328,7 @@ export class EditFileHandler implements ToolHandler {
       }
 
       // Preserve the file's existing line-ending convention when writing back.
-      const finalContent = normalizeLineEndings(newContent, fileLineEnding || "\n");
+      const finalContent = applyLineEnding(newContent, fileLineEnding);
 
       // Write the modified content back
       await filesystem.writeFile(fullPath, finalContent);

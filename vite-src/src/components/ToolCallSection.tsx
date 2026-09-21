@@ -268,6 +268,9 @@ const toolConfigs: Record<string, ToolConfig> = {
       return <ToolHeader icon={<FileText className={styles.toolCallIcon} size={14} />} name="Edit" pathLabel={path ? formatTruncatedPath(path) : null} />;
     },
     content: (parsedArgs, parsedResult) => {
+      if (parsedResult.formatted.startsWith("Error:")) {
+        return <pre className={styles.toolCallContent}>{parsedResult.formatted}</pre>;
+      }
       if (parsedArgs && !("raw" in parsedArgs)) {
         const args = parsedArgs as { path?: string; edits?: { oldText: string; newText: string }[] };
         if (args.edits && args.edits.length > 0) {
