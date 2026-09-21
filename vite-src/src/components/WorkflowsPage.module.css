@@ -369,3 +369,58 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+.presetCommandsSection {
+  margin-bottom: 16px;
+  padding: 14px 16px;
+  background: #16162a;
+  border: 1px solid #2a2a4a;
+  border-radius: 8px;
+}
+
+.presetCommandRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.presetCommandRow:last-child {
+  margin-bottom: 0;
+}
+
+.presetCommandLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: #9090a0;
+  min-width: 60px;
+  text-align: right;
+  flex-shrink: 0;
+}
+
+.presetCommandInput {
+  flex: 1;
+  background: #0e0e1a;
+  border: 1px solid #2a2a4a;
+  border-radius: 5px;
+  padding: 7px 10px;
+  font-size: 13px;
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  color: #c0c0d0;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.presetCommandInput::placeholder {
+  color: #555;
+  font-family: inherit;
+}
+
+.presetCommandInput:hover {
+  border-color: #3a3a5a;
+}
+
+.presetCommandInput:focus {
+  border-color: #4a6cf7;
+  box-shadow: 0 0 0 2px rgba(74, 108, 247, 0.15);
+}

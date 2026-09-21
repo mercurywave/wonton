@@ -245,6 +245,31 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   });
 
   const { tools: projectTools } = useToolsContext();
+
+  // Build preset command tools from projectMeta
+  const presetTools = useMemo(() => {
+    if (!projectMeta) return [] as { name: string; description: string; code: string }[];
+    const presets = [
+      { key: 'presetBuildCommand' as const, name: 'build', label: 'Build' },
+      { key: 'presetRunCommand' as const, name: 'run', label: 'Run' },
+      { key: 'presetLintCommand' as const, name: 'lint', label: 'Lint' },
+      { key: 'presetTestCommand' as const, name: 'test', label: 'Test' },
+    ];
+    const tools: { name: string; description: string; code: string }[] = [];
+    for (const preset of presets) {
+      const cmd = projectMeta[preset.key];
+      if (cmd && cmd.trim()) {
+        tools.push({
+          name: preset.name,
+          description: `Runs the ${preset.label} command for this project: ${cmd}`,
+          code: `const result = await won.runCommand(${JSON.stringify(cmd)});
+return 'Exit code: ' + result.code + '\\n\\nSTDOUT:\\n' + result.stdout + '\\n\\nSTDERR:\\n' + result.stderr;`,
+        });
+      }
+    }
+    return tools;
+  }, [projectMeta]);
+
   const workflowCustomTools = useMemo(() => {
     const toolMap = new Map<string, { name: string; description: string; code: string }>();
     for (const t of projectTools) {
@@ -255,8 +280,12 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
         toolMap.set(t.name, { name: t.name, description: t.description, code: t.code });
       }
     }
+    // Preset tools take lowest priority (will be overridden by YAML tools with same name)
+    for (const t of presetTools) {
+      toolMap.set(t.name, t);
+    }
     return Array.from(toolMap.values());
-  }, [projectTools, currentFlow?.tools]);
+  }, [projectTools, currentFlow?.tools, presetTools]);
 
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     resolvedSettings,

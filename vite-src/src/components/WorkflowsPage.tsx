@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { GitBranch, FolderOpen, Loader2, Play, Wrench } from "lucide-react";
 import styles from "../components/WorkflowsPage.module.css";
 import AgentsSettings from "../components/AgentsSettings";
 import { useFlowsContext } from "../contexts/FlowsContext";
 import { useToolsContext } from "../contexts/ToolsContext";
 import { isBackendConnected, isWindowsSync } from "../utils/platformUtils";
+import { projectMetaStore } from "../store/projectMeta";
+import { useNav } from "../contexts/NavContext";
 
 function SectionHeader({ title, path }: { title: string; path: string }) {
   const [isOpening, setIsOpening] = useState(false);
@@ -92,10 +94,19 @@ const tabs: { key: "workflows" | "tools" | "agents"; label: string }[] = [
   { key: "agents", label: "Agents" },
 ];
 
+const presetFields = [
+  { key: "presetBuildCommand" as const, label: "Build", placeholder: "e.g., npm run build" },
+  { key: "presetRunCommand" as const, label: "Run", placeholder: "e.g., npm run start" },
+  { key: "presetLintCommand" as const, label: "Lint", placeholder: "e.g., npx eslint ." },
+  { key: "presetTestCommand" as const, label: "Test", placeholder: "e.g., npm run test" },
+];
+
 export default function WorkflowsPage() {
   const { flows, disabledFlows, isLoading, globalFlowsPath, projectFlowsPath, toggleFlow, conflictIds, conflictFiles, overriddenGlobalIds } = useFlowsContext();
   const { tools, toolsDirPath } = useToolsContext();
+  const { activeProjectId } = useNav();
   const [activeTab, setActiveTab] = useState<"workflows" | "tools" | "agents">("workflows");
+  const [presetCommands, setPresetCommands] = useState<Record<string, string>>({});
   const windowsOnly = isWindowsSync();
   const overriddenSet = new Set(overriddenGlobalIds);
   const hasConflict = conflictIds.length > 0;
@@ -103,6 +114,33 @@ export default function WorkflowsPage() {
   // Split flows into project-level and global
   const projectFlows = flows.filter((f) => f.source && f.source !== "global");
   const globalFlows = flows.filter((f) => f.source === "global");
+
+  // Load preset commands from projectMeta
+  useEffect(() => {
+    if (!activeProjectId) {
+      setPresetCommands({});
+      return;
+    }
+    const load = () => {
+      const meta = projectMetaStore.getProjectMeta(activeProjectId);
+      if (meta) {
+        const commands: Record<string, string> = {};
+        for (const field of presetFields) {
+          commands[field.key] = meta[field.key] ?? "";
+        }
+        setPresetCommands(commands);
+      }
+    };
+    load();
+    const unsub = projectMetaStore.subscribe(activeProjectId, load);
+    return unsub;
+  }, [activeProjectId]);
+
+  const updatePresetCommand = async (key: string, value: string) => {
+    if (!activeProjectId) return;
+    setPresetCommands((prev) => ({ ...prev, [key]: value }));
+    await projectMetaStore.update(activeProjectId, { [key]: value });
+  };
 
   return (
     <div className={styles.container}>
@@ -199,7 +237,7 @@ export default function WorkflowsPage() {
             </>
           )}
 
-          {activeTab === "tools" && <ToolsSection toolsDirPath={toolsDirPath} tools={tools} />}
+          {activeTab === "tools" && <ToolsSection toolsDirPath={toolsDirPath} tools={tools} presetCommands={presetCommands} updatePresetCommand={updatePresetCommand} />}
 
           {activeTab === "agents" && <AgentsSettings />}
         </div>
@@ -253,7 +291,7 @@ export default function WorkflowsPage() {
   );
 }
 
-function ToolsSection({ tools, toolsDirPath }: { tools: import("../types/chat").ProjectCustomTool[]; toolsDirPath: string }) {
+function ToolsSection({ tools, toolsDirPath, presetCommands, updatePresetCommand }: { tools: import("../types/chat").ProjectCustomTool[]; toolsDirPath: string; presetCommands: Record<string, string>; updatePresetCommand: (key: string, value: string) => Promise<void> }) {
   const [isOpening, setIsOpening] = useState(false);
   const windowsOnly = isWindowsSync();
 
@@ -289,6 +327,25 @@ function ToolsSection({ tools, toolsDirPath }: { tools: import("../types/chat").
           </button>
         )}
       </div>
+      {/* Preset command tools */}
+      <div className={styles.presetCommandsSection}>
+        {presetFields.map((field) => (
+          <div key={field.key} className={styles.presetCommandRow}>
+            <label className={styles.presetCommandLabel} htmlFor={`preset-${field.key}`}>
+              {field.label}
+            </label>
+            <input
+              id={`preset-${field.key}`}
+              className={styles.presetCommandInput}
+              type="text"
+              placeholder={field.placeholder}
+              value={presetCommands[field.key] ?? ""}
+              onChange={(e) => updatePresetCommand(field.key, e.target.value)}
+            />
+          </div>
+        ))}
+      </div>
+      {/* YAML tools */}
       {tools.length === 0 ? (
         <div className={styles.empty}>
           <p>No tools found.</p>

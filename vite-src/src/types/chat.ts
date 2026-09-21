@@ -113,6 +113,10 @@ export interface ProjectMeta {
   defaultModel?: string;
   disabledFlows?: string[];
   filePermissions?: Record<string, FilePermission>;
+  presetBuildCommand?: string;
+  presetRunCommand?: string;
+  presetLintCommand?: string;
+  presetTestCommand?: string;
 }
 
 export interface FlowCustomTool {
