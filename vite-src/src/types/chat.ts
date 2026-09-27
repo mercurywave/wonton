@@ -38,6 +38,7 @@ export interface ChatMessage {
   stats?: LLMStats;
   toolCalls?: ToolCall[];
   toolCallId?: string;
+  toolExecutionMs?: number;
   originalContent?: string;
 }
 

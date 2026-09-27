@@ -172,10 +172,10 @@ const MessageBubble = memo(function MessageBubble({ message, modelAliases, toolR
 
   const toolCallResults = useMemo(() => {
     if (!toolResultMessages) return {};
-    const results: Record<string, string> = {};
+    const results: Record<string, { content: string; toolExecutionMs?: number }> = {};
     for (const tr of toolResultMessages) {
       if (tr.role === "tool" && tr.toolCallId) {
-        results[tr.toolCallId] = tr.content;
+        results[tr.toolCallId] = { content: tr.content, toolExecutionMs: tr.toolExecutionMs };
       }
     }
     return results;
@@ -227,7 +227,7 @@ const MessageBubble = memo(function MessageBubble({ message, modelAliases, toolR
         {hasToolCalls && (
           <div className={styles.toolCallContainer}>
             {message.toolCalls!.map((tc) => (
-              <ToolCallSection key={tc.id} toolCall={tc} result={toolCallResults[tc.id]} />
+              <ToolCallSection key={tc.id} toolCall={tc} result={toolCallResults[tc.id]?.content} toolExecutionMs={toolCallResults[tc.id]?.toolExecutionMs} />
             ))}
           </div>
         )}
@@ -281,7 +281,7 @@ const MessageBubble = memo(function MessageBubble({ message, modelAliases, toolR
       {hasToolCalls && (
         <div className={styles.toolCallContainer}>
           {message.toolCalls!.map((tc) => (
-            <ToolCallSection key={tc.id} toolCall={tc} result={toolCallResults[tc.id]} />
+            <ToolCallSection key={tc.id} toolCall={tc} result={toolCallResults[tc.id]?.content} toolExecutionMs={toolCallResults[tc.id]?.toolExecutionMs} />
           ))}
         </div>
       )}

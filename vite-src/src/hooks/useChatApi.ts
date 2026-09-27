@@ -34,7 +34,7 @@ interface ToolCallLoopOptions {
   reasoningEffort?: ReasoningEffort;
   customTools?: FlowCustomTool[];
   enabledToolNames?: string[];
-  onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string, reasoningContent?: string) => void;
+  onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string, reasoningContent?: string, toolExecutionMs?: number) => void;
   onChatUpdated?: () => void;
   onValidate?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
   onFinish?: () => void;
@@ -262,6 +262,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
           args = { raw: tc.arguments };
         }
 
+        const executionStartTime = Date.now();
         let result: { callId: string; content: string; isError?: boolean };
         if (customTools) {
           const customTool = findCustomTool({ tools: customTools }, tc.name);
@@ -301,7 +302,8 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
         // Update the tool result message with actual content
         const toolResultMessage = toolResults[i];
         toolResultMessage.content = result.content;
-        onUpdateMessage?.(toolResultMessage.id, result.content, [], "tool", toolResultMessage.toolCallId);
+        toolResultMessage.toolExecutionMs = Date.now() - executionStartTime;
+        onUpdateMessage?.(toolResultMessage.id, result.content, [], "tool", toolResultMessage.toolCallId, undefined, toolResultMessage.toolExecutionMs);
       }
 
       // Persist assistant message and its tool results in order

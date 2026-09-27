@@ -52,7 +52,7 @@ function ToolHeader({ icon, name, pathLabel }: { icon: React.ReactNode; name: st
   );
 }
 
-function DebugSection({ args, formatted }: { args: object | null; formatted: string }) {
+function DebugSection({ args, formatted, toolExecutionMs }: { args: object | null; formatted: string; toolExecutionMs?: number }) {
   const [isExpanded, setIsExpanded] = useState(false);
   return (
     <div className={styles.debugSection}>
@@ -62,6 +62,12 @@ function DebugSection({ args, formatted }: { args: object | null; formatted: str
       </button>
       {isExpanded && (
         <div className={styles.debugBody}>
+          {toolExecutionMs !== undefined && (
+            <>
+              <div className={styles.toolCallSectionLabel}>Duration</div>
+              <div>{toolExecutionMs} ms</div>
+            </>
+          )}
           <div className={styles.toolCallSectionLabel}>Arguments</div>
           <pre className={styles.toolCallArgs}>{JSON.stringify(args, null, 2)}</pre>
           {formatted && (
@@ -76,7 +82,7 @@ function DebugSection({ args, formatted }: { args: object | null; formatted: str
   );
 }
 
-function SubagentSection({ toolCall, result }: { toolCall: ToolCall; result?: string }) {
+function SubagentSection({ toolCall, result, toolExecutionMs }: { toolCall: ToolCall; result?: string; toolExecutionMs?: number }) {
   const { navigateToLog } = useNav();
   const [isExpanded, setIsExpanded] = useState(false);
   const parsedArgs = useMemo(() => parseArgs(toolCall), [toolCall]);
@@ -122,14 +128,14 @@ function SubagentSection({ toolCall, result }: { toolCall: ToolCall; result?: st
       </div>
       {isExpanded && (
         <div className={styles.toolCallBody}>
-          <DebugSection args={parsedArgs} formatted={parsedResult.formatted} />
+          <DebugSection args={parsedArgs} formatted={parsedResult.formatted} toolExecutionMs={toolExecutionMs} />
         </div>
       )}
     </div>
   );
 }
 
-function ExecSection({ toolCall, result }: { toolCall: ToolCall; result?: string }) {
+function ExecSection({ toolCall, result, toolExecutionMs }: { toolCall: ToolCall; result?: string; toolExecutionMs?: number }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const parsedArgs = useMemo(() => parseArgs(toolCall), [toolCall]);
   const parsedResult = useMemo(() => parseResult(result), [result]);
@@ -182,7 +188,7 @@ function ExecSection({ toolCall, result }: { toolCall: ToolCall; result?: string
       {isExpanded && (
         <div className={styles.toolCallBody}>
           {renderExecContent()}
-          <DebugSection args={parsedArgs} formatted={parsedResult.formatted} />
+          <DebugSection args={parsedArgs} formatted={parsedResult.formatted} toolExecutionMs={toolExecutionMs} />
         </div>
       )}
     </div>
@@ -391,12 +397,12 @@ function ResultsTable({ results, truncated }: { results: Array<Record<string, un
   );
 }
 
-export default function ToolCallSection({ toolCall, result }: { toolCall: ToolCall; result?: string }) {
+export default function ToolCallSection({ toolCall, result, toolExecutionMs }: { toolCall: ToolCall; result?: string; toolExecutionMs?: number }) {
   if (toolCall.name === EXECUTE_SUBAGENT_TOOL_NAME) {
-    return <SubagentSection toolCall={toolCall} result={result} />;
+    return <SubagentSection toolCall={toolCall} result={result} toolExecutionMs={toolExecutionMs} />;
   }
   if (toolCall.name === EXEC_COMMAND_TOOL_NAME) {
-    return <ExecSection toolCall={toolCall} result={result} />;
+    return <ExecSection toolCall={toolCall} result={result} toolExecutionMs={toolExecutionMs} />;
   }
 
   const [isExpanded, setIsExpanded] = useState(false);
@@ -417,7 +423,7 @@ export default function ToolCallSection({ toolCall, result }: { toolCall: ToolCa
       {isExpanded && (
         <div className={styles.toolCallBody}>
           {config.content(parsedArgs, parsedResult)}
-          <DebugSection args={parsedArgs} formatted={parsedResult.formatted} />
+          <DebugSection args={parsedArgs} formatted={parsedResult.formatted} toolExecutionMs={toolExecutionMs} />
         </div>
       )}
     </div>
