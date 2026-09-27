@@ -93,6 +93,7 @@ export interface ChatMeta {
   activeModel?: string;
   activeAgentId?: string;
   reasoningEffort?: ReasoningEffort;
+  enabledToolNames?: string[];
   workflowId?: string;
   workflowStateKey?: string;
   workflowData?: Record<string, unknown>;

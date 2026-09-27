@@ -54,6 +54,8 @@ interface ChatsContextValue {
   onModelChange: (modelId: string) => Promise<void>;
   activeReasoningEffort: ReasoningEffort;
   onReasoningEffortChange: (effort: ReasoningEffort) => Promise<void>;
+  enabledToolNames: string[];
+  onToolSetChange: (toolNames: string[]) => Promise<void>;
 }
 
 const ChatsContext = createContext<ChatsContextValue | null>(null);
@@ -198,6 +200,25 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     [selectedChatId, activeProjectId, activeSubagentMeta, settings.reasoningEffort, updateSubagentMeta]
   );
 
+  // Resolve the effective enabled tool names for the selected chat
+  const enabledToolNames = useMemo(() => {
+    if (!selectedChatMeta) return [];
+    return selectedChatMeta.enabledToolNames || [];
+  }, [selectedChatMeta]);
+
+  // Callback to change the enabled tools for the selected chat
+  const onToolSetChange = useCallback(
+    async (toolNames: string[]) => {
+      if (!selectedChatId || !activeProjectId) return;
+      if (toolNames.length === 0) {
+        await projectChatsUpdateChatMeta(selectedChatId, { enabledToolNames: undefined });
+      } else {
+        await projectChatsUpdateChatMeta(selectedChatId, { enabledToolNames: toolNames });
+      }
+    },
+    [selectedChatId, activeProjectId, projectChatsUpdateChatMeta]
+  );
+
   // Active logId: navLogId if set (explicit log selection), otherwise fall back to chat's main log
   const activeLogId = useMemo(() => {
     if (navLogId) return navLogId;
@@ -306,6 +327,7 @@ return 'Exit code: ' + result.code + '\\n\\nSTDOUT:\\n' + result.stdout + '\\n\\
     wrappedShowFeedback,
     activeReasoningEffort,
     workflowCustomTools,
+    enabledToolNames,
   );
 
   // Track previous isLoading to detect completion of user-initiated chats
@@ -478,8 +500,10 @@ return 'Exit code: ' + result.code + '\\n\\nSTDOUT:\\n' + result.stdout + '\\n\\
       onModelChange,
       activeReasoningEffort,
       onReasoningEffortChange,
+      enabledToolNames,
+      onToolSetChange,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

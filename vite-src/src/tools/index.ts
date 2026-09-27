@@ -45,29 +45,49 @@ export async function executeToolCall(
   return handler.execute(args, context, toolCall);
 }
 
-export async function filterToAvailableTools(toolNames: string[], folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition[]> {
+export async function filterToAvailableTools(toolNames: string[], folderPath?: string, agent?: Agent, allAgents?: Agent[], enabledToolNames?: string[]): Promise<ToolDefinition[]> {
   return await filterAndCleanTools(
     Object.values(toolHandlers).filter(h => toolNames.includes(h.name)), 
     folderPath,
     agent,
-    allAgents
+    allAgents,
+    enabledToolNames
   );
 }
 
-export async function getAvailableTools(folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition[]> {
-  return await filterAndCleanTools(Object.values(toolHandlers), folderPath, agent, allAgents);
+export async function getAvailableTools(
+  folderPath?: string,
+  agent?: Agent,
+  allAgents?: Agent[],
+  enabledToolNames?: string[],
+): Promise<ToolDefinition[]> {
+  return await filterAndCleanTools(Object.values(toolHandlers), folderPath, agent, allAgents, enabledToolNames);
+}
+
+export async function getOptionalTools(folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition[]> {
+  return await filterAndCleanTools(Object.values(toolHandlers), folderPath, agent, allAgents, undefined, false);
 }
 
 export { executeCustomTool, getCustomToolDefinitions, findCustomTool } from "./customTool";
 
-async function filterAndCleanTools(allTools: ToolHandler[], folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition[]> {
+async function filterAndCleanTools(
+  allTools: ToolHandler[],
+  folderPath?: string,
+  agent?: Agent,
+  allAgents?: Agent[],
+  enabledToolNames?: string[],
+  useDefaultToolSet: boolean = true,
+): Promise<ToolDefinition[]> {
   const availableAgents = (allAgents && agent && agent.subagentAllowlist) 
     ? allAgents.filter(a => agent.subagentAllowlist?.includes(a.id))
     : allAgents;
 
-  const allowedTools = agent?.defaultToolSet
-    ? allTools.filter(t => agent.defaultToolSet!.includes(t.name))
-    : allTools;
+  const defaultToolNames = new Set(agent?.defaultToolSet ?? []);
+  const optionalToolNames = new Set(enabledToolNames ?? []);
+
+  const allowedTools = useDefaultToolSet
+    ? allTools.filter((t) => defaultToolNames.has(t.name) || optionalToolNames.has(t.name))
+    : allTools.filter((t) => !defaultToolNames.has(t.name));
 
   const filtered = allowedTools.filter((h) => {
     if(h.isAvailable){

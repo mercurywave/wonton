@@ -425,6 +425,8 @@ export function buildWon(
       const model = chat?.activeModel || projectMeta?.defaultModel || settings.defaultModel || "";
       const reasoningEffort = (chat?.reasoningEffort as ReasoningEffort | undefined) || settings.reasoningEffort;
       const folderPath = projectStore.getProjectById(projectId)?.folderPath;
+      const enabledToolNames = chat?.enabledToolNames ?? [];
+      const toolNames = [...new Set([...(agent?.defaultToolSet ?? []), ...enabledToolNames])];
       const userChatMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",
@@ -432,10 +434,11 @@ export function buildWon(
         timestamp: Date.now(),
       };
       const resolvedTools = await filterToAvailableTools(
-        agent?.defaultToolSet || [],
+        toolNames,
         folderPath,
         agent,
         allAgents,
+        enabledToolNames,
       );
       const customToolDefs = (() => {
         const toolMap = new Map<string, FlowCustomTool>();
@@ -472,6 +475,7 @@ export function buildWon(
         allAgents,
         reasoningEffort,
         customTools: customToolDefs.length > 0 ? customToolDefs : undefined,
+        enabledToolNames,
         onUpdateMessage: () => {},
         onChatUpdated: () => {},
         onValidate: showFeedback,

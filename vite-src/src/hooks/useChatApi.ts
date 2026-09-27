@@ -33,6 +33,7 @@ interface ToolCallLoopOptions {
   allAgents?: Agent[];
   reasoningEffort?: ReasoningEffort;
   customTools?: FlowCustomTool[];
+  enabledToolNames?: string[];
   onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string, reasoningContent?: string) => void;
   onChatUpdated?: () => void;
   onValidate?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
@@ -63,13 +64,14 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     allAgents,
     reasoningEffort,
     customTools,
+    enabledToolNames,
     onUpdateMessage,
     onChatUpdated,
     onValidate,
     onFinish,
   } = options;
 
-  const standardTools = await filterToAvailableTools(toolNames, folderPath, agent, allAgents);
+  const standardTools = await filterToAvailableTools(toolNames, folderPath, agent, allAgents, enabledToolNames);
   const customToolDefs = customTools ? getCustomToolDefinitions({ tools: customTools }) : [];
   const tools = [...standardTools, ...customToolDefs];
 
@@ -371,6 +373,7 @@ export function useChatApi(
   onValidate?: (projectId: string, chatId: string, logId: string, payload: import("../contexts").FeedbackPayload) => Promise<number | string | void>,
   reasoningEffort?: ReasoningEffort,
   customTools?: FlowCustomTool[],
+  enabledToolNames?: string[],
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -503,7 +506,7 @@ export function useChatApi(
         // Include userMessage since setMessages is async and messages state is stale
         const allMessagesForApi = [...messagesRef.current, userMessage];
 
-        const resolvedTools = await getAvailableTools(folderPath, agent, allAgents);
+        const resolvedTools = await getAvailableTools(folderPath, agent, allAgents, enabledToolNames);
 
         await onSendPrompt?.();
 
@@ -523,6 +526,7 @@ export function useChatApi(
           allAgents,
           reasoningEffort,
           customTools,
+          enabledToolNames,
           onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId, messageReasoningContent) => {
             if (logId && messageRole !== "tool") {
               const pending = chatLogsStore.getPendingMessage(projectId!, logId);
@@ -566,7 +570,7 @@ export function useChatApi(
         }
       }
     },
-    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, folderPath, onSendPrompt, onChatResponse, agentId, onValidate, customTools]
+    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, folderPath, onSendPrompt, onChatResponse, agentId, onValidate, customTools, enabledToolNames]
   );
 
   const stopGeneration = useCallback(() => {

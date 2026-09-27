@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback, useMemo, useState, memo } from "react";
 import React from "react";
-import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play, Brain, Copy, Undo2, Utensils } from "lucide-react";
+import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play, Brain, Copy, Undo2, Utensils, Hammer } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
@@ -13,6 +13,7 @@ import { isBackendConnected } from "../utils/platformUtils";
 import ModelPicker from "./ModelPicker";
 import AgentPicker from "./AgentPicker";
 import ThinkingPicker from "./ThinkingPicker";
+import ToolPicker from "./ToolPicker";
 import ContextRing from "./ContextRing";
 import LogSelector from "./LogSelector";
 import FileSelector from "./FileSelector";
@@ -20,7 +21,7 @@ import SelectionBubble from "./SelectionBubble";
 import FeedbackPopup from "./FeedbackPopup";
 import ToastPopup from "./ToastPopup";
 import { getDisplayName } from "../utils/modelUtils";
-import { getAvailableTools } from "../tools";
+import { getAvailableTools, getOptionalTools } from "../tools";
 import { projectMetaStore } from "../store/projectMeta";
 import { ProjectMeta } from "../types/chat";
 import ToolCallSection from "./ToolCallSection";
@@ -353,6 +354,8 @@ export default function ChatPanel({
     executeCommand: runCommand,
     setSelectedChatWorkflowId,
     onUserMessageAction,
+    enabledToolNames,
+    onToolSetChange,
   } = useChats();
 
   const [extensionStatus, setExtensionStatus] = useState<string | null>(null);
@@ -425,6 +428,7 @@ export default function ChatPanel({
   const { tools: projectTools } = useToolsContext();
   const { on: onEvent } = useEventBus();
   const [showCommandsPopup, setShowCommandsPopup] = useState(false);
+  const [showToolPicker, setShowToolPicker] = useState(false);
   const popupRef = useRef<HTMLDivElement>(null);
   const enabledCommands = useMemo(
     () => commandFlows.filter((f) => !disabledFlows.includes(f.id)),
@@ -538,11 +542,15 @@ export default function ChatPanel({
   }, [logId, currentChat, allAgents]);
 
   const [availableTools, setAvailableTools] = useState<ToolDefinition[]>([]);
+  const [optionalTools, setOptionalTools] = useState<ToolDefinition[]>([]);
 
   useEffect(() => {
     const loadTools = async () => {
       let agent = allAgents.find((a) => a.id === activeAgentId);
-      const tools = await getAvailableTools(activeProject?.folderPath, agent, allAgents);
+      const [tools, optionalTools] = await Promise.all([
+        getAvailableTools(activeProject?.folderPath, agent, allAgents, enabledToolNames),
+        getOptionalTools(activeProject?.folderPath, agent, allAgents),
+      ]);
       
       // Merge project tools with workflow tools (workflow tools overwrite by name)
       const toolMap = new Map<string, { name: string; description: string }>();
@@ -563,9 +571,10 @@ export default function ChatPanel({
         },
       }));
       setAvailableTools([...tools, ...customToolDefs]);
+      setOptionalTools(optionalTools);
     };
     loadTools();
-  }, [activeProject?.folderPath, activeAgentId, allAgents, resolvedWorkflow?.tools, projectTools]);
+  }, [activeProject?.folderPath, activeAgentId, allAgents, enabledToolNames, resolvedWorkflow?.tools, projectTools]);
   const { maxTokens } = useContextWindow(activeModel, resolvedSettings, settings.defaultContextWindow);
 
   const usageTokens = useMemo(() => {
@@ -963,6 +972,23 @@ export default function ChatPanel({
                   )}
                 </div>
               </div>
+            )}
+            <button
+              type="button"
+              className={`${styles.commandButton} ${optionalTools.length > 0 && enabledToolNames.length > 0 ? styles.commandButtonHasExtras : ""}`}
+              onClick={() => setShowToolPicker(!showToolPicker)}
+              title="Toggle tools"
+              disabled={optionalTools.length === 0}
+            >
+              <Hammer size={16} />
+            </button>
+            {showToolPicker && (
+              <ToolPicker
+                availableTools={optionalTools}
+                enabledToolNames={enabledToolNames}
+                onToolSetChange={onToolSetChange}
+                onClose={() => setShowToolPicker(false)}
+              />
             )}
             <ContextRing
               usageTokens={usageTokens}
