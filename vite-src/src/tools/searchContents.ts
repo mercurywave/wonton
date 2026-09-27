@@ -224,50 +224,60 @@ export class SearchContentsHandler implements ToolHandler {
         matchNote = ` [Showing 5 of ${matches.length + (r.matches.length - 5)} total matches in this file]`;
       }
 
+      const matchesOutput = matches.map((m) => {
+        const originalContent = m.content;
+        
+        // For long lines (>200 chars), show context around the first match on that line
+        let displayContent = originalContent;
+        if (originalContent.length > 200) {
+          const queryLower = query.toLowerCase();
+          const contentLower = originalContent.toLowerCase();
+          const matchIndex = contentLower.indexOf(queryLower);
+          
+          if (matchIndex !== -1) {
+            // Show some context before and after the match
+            const contextBefore = 50;
+            const contextAfter = 50;
+            const start = Math.max(0, matchIndex - contextBefore);
+            const end = Math.min(originalContent.length, matchIndex + query.length + contextAfter);
+            
+            let context = "";
+            if (start > 0) {
+              context += "...";
+            }
+            context += originalContent.slice(start, end);
+            if (end < originalContent.length) {
+              context += "...";
+            }
+            
+            displayContent = `[Context around first match (${originalContent.length} chars): ${context}]`;
+          }
+        }
+
+        // If there are multiple matches on this line, note it
+        const matchCount = originalContent.toLowerCase().split(query.toLowerCase()).length - 1;
+        if (matchCount > 1) {
+          displayContent = `[First of ${matchCount} matches on this line] ${displayContent}`;
+        }
+
+        return {
+          line: m.line,
+          content: displayContent,
+        };
+      });
+
+      // Add truncation note as a separate entry at line -1 if needed
+      if (matchNote) {
+        matchesOutput.unshift({
+          line: -1,
+          content: matchNote,
+        });
+      }
+
       return {
         path,
         size: r.size,
-        matches: matches.map((m) => {
-          const originalContent = m.content;
-          
-          // For long lines (>200 chars), show context around the first match on that line
-          let displayContent = originalContent;
-          if (originalContent.length > 200) {
-            const queryLower = query.toLowerCase();
-            const contentLower = originalContent.toLowerCase();
-            const matchIndex = contentLower.indexOf(queryLower);
-            
-            if (matchIndex !== -1) {
-              // Show some context before and after the match
-              const contextBefore = 50;
-              const contextAfter = 50;
-              const start = Math.max(0, matchIndex - contextBefore);
-              const end = Math.min(originalContent.length, matchIndex + query.length + contextAfter);
-              
-              let context = "";
-              if (start > 0) {
-                context += "...";
-              }
-              context += originalContent.slice(start, end);
-              if (end < originalContent.length) {
-                context += "...";
-              }
-              
-              displayContent = `[Context around first match (${originalContent.length} chars): ${context}]`;
-            }
-          }
-
-          // If there are multiple matches on this line, note it
-          const matchCount = originalContent.toLowerCase().split(query.toLowerCase()).length - 1;
-          if (matchCount > 1) {
-            displayContent = `[First of ${matchCount} matches on this line] ${displayContent}`;
-          }
-
-          return {
-            line: m.line,
-            content: displayContent + matchNote,
-          };
-        }),
+        matches: matchesOutput,
       };
     });
 
