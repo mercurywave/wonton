@@ -156,15 +156,6 @@ export default function Sidebar({
     }
   }, [showTaskPopup]);
 
-  const handleTaskPopupKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      setShowTaskPopup(false);
-      setTaskPopupText("");
-    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-      handleTaskPopupSave();
-    }
-  }, []);
-
   const handleTaskPopupSave = useCallback(async () => {
     if (!taskPopupText.trim()) return;
     setTaskCreating(true);
@@ -173,6 +164,15 @@ export default function Sidebar({
     setShowTaskPopup(false);
     setTaskCreating(false);
   }, [taskPopupText, createTask]);
+
+  const handleTaskPopupKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      setShowTaskPopup(false);
+      setTaskPopupText("");
+    } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+      handleTaskPopupSave();
+    }
+  }, [handleTaskPopupSave]);
 
   const handleContextMenu = (e: React.MouseEvent, chatId: string) => {
     e.preventDefault();

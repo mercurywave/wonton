@@ -398,16 +398,16 @@ function ResultsTable({ results, truncated }: { results: Array<Record<string, un
 }
 
 export default function ToolCallSection({ toolCall, result, toolExecutionMs }: { toolCall: ToolCall; result?: string; toolExecutionMs?: number }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const parsedArgs = useMemo(() => parseArgs(toolCall), [toolCall]);
+  const parsedResult = useMemo(() => parseResult(result), [result]);
+
   if (toolCall.name === EXECUTE_SUBAGENT_TOOL_NAME) {
     return <SubagentSection toolCall={toolCall} result={result} toolExecutionMs={toolExecutionMs} />;
   }
   if (toolCall.name === EXEC_COMMAND_TOOL_NAME) {
     return <ExecSection toolCall={toolCall} result={result} toolExecutionMs={toolExecutionMs} />;
   }
-
-  const [isExpanded, setIsExpanded] = useState(false);
-  const parsedArgs = useMemo(() => parseArgs(toolCall), [toolCall]);
-  const parsedResult = useMemo(() => parseResult(result), [result]);
 
   const config = toolConfigs[toolCall.name] ?? {
     header: () => <ToolHeader icon={<Hammer className={styles.toolCallIcon} size={14} />} name={toolCall.name} pathLabel={null} />,

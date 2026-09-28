@@ -81,12 +81,6 @@ function TreeNodeComponent({
   const [loadError, setLoadError] = useState(false);
   const isExpanded = expandedPaths.has(node.path);
 
-  useEffect(() => {
-    if (isExpanded && !isLoaded && !loadError && node.isDirectory) {
-      loadChildren();
-    }
-  }, [isExpanded]);
-
   const loadChildren = useCallback(async () => {
     try {
       const entries = await filesystem.readDirectory(node.path);
@@ -112,7 +106,13 @@ function TreeNodeComponent({
       setLoadError(true);
       setIsLoaded(true);
     }
-  }, [node.path, node.isDirectory]);
+  }, [node.path]);
+
+  useEffect(() => {
+    if (isExpanded && !isLoaded && !loadError && node.isDirectory) {
+      loadChildren();
+    }
+  }, [isExpanded, isLoaded, loadError, node.isDirectory, loadChildren]);
 
   const handleToggleExpand = useCallback(() => {
     if (!node.isDirectory) return;
@@ -298,10 +298,6 @@ export default function FileTree({
   const [loadError, setLoadError] = useState(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    loadRoot();
-  }, [folderPath]);
-
   const loadRoot = useCallback(async () => {
     try {
       const normFolderPath = folderPath.replace(/\\/g, "/");
@@ -329,6 +325,10 @@ export default function FileTree({
       setIsLoaded(true);
     }
   }, [folderPath]);
+
+  useEffect(() => {
+    loadRoot();
+  }, [loadRoot]);
 
   const toggleExpand = useCallback((path: string) => {
     setExpandedPaths((prev) => {
