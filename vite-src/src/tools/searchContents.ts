@@ -5,6 +5,7 @@ import { getEffectivePermission } from "./pathTools";
 import { projectMetaStore } from "../store/projectMeta";
 import { chatStore } from "../store/chats";
 import { getProjectDataDir, TMP_DIR_NAME } from "../utils/platformUtils";
+import { minimatch } from "minimatch";
 
 export const SEARCH_CONTENTS_TOOL_NAME = "grep";
 
@@ -50,6 +51,14 @@ export class SearchContentsHandler implements ToolHandler {
           maxResults: {
             type: "number",
             description: "Maximum number of files to return (default: 20)",
+          },
+          include: {
+            type: "string",
+            description: "Glob pattern for files to include in the search (e.g., '*.ts', 'src/**/*.{js,ts}')",
+          },
+          exclude: {
+            type: "string",
+            description: "Glob pattern for files to exclude from the search (e.g., '*.test.ts', '**/node_modules/**')",
           },
         },
         required: ["query"],
@@ -175,6 +184,32 @@ export class SearchContentsHandler implements ToolHandler {
   }
 
   /**
+   * Filter file paths by a glob pattern using minimatch.
+   * Matches against the path relative to baseDir.
+   * If exclude is true, files matching the pattern are excluded; otherwise they are included.
+   */
+  private filterByGlob(filePaths: string[], baseDir: string, pattern: string, exclude = false): string[] {
+    // Normalize baseDir to use forward slashes for comparison
+    const normBaseDir = baseDir.replace(/\\/g, "/");
+    return filePaths.filter((fp) => {
+      // Normalize fp to forward slashes and compute relative path
+      const normFp = fp.replace(/\\/g, "/");
+      let relPath: string;
+      if (normFp.startsWith(normBaseDir + "/")) {
+        relPath = normFp.slice(normBaseDir.length + 1);
+      } else if (normFp === normBaseDir) {
+        relPath = ".";
+      } else {
+        relPath = normFp;
+      }
+      // For simple exclude patterns like **/node_modules/**, use a direct string check
+      // which is more reliable than minimatch for common exclusion patterns
+      const matches = minimatch(relPath, pattern);
+      return exclude ? !matches : matches;
+    });
+  }
+
+  /**
    * Check if a file path should be included in the search based on extension.
    * Returns false for files with extensions that are commonly binary.
    */
@@ -206,7 +241,9 @@ export class SearchContentsHandler implements ToolHandler {
     maxResults: number,
     depth: number,
     projectId: string | undefined,
-    folderPath: string
+    folderPath: string,
+    include?: string,
+    exclude?: string
   ): Promise<boolean> {
     if (results.length >= maxResults) {
       return true;
@@ -254,7 +291,17 @@ export class SearchContentsHandler implements ToolHandler {
       // Batch process files in parallel
       if (files.length > 0) {
         // First filter by extension
-        const eligibleFiles = files.filter(f => this.shouldSearchFile(f));
+        let eligibleFiles = files.filter(f => this.shouldSearchFile(f));
+
+        // Apply include glob filter (match against relative path)
+        if (include) {
+          eligibleFiles = this.filterByGlob(eligibleFiles, folderPath, include);
+        }
+
+        // Apply exclude glob filter (match against relative path)
+        if (exclude) {
+          eligibleFiles = this.filterByGlob(eligibleFiles, folderPath, exclude, true);
+        }
         
         // Batch read stats for eligible files
         const statsMap = await this.readStatsBatch(eligibleFiles);
@@ -312,7 +359,7 @@ export class SearchContentsHandler implements ToolHandler {
       // due to permission checks that depend on projectId)
       for (const dir of directories) {
         if (results.length >= maxResults) break;
-        const done = await this.searchDirectory(dir.path, query, results, maxResults, depth + 1, projectId, folderPath);
+        const done = await this.searchDirectory(dir.path, query, results, maxResults, depth + 1, projectId, folderPath, include, exclude);
         if (done) return true;
       }
     } catch {
@@ -323,7 +370,7 @@ export class SearchContentsHandler implements ToolHandler {
   }
 
   async execute(args: object, context: ToolContext): Promise<ToolResult> {
-    const { query, maxResults = 20 } = args as { query: string; maxResults?: number };
+    const { query, maxResults = 20, include, exclude } = args as { query: string; maxResults?: number; include?: string; exclude?: string };
     const { folderPath, projectId, chatId } = context;
 
     if (!folderPath) {
@@ -343,7 +390,7 @@ export class SearchContentsHandler implements ToolHandler {
     }
 
     const results: ContentSearchResult[] = [];
-    const done = await this.searchDirectory(folderPath, query, results, maxResults, 0, projectId, folderPath);
+    const done = await this.searchDirectory(folderPath, query, results, maxResults, 0, projectId, folderPath, include, exclude);
 
     const reservedTempFiles = (chatId && projectId)
       ? await chatStore.getReservedTempFiles(projectId, chatId)
