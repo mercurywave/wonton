@@ -428,7 +428,7 @@ return 'Exit code: ' + result.code + '\\n\\nSTDOUT:\\n' + result.stdout + '\\n\\
       const messages = chatLogsStore.getLog(activeProjectId, chat.logId);
       const msg = messages?.find(m => m.id === messageId);
       if (msg) {
-        await navigator.clipboard.writeText(msg.content);
+        await navigator.clipboard.writeText(msg.content ?? "");
       }
       return;
     }
@@ -458,7 +458,7 @@ return 'Exit code: ' + result.code + '\\n\\nSTDOUT:\\n' + result.stdout + '\\n\\
       await chatLogsStore.replaceLog(activeProjectId, newLogId, truncatedMessages);
 
       // Set draft to the rollback message content for editing
-      await projectChatsUpdateChatMeta(actionChatId, { draft: rollbackMessage.content });
+      await projectChatsUpdateChatMeta(actionChatId, { draft: rollbackMessage.content ?? "" });
     }
   }, [chats, activeProjectId, projectChatsUpdateChatMeta]);
 

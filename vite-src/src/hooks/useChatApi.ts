@@ -246,11 +246,11 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
         toolResults.push(toolResultMessage);
 
         // Broadcast partial tool result message immediately
-        onUpdateMessage?.(toolResultMessage.id, toolResultMessage.content, [], "tool", toolResultMessage.toolCallId);
+        onUpdateMessage?.(toolResultMessage.id, toolResultMessage.content ?? "", [], "tool", toolResultMessage.toolCallId);
       }
 
       // Notify caller of updated assistant message
-      onUpdateMessage?.(assistantId, assistantMessage.content, toolCalls, "assistant");
+      onUpdateMessage?.(assistantId, assistantMessage.content ?? "", toolCalls, "assistant");
 
       // Execute tool calls and update results
       for (let i = 0; i < toolCalls.length; i++) {

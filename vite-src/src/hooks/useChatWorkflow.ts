@@ -268,7 +268,7 @@ export function buildWon(
         systemPrompt: resolvedSystemPrompt,
         model: resolvedModel,
       });
-      return result.finalMessage.content;
+      return result.finalMessage.content ?? "";
     },
     getChatDraft(): string {
       const meta = chatStore.getChat(projectId, chatId);
@@ -408,7 +408,7 @@ export function buildWon(
       subagentMeta.updatedAt = Date.now();
       await chatStore.saveSubagentMeta(projectId, chatId, subagentMeta);
       
-      return result.finalMessage.content;
+      return result.finalMessage.content ?? "";
     },
     async runPrompt(userMessage: string): Promise<string> {
       if (logId) { throw new Error("Cannot runPrompt from sub agent"); }
@@ -480,7 +480,7 @@ export function buildWon(
         onChatUpdated: () => {},
         onValidate: showFeedback,
       });
-      return result.finalMessage.content;
+      return result.finalMessage.content ?? "";
     },
     async finishWorkflow() {
       await chatStore.updateChatMeta(projectId, chatId, {

@@ -175,7 +175,7 @@ const MessageBubble = memo(function MessageBubble({ message, modelAliases, toolR
     const results: Record<string, { content: string; toolExecutionMs?: number }> = {};
     for (const tr of toolResultMessages) {
       if (tr.role === "tool" && tr.toolCallId) {
-        results[tr.toolCallId] = { content: tr.content, toolExecutionMs: tr.toolExecutionMs };
+        results[tr.toolCallId] = { content: tr.content ?? "", toolExecutionMs: tr.toolExecutionMs };
       }
     }
     return results;

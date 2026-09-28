@@ -32,7 +32,7 @@ export interface ToolResult {
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system" | "tool";
-  content: string;
+  content: string | null;
   reasoningContent?: string;
   timestamp: number;
   stats?: LLMStats;
@@ -170,7 +170,7 @@ export interface WorkflowStateContext {
 
 export interface ChatHistoryEntry {
   role: "user" | "assistant" | "system" | "tool";
-  content: string;
+  content: string | null;
 }
 
 export interface WonQueryOptions {

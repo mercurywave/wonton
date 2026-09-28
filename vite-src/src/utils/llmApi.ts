@@ -112,7 +112,7 @@ export function mergeStats(existing: LLMStats | null, incoming: LLMStats | null)
 interface ApiMessagesResult {
   messages: Array<{
     role: string;
-    content?: string;
+    content?: string | null;
     tool_calls?: { type: string; id: string; function: { name: string; arguments: string } }[];
     tool_call_id?: string;
   }>;
@@ -126,7 +126,7 @@ export function buildApiMessages(
 ): ApiMessagesResult {
   const allMessages: Array<{
     role: string;
-    content?: string;
+    content?: string | null;
     tool_calls?: { type: string; id: string; function: { name: string; arguments: string } }[];
     tool_call_id?: string;
   }> = [];
@@ -138,7 +138,7 @@ export function buildApiMessages(
   for (const msg of messages) {
     const apiMsg: {
       role: string;
-      content?: string;
+      content?: string | null;
       tool_calls?: { type: string; id: string; function: { name: string; arguments: string } }[];
       tool_call_id?: string;
     } = { role: msg.role };
@@ -147,7 +147,16 @@ export function buildApiMessages(
       apiMsg.tool_call_id = msg.toolCallId;
       apiMsg.content = msg.content;
     } else {
-      apiMsg.content = msg.content;
+      if (msg.toolCalls && msg.toolCalls.length > 0) {
+        if (msg.content && msg.content.length > 0) {
+          apiMsg.content = msg.content;
+        }
+        else {
+          apiMsg.content = null;
+        }
+      } else {
+        apiMsg.content = msg.content;
+      }
     }
 
     if (msg.toolCalls && msg.toolCalls.length > 0) {
@@ -172,7 +181,7 @@ interface ApiRequestBody {
   model: string;
   messages: Array<{
     role: string;
-    content?: string;
+    content?: string | null;
     tool_calls?: { type: string; id: string; function: { name: string; arguments: string } }[];
     tool_call_id?: string;
   }>;
