@@ -184,10 +184,15 @@ export default function ReferencesPage() {
           const dPath = `${projectDir}/${DOCS_DIR_NAME}`;
           setDocsPath(dPath);
           try { await filesystem.getStats(dPath); } catch {
-            try { await filesystem.createDirectory(dPath); } catch {}
+            /* directory likely exists */
+          }
+          try { await filesystem.createDirectory(dPath); } catch {
+            /* intentionally empty */
           }
         }
-      } catch {}
+      } catch {
+        /* intentionally empty */
+      }
     })();
   }, [activeProjectId]);
 

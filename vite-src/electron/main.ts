@@ -225,7 +225,7 @@ const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ..
     return path.normalize(filePath);
   },
 
-  async createWatcher(_event, dirPath) {
+  async createWatcher(_event, _dirPath) {
     // File watchers are handled in the renderer process via IPC
     return { watcherId: Date.now() };
   },
@@ -339,12 +339,12 @@ for (const [method, handler] of Object.entries(dataDirHandlers)) {
 // notifications module
 const notificationIcon = path.resolve(__dirname, "../../public/takeout.png");
 
-ipcMain.handle("notification:show", async (_event, title, body, behavior) => {
+ipcMain.handle("notification:show", async (_event, title, body, _behavior) => {
   if(!Notification.isSupported()) {
     console.error("notifications not supported on platform");
     return; 
   }
-  let notify = new Notification({
+  const notify = new Notification({
     title,
     body,
     icon: notificationIcon,
@@ -445,7 +445,7 @@ async function purgeTempTree(rootDir: string): Promise<number> {
       if (entry.name === "tmp") {
         deletedCount += await purgeStaleTempFiles(fullPath);
         continue;
-      }
+}
 
       deletedCount += await purgeTempTree(fullPath);
     }

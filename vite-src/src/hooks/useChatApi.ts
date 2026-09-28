@@ -78,7 +78,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
   const { messages: initialApiMessages } = buildApiMessages(initialMessages, systemPrompt, tools);
 
   let currentApiMessages = initialApiMessages;
-  let allAssistantMessages: ChatMessageWithToolCalls[] = [];
+  const allAssistantMessages: ChatMessageWithToolCalls[] = [];
   let hasMoreToolCalls = true;
   let round = 0;
   const MAX_TOOL_ROUNDS = 100;

@@ -159,7 +159,7 @@ async function deleteChat(projectId: string, chatId: string): Promise<void> {
         if (subagent.logId) {
           try{
             await filesystem.remove(`${msgsDir}/${subagent.logId}.jsonl`);
-          } catch { }
+          } catch { /* intentionally empty */ }
         }
       }
     }
@@ -168,14 +168,14 @@ async function deleteChat(projectId: string, chatId: string): Promise<void> {
         if (entry.logId) {
           try {
             await filesystem.remove(`${msgsDir}/${entry.logId}.jsonl`);
-          } catch { }
+          } catch { /* intentionally empty */ }
         }
       }
     }
     if (meta.queriesLogId) {
       try {
         await filesystem.remove(`${msgsDir}/${meta.queriesLogId}.jsonl`);
-      } catch { }
+      } catch { /* intentionally empty */ }
     }
   } catch (err) {
     console.error("deleteChat: failed to remove chat files", err);

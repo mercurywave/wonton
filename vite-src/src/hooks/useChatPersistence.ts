@@ -97,7 +97,7 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   try {
     await filesystem.readFile(projPath);
     return;
-  } catch { }
+  } catch { /* intentionally empty */ }
 
   // I seemingly can't avoid race conditions that lead to double files
   // so write the first chat using the project ID to avoid a double entry

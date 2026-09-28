@@ -57,7 +57,7 @@ export class ExecCommandHandler implements ToolHandler {
     return ExecCommandHandler.instance;
   }
 
-  async execute(args: object, context: ToolContext, _toolCall: any): Promise<ToolResult> {
+  async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { command } = args as { command: string };
     const { folderPath, showFeedback, projectId, chatId, logId } = context;
 

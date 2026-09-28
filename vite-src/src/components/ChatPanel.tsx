@@ -546,7 +546,7 @@ export default function ChatPanel({
 
   useEffect(() => {
     const loadTools = async () => {
-      let agent = allAgents.find((a) => a.id === activeAgentId);
+      const agent = allAgents.find((a) => a.id === activeAgentId);
       const [tools, optionalTools] = await Promise.all([
         getAvailableTools(activeProject?.folderPath, agent, allAgents, enabledToolNames),
         getOptionalTools(activeProject?.folderPath, agent, allAgents),

@@ -102,7 +102,8 @@ const filePermissionsStore: FilePermissionsStore = {
   async removePermission(projectId: string, relativePath: string) {
     const meta = projectMetaStore.getProjectMeta(projectId);
     const existingPermissions = meta?.filePermissions ?? {};
-    const { [relativePath]: _, ...nextPermissions } = existingPermissions;
+    const nextPermissions = { ...existingPermissions };
+    delete nextPermissions[relativePath];
     await projectMetaStore.update(projectId, { filePermissions: nextPermissions });
 
     const current = state.get(projectId);
