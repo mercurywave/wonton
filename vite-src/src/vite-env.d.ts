@@ -35,8 +35,8 @@ interface ElectronAPI {
     getPlatform: () => Promise<string>;
   };
   events: {
-    on: (eventName: string, callback: (event: any, ...args: any[]) => void) => () => void;
-    off: (eventName: string, callback: (event: any, ...args: any[]) => void) => void;
+    on: (eventName: string, callback: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void) => () => void;
+    off: (eventName: string, callback: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void) => void;
   };
   notification: {
     show: (title: string, body: string, behavior: string) => Promise<void>;

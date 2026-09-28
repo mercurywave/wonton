@@ -64,277 +64,276 @@ app.on("window-all-closed", () => {
 // IPC handlers
 
 // filesystem module
-const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ...args: any[]) => Promise<any> | any> = {
-  async createDirectory(_event, dirPath) {
-    if (typeof dirPath !== "string" || dirPath.trim() === "") {
-      throw new Error("Directory path is required");
-    }
+async function fsCreateDirectory(_event: Electron.IpcMainInvokeEvent, dirPath: string) {
+  if (dirPath.trim() === "") {
+    throw new Error("Directory path is required");
+  }
 
-    try {
-      await fs.mkdir(dirPath, { recursive: true });
-    } catch (err: any) {
-      const error = new Error(err.message || "Failed to create directory");
-      (error as any).code = err.code || "E_FS_CREATE_DIR";
-      throw error;
-    }
-  },
+  try {
+    await fs.mkdir(dirPath, { recursive: true });
+  } catch (err: unknown) {
+    const error = new Error(err instanceof Error ? err.message : "Failed to create directory");
+    Object.defineProperty(error, "code", { value: (err as NodeJS.ErrnoException).code || "E_FS_CREATE_DIR" });
+    throw error;
+  }
+}
 
-  async tryReadFile(_event, filePath) {
-    if (typeof filePath !== "string" || filePath.trim() === "") {
+async function fsTryReadFile(_event: Electron.IpcMainInvokeEvent, filePath: string) {
+  if (filePath.trim() === "") {
+    return null;
+  }
+
+  try {
+    const content = await fs.readFile(filePath, "utf-8");
+    return content;
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "code" in err && (err as NodeJS.ErrnoException).code === "ENOENT") {
       return null;
     }
+    const error = new Error(err instanceof Error ? err.message : "Failed to read file");
+    Object.defineProperty(error, "code", { value: (err as NodeJS.ErrnoException).code || "E_FS_READ" });
+    throw error;
+  }
+}
 
-    try {
-      const content = await fs.readFile(filePath, "utf-8");
-      return content;
-    } catch (err: any) {
-      if (err && err.code === "ENOENT") {
-        return null;
+async function fsReadFile(_event: Electron.IpcMainInvokeEvent, filePath: string) {
+  if (filePath.trim() === "") {
+    throw new Error("File path is required");
+  }
+
+  try {
+    const content = await fs.readFile(filePath, "utf-8");
+    return content;
+  } catch (err: unknown) {
+    const error = new Error(err instanceof Error ? err.message : "Failed to read file");
+    Object.defineProperty(error, "code", { value: (err as NodeJS.ErrnoException).code || "E_FS_READ" });
+    throw error;
+  }
+}
+
+async function fsDoesFileExist(_event: Electron.IpcMainInvokeEvent, filePath: string) {
+  if (filePath.trim() === "") {
+    return false;
+  }
+
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function fsWriteFile(_event: Electron.IpcMainInvokeEvent, filePath: string, content: string) {
+  try {
+    await fs.writeFile(filePath, content, "utf-8");
+  } catch (err: unknown) {
+    const error = new Error(err instanceof Error ? err.message : "Failed to write file");
+    Object.defineProperty(error, "code", { value: (err as NodeJS.ErrnoException).code || "E_FS_WRITE" });
+    throw error;
+  }
+}
+
+async function fsAppendFile(_event: Electron.IpcMainInvokeEvent, filePath: string, content: string) {
+  try {
+    await fs.appendFile(filePath, content, "utf-8");
+  } catch (err: unknown) {
+    const error = new Error(err instanceof Error ? err.message : "Failed to append to file");
+    Object.defineProperty(error, "code", { value: (err as NodeJS.ErrnoException).code || "E_FS_APPEND" });
+    throw error;
+  }
+}
+
+async function fsRemove(_event: Electron.IpcMainInvokeEvent, filePath: string) {
+  try {
+    await fs.rm(filePath, { recursive: false, force: true });
+  } catch (err: unknown) {
+    const error = new Error(err instanceof Error ? err.message : "Failed to remove file");
+    Object.defineProperty(error, "code", { value: (err as NodeJS.ErrnoException).code || "E_FS_REMOVE" });
+    throw error;
+  }
+}
+
+async function fsReadDirectory(_event: Electron.IpcMainInvokeEvent, dirPath: string) {
+  try {
+    const entries = await fs.readdir(dirPath);
+    return entries.map((entry: string) => ({ entry }));
+  } catch (err: unknown) {
+    const error = new Error(err instanceof Error ? err.message : "Failed to read directory");
+    Object.defineProperty(error, "code", { value: (err as NodeJS.ErrnoException).code || "E_FS_READ_DIR" });
+    throw error;
+  }
+}
+
+async function fsGetStats(_event: Electron.IpcMainInvokeEvent, filePath: string) {
+  try {
+    const stat = await fs.stat(filePath);
+    return {
+      size: stat.size,
+      isDirectory: stat.isDirectory(),
+      isFile: stat.isFile(),
+      modifiedTime: stat.mtimeMs,
+      createdTime: stat.birthtimeMs,
+    };
+  } catch (err: unknown) {
+    const error = new Error(err instanceof Error ? err.message : "Failed to stat file");
+    Object.defineProperty(error, "code", { value: (err as NodeJS.ErrnoException).code || "E_FS_STATS" });
+    throw error;
+  }
+}
+
+async function fsIsBinaryFile(_event: Electron.IpcMainInvokeEvent, filePath: string) {
+  if (filePath.trim() === "") {
+    return false;
+  }
+
+  try {
+    const stat = await fs.stat(filePath);
+    if (stat.isDirectory() || !stat.isFile()) return false;
+
+    // Read the first 512 bytes to check for binary content
+    const buffer = await fs.readFile(filePath, { encoding: null, flag: "r" });
+    const chunk = buffer.slice(0, 512);
+
+    // Check for null bytes which are indicative of binary files
+    for (let i = 0; i < chunk.length; i++) {
+      if (chunk[i] === 0x00) {
+        return true;
       }
-      const error = new Error(err.message || "Failed to read file");
-      (error as any).code = err.code || "E_FS_READ";
-      throw error;
-    }
-  },
-
-  async readFile(_event, filePath) {
-    if (typeof filePath !== "string" || filePath.trim() === "") {
-      throw new Error("File path is required");
     }
 
-    try {
-      const content = await fs.readFile(filePath, "utf-8");
-      return content;
-    } catch (err: any) {
-      const error = new Error(err.message || "Failed to read file");
-      (error as any).code = err.code || "E_FS_READ";
-      throw error;
-    }
-  },
+    return false;
+  } catch {
+    return false;
+  }
+}
 
-  async doesFileExist(_event, filePath) {
-    if (typeof filePath !== "string" || filePath.trim() === "") {
-      return false;
-    }
+async function fsGetJoinedPath(_event: Electron.IpcMainInvokeEvent, basePath: string, relativePath: string) {
+  return path.join(basePath, relativePath);
+}
 
-    try {
-      await fs.access(filePath);
-      return true;
-    } catch {
-      return false;
-    }
-  },
+async function fsGetAbsolutePath(_event: Electron.IpcMainInvokeEvent, filePath: string) {
+  return path.resolve(filePath);
+}
 
-  async writeFile(_event, filePath, content) {
-    try {
-      await fs.writeFile(filePath, content, "utf-8");
-    } catch (err: any) {
-      const error = new Error(err.message || "Failed to write file");
-      (error as any).code = err.code || "E_FS_WRITE";
-      throw error;
-    }
-  },
+async function fsGetRelativePath(_event: Electron.IpcMainInvokeEvent, fromPath: string, toPath: string) {
+  return path.relative(fromPath, toPath);
+}
 
-  async appendFile(_event, filePath, content) {
-    try {
-      await fs.appendFile(filePath, content, "utf-8");
-    } catch (err: any) {
-      const error = new Error(err.message || "Failed to append to file");
-      (error as any).code = err.code || "E_FS_APPEND";
-      throw error;
-    }
-  },
+async function fsGetNormalizedPath(_event: Electron.IpcMainInvokeEvent, filePath: string) {
+  return path.normalize(filePath);
+}
 
-  async remove(_event, filePath) {
-    try {
-      await fs.rm(filePath, { recursive: false, force: true });
-    } catch (err: any) {
-      const error = new Error(err.message || "Failed to remove file");
-      (error as any).code = err.code || "E_FS_REMOVE";
-      throw error;
-    }
-  },
+async function fsCreateWatcher(_event: Electron.IpcMainInvokeEvent, _dirPath: string) {
+  // File watchers are handled in the renderer process via IPC
+  return { watcherId: Date.now() };
+}
 
-  async readDirectory(_event, dirPath) {
-    try {
-      const entries = await fs.readdir(dirPath);
-      return entries.map((entry: string) => ({ entry }));
-    } catch (err: any) {
-      const error = new Error(err.message || "Failed to read directory");
-      (error as any).code = err.code || "E_FS_READ_DIR";
-      throw error;
-    }
-  },
-
-  async getStats(_event, filePath) {
-    try {
-      const stat = await fs.stat(filePath);
-      return {
-        size: stat.size,
-        isDirectory: stat.isDirectory(),
-        isFile: stat.isFile(),
-        modifiedTime: stat.mtimeMs,
-        createdTime: stat.birthtimeMs,
-      };
-    } catch (err: any) {
-      const error = new Error(err.message || "Failed to stat file");
-      (error as any).code = err.code || "E_FS_STATS";
-      throw error;
-    }
-  },
-
-  async isBinaryFile(_event, filePath) {
-    if (typeof filePath !== "string" || filePath.trim() === "") {
-      return false;
-    }
-
-    try {
-      const stat = await fs.stat(filePath);
-      if (stat.isDirectory() || !stat.isFile()) return false;
-
-      // Read the first 512 bytes to check for binary content
-      const buffer = await fs.readFile(filePath, { encoding: null, flag: "r" });
-      const chunk = buffer.slice(0, 512);
-
-      // Check for null bytes which are indicative of binary files
-      for (let i = 0; i < chunk.length; i++) {
-        if (chunk[i] === 0x00) {
-          return true;
-        }
-      }
-
-      return false;
-    } catch {
-      return false;
-    }
-  },
-
-  async getJoinedPath(_event, basePath, relativePath) {
-    return path.join(basePath, relativePath);
-  },
-
-  async getAbsolutePath(_event, filePath) {
-    return path.resolve(filePath);
-  },
-
-  async getRelativePath(_event, fromPath, toPath) {
-    return path.relative(fromPath, toPath);
-  },
-
-  async getNormalizedPath(_event, filePath) {
-    return path.normalize(filePath);
-  },
-
-  async createWatcher(_event, _dirPath) {
-    // File watchers are handled in the renderer process via IPC
-    return { watcherId: Date.now() };
-  },
-
-  async removeWatcher(_event, _watcherId) {
-    // No-op: watchers are managed in renderer
-  },
-};
+async function fsRemoveWatcher(_event: Electron.IpcMainInvokeEvent, _watcherId: string) {
+  // No-op: watchers are managed in renderer
+}
 
 // Register filesystem IPC handlers
-for (const [method, handler] of Object.entries(filesystemHandlers)) {
-  ipcMain.handle(`filesystem:${method}`, handler);
-}
+ipcMain.handle("filesystem:createDirectory", fsCreateDirectory);
+ipcMain.handle("filesystem:tryReadFile", fsTryReadFile);
+ipcMain.handle("filesystem:doesFileExist", fsDoesFileExist);
+ipcMain.handle("filesystem:readFile", fsReadFile);
+ipcMain.handle("filesystem:writeFile", fsWriteFile);
+ipcMain.handle("filesystem:appendFile", fsAppendFile);
+ipcMain.handle("filesystem:remove", fsRemove);
+ipcMain.handle("filesystem:readDirectory", fsReadDirectory);
+ipcMain.handle("filesystem:getStats", fsGetStats);
+ipcMain.handle("filesystem:isBinaryFile", fsIsBinaryFile);
+ipcMain.handle("filesystem:getJoinedPath", fsGetJoinedPath);
+ipcMain.handle("filesystem:getAbsolutePath", fsGetAbsolutePath);
+ipcMain.handle("filesystem:getRelativePath", fsGetRelativePath);
+ipcMain.handle("filesystem:getNormalizedPath", fsGetNormalizedPath);
+ipcMain.handle("filesystem:createWatcher", fsCreateWatcher);
+ipcMain.handle("filesystem:removeWatcher", fsRemoveWatcher);
 
 // os module
-const osHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ...args: any[]) => Promise<any> | any> = {
-  async showFolderDialog(_event, title) {
-    const result = await dialog.showOpenDialog({
-      properties: ["openDirectory"],
-      title,
-    });
-    if (!result || result.filePaths.length === 0) return "";
-    return result.filePaths[0];
-  },
+async function osShowFolderDialog(_event: Electron.IpcMainInvokeEvent, title: string) {
+  const result = await dialog.showOpenDialog({
+    properties: ["openDirectory"],
+    title,
+  });
+  if (!result || result.filePaths.length === 0) return "";
+  return result.filePaths[0];
+}
 
-  async showSaveDialog(_event, title, defaultPath) {
-    const result = await dialog.showSaveDialog({
-      title,
-      defaultPath: defaultPath || undefined,
-    });
-    if (result.canceled || !result.filePath) return "";
-    return result.filePath;
-  },
+async function osShowSaveDialog(_event: Electron.IpcMainInvokeEvent, title: string, defaultPath?: string) {
+  const result = await dialog.showSaveDialog({
+    title,
+    defaultPath: defaultPath || undefined,
+  });
+  if (result.canceled || !result.filePath) return "";
+  return result.filePath;
+}
 
-  async open(_event, folderPath) {
-    return shell.openPath(folderPath);
-  },
+async function osOpen(_event: Electron.IpcMainInvokeEvent, folderPath: string) {
+  return shell.openPath(folderPath);
+}
 
-  async downloadFile(_event, url, targetPath) {
-    if (typeof url !== "string" || !url.trim()) {
-      throw new Error("Download URL is required");
-    }
-    if (typeof targetPath !== "string" || !targetPath.trim()) {
-      throw new Error("Download destination is required");
-    }
+async function osDownloadFile(_event: Electron.IpcMainInvokeEvent, url: string, targetPath: string) {
+  const response = await fetch(url);
+  if (!response.ok) {
+    const payload = await response.text().catch(() => "");
+    throw new Error(payload || `Download failed (${response.status})`);
+  }
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      const payload = await response.text().catch(() => "");
-      throw new Error(payload || `Download failed (${response.status})`);
-    }
+  const buffer = Buffer.from(await response.arrayBuffer());
+  await fs.writeFile(targetPath, buffer);
+  return targetPath;
+}
 
-    const buffer = Buffer.from(await response.arrayBuffer());
-    await fs.writeFile(targetPath, buffer);
-    return targetPath;
-  },
-
-  async execCommand(_event, command, cwd) {
-    try {
-      const result = await execAsync(command, { cwd });
-      return { stdout: result.stdout, stderr: result.stderr, status: 0 };
-    } catch (err: any) {
-      return { stdout: err.stdout ?? "", stderr: err.stderr ?? "", status: (err.code || err.status) ?? 1, signal: err.signal, killed: err.killed };
-    }
-  },
-};
+async function osExecCommand(_event: Electron.IpcMainInvokeEvent, command: string, cwd?: string) {
+  try {
+    const result = await execAsync(command, { cwd });
+    return { stdout: result.stdout, stderr: result.stderr, status: 0 };
+  } catch (err: unknown) {
+    const errnoErr = err as NodeJS.ErrnoException & { stdout?: string; stderr?: string; code?: string | number; status?: number; signal?: string; killed?: boolean };
+    return { stdout: errnoErr.stdout ?? "", stderr: errnoErr.stderr ?? "", status: (errnoErr.code ?? errnoErr.status) ?? 1, signal: errnoErr.signal, killed: errnoErr.killed };
+  }
+}
 
 // Register os IPC handlers
-for (const [method, handler] of Object.entries(osHandlers)) {
-  ipcMain.handle(`os:${method}`, handler);
-}
+ipcMain.handle("os:showFolderDialog", osShowFolderDialog);
+ipcMain.handle("os:showSaveDialog", osShowSaveDialog);
+ipcMain.handle("os:open", osOpen);
+ipcMain.handle("os:downloadFile", osDownloadFile);
+ipcMain.handle("os:execCommand", osExecCommand);
 
 // computer module
-const computerHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ...args: any[]) => Promise<any> | any> = {
-  async getOSInfo(_event) {
-    return {
-      name: process.platform,
-      arch: os.arch(),
-      platform: process.platform,
-      version: os.release(),
-      type: os.type(),
-    };
-  },
-};
+async function computerGetOSInfo(_event: Electron.IpcMainInvokeEvent) {
+  return {
+    name: process.platform,
+    arch: os.arch(),
+    platform: process.platform,
+    version: os.release(),
+    type: os.type(),
+  };
+}
 
 // Register computer IPC handlers
-for (const [method, handler] of Object.entries(computerHandlers)) {
-  ipcMain.handle(`computer:${method}`, handler);
-}
+ipcMain.handle("computer:getOSInfo", computerGetOSInfo);
 
 // dataDir module - path resolution that requires Node.js access
-const dataDirHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ...args: any[]) => Promise<any> | any> = {
-  async getAppPath(_event) {
-    return app.getPath("userData");
-  },
+async function dataDirGetAppPath(_event: Electron.IpcMainInvokeEvent) {
+  return app.getPath("userData");
+}
 
-  async getHomeDir(_event) {
-    return os.homedir();
-  },
+async function dataDirGetHomeDir(_event: Electron.IpcMainInvokeEvent) {
+  return os.homedir();
+}
 
-  async getPlatform(_event) {
-    return process.platform;
-  },
-};
+async function dataDirGetPlatform(_event: Electron.IpcMainInvokeEvent) {
+  return process.platform;
+}
 
 // Register dataDir IPC handlers
-for (const [method, handler] of Object.entries(dataDirHandlers)) {
-  ipcMain.handle(`dataDir:${method}`, handler);
-}
+ipcMain.handle("dataDir:getAppPath", dataDirGetAppPath);
+ipcMain.handle("dataDir:getHomeDir", dataDirGetHomeDir);
+ipcMain.handle("dataDir:getPlatform", dataDirGetPlatform);
 
 // notifications module
 const notificationIcon = path.resolve(__dirname, "../../public/takeout.png");

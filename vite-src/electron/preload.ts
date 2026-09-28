@@ -50,14 +50,14 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // events module
   events: {
-    on: (eventName: string, callback: (event: any, ...args: any[]) => void) => {
-      const listener = (_event: any, ...args: any[]) => callback(_event, ...args);
+    on: (eventName: string, callback: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void) => {
+      const listener = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => callback(_event, ...args);
       ipcRenderer.on(eventName, listener);
       return () => {
         ipcRenderer.removeListener(eventName, listener);
       };
     },
-    off: (eventName: string, callback: (event: any, ...args: any[]) => void) => {
+    off: (eventName: string, callback: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void) => {
       ipcRenderer.removeListener(eventName, callback);
     },
   },

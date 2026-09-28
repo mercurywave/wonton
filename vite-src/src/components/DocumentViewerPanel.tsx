@@ -160,7 +160,8 @@ export default function DocumentViewerPanel({
       if (err instanceof Error) {
         setError(err.message);
       } else if (typeof err === "object" && err !== null) {
-        setError((err as any).message || (err as any).msg || JSON.stringify(err));
+        const errorObj = err as Record<string, unknown>;
+        setError((errorObj.message as string | undefined) || (errorObj.msg as string | undefined) || JSON.stringify(err));
       } else {
         setError(String(err));
       }

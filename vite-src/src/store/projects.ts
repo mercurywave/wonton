@@ -92,8 +92,8 @@ async function ensureDataDir(): Promise<string> {
 
   try {
     await filesystem.createDirectory(wontonDir);
-  } catch (err: any) {
-    if (err.code !== "EEXIST") {
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code !== "EEXIST") {
       console.error("projectStore: failed to create directory", err);
     }
   }
@@ -101,8 +101,8 @@ async function ensureDataDir(): Promise<string> {
   const flowsDir = `${wontonDir}/${FLOWS_DIR_NAME}`;
   try {
     await filesystem.createDirectory(flowsDir);
-  } catch (err: any) {
-    if (err.code !== "EEXIST") {
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code !== "EEXIST") {
       console.error("projectStore: failed to create flows dir", err);
     }
   }

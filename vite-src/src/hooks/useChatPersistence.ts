@@ -24,8 +24,8 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
 
   try {
     await filesystem.createDirectory(projectDir);
-  } catch (err: any) {
-    if (err.code !== "EEXIST") {
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create project dir", err);
     }
   }
@@ -33,8 +33,8 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   const chatsDir = `${projectDir}/${CHATS_DIR_NAME}`;
   try {
     await filesystem.createDirectory(chatsDir);
-  } catch (err: any) {
-    if (err.code !== "EEXIST") {
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create chats dir", err);
     }
   }
@@ -42,8 +42,8 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   const msgsDir = `${projectDir}/${MSGS_DIR_NAME}`;
   try {
     await filesystem.createDirectory(msgsDir);
-  } catch (err: any) {
-    if (err.code !== "EEXIST") {
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create msgs dir", err);
     }
   }
@@ -51,8 +51,8 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   const docsDir = `${projectDir}/${DOCS_DIR_NAME}`;
   try {
     await filesystem.createDirectory(docsDir);
-  } catch (err: any) {
-    if (err.code !== "EEXIST") {
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create docs dir", err);
     }
   }
@@ -60,8 +60,8 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   const tmpDir = `${projectDir}/${TMP_DIR_NAME}`;
   try {
     await filesystem.createDirectory(tmpDir);
-  } catch (err: any) {
-    if (err.code !== "EEXIST") {
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create tmp dir", err);
     }
   }
@@ -69,8 +69,8 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   const flowsDir = `${projectDir}/${FLOWS_DIR_NAME}`;
   try {
     await filesystem.createDirectory(flowsDir);
-  } catch (err: any) {
-    if (err.code !== "EEXIST") {
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create flows dir", err);
     }
   }
@@ -78,8 +78,8 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   const toolsDir = `${projectDir}/${TOOLS_DIR_NAME}`;
   try {
     await filesystem.createDirectory(toolsDir);
-  } catch (err: any) {
-    if (err.code !== "EEXIST") {
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create tools dir", err);
     }
   }
@@ -87,8 +87,8 @@ export async function ensureChatFolder(projectId: string): Promise<void> {
   const batchesDir = `${projectDir}/${BATCHES_DIR_NAME}`;
   try {
     await filesystem.createDirectory(batchesDir);
-  } catch (err: any) {
-    if (err.code !== "EEXIST") {
+  } catch (err: unknown) {
+    if ((err as { code?: string }).code !== "EEXIST") {
       console.error("ensureChatFolder: failed to create batches dir", err);
     }
   }

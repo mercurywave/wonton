@@ -79,7 +79,7 @@ async function loadFlowsFromDirectory(dirPath: string, source: string): Promise<
       if (typeof data.command === "string") {
         data.isCommand = true;
       }
-      (data as any).source = source;
+      (data as Record<string, unknown>).source = source;
       flows.push(data as unknown as Flow);
       flowSources.set(data.id as string, name);
     } catch (e) {

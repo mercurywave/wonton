@@ -138,7 +138,7 @@ function WorkflowSelector({ workflows, onSelect, selectedWorkflowId }: { workflo
       <p className={styles.workflowSelectorTitle}>Select a workflow to get started</p>
       <div className={styles.workflowGrid}>
         {workflows.map((flow) => {
-          const isCommand = (flow as any).isCommand;
+          const isCommand = (flow as { isCommand?: boolean }).isCommand;
           return (
             <button
               key={flow.id}
@@ -814,7 +814,7 @@ export default function ChatPanel({
         <div className={styles.messages} ref={messagesContainerRef}>
           {messages.length === 0 && (
             <WorkflowSelector
-              workflows={enabledWorkflows.filter((f) => !(f as any).isCommand)}
+              workflows={enabledWorkflows.filter((f) => !(f as { isCommand?: boolean }).isCommand)}
               onSelect={(id) => {
                 const flow = enabledWorkflows.find((f) => f.id === id);
                 setSelectedChatWorkflowId(id, flow?.initialState);
