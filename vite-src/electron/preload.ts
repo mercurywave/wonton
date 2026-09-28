@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     remove: (filePath: string) => ipcRenderer.invoke("filesystem:remove", filePath),
     readDirectory: (dirPath: string) => ipcRenderer.invoke("filesystem:readDirectory", dirPath),
     getStats: (filePath: string) => ipcRenderer.invoke("filesystem:getStats", filePath),
+    isBinaryFile: (filePath: string) => ipcRenderer.invoke("filesystem:isBinaryFile", filePath),
     getJoinedPath: (basePath: string, relativePath: string) => ipcRenderer.invoke("filesystem:getJoinedPath", basePath, relativePath),
     getAbsolutePath: (filePath: string) => ipcRenderer.invoke("filesystem:getAbsolutePath", filePath),
     getRelativePath: (fromPath: string, toPath: string) => ipcRenderer.invoke("filesystem:getRelativePath", fromPath, toPath),

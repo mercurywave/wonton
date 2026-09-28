@@ -20,6 +20,15 @@ interface MatchInfo {
   content: string;
 }
 
+// Extensions that are always treated as text
+const TEXT_EXTENSIONS = new Set([
+  ".txt", ".md", ".json", ".xml", ".html", ".css", ".js", ".ts", ".tsx", ".jsx",
+  ".py", ".java", ".c", ".cpp", ".h", ".hpp", ".cs", ".go", ".rs", ".rb", ".php",
+  ".yml", ".yaml", ".toml", ".ini", ".cfg", ".conf", ".sh", ".bash", ".zsh",
+  ".sql", ".graphql", ".vue", ".svelte", ".scala", ".kt", ".swift", ".m",
+  ".lua", ".pl", ".r", ".dart", ".zig", ".nim",
+]);
+
 export class SearchContentsHandler implements ToolHandler {
   private static instance: SearchContentsHandler;
 
@@ -61,6 +70,12 @@ export class SearchContentsHandler implements ToolHandler {
     return SearchContentsHandler.instance;
   }
 
+  private getExtension(filePath: string): string {
+    const lastDot = filePath.lastIndexOf(".");
+    if (lastDot === -1) return "";
+    return filePath.slice(lastDot).toLowerCase();
+  }
+
   private async searchFile(
     filePath: string,
     query: string,
@@ -72,7 +87,11 @@ export class SearchContentsHandler implements ToolHandler {
       const stat = await filesystem.getStats(filePath);
       if (!stat || stat.isDirectory) return false;
 
+      // Skip files larger than 500KB
       if (stat.size > 500_000) return false;
+
+      // Skip binary files
+      if (await filesystem.isBinaryFile(filePath)) return false;
 
       const content = await filesystem.readFile(filePath);
       if (!content) return false;
@@ -80,8 +99,9 @@ export class SearchContentsHandler implements ToolHandler {
       const lines = content.split("\n");
       const matches: MatchInfo[] = [];
 
+      const queryLower = query.toLowerCase();
       for (let i = 0; i < lines.length; i++) {
-        if (lines[i].toLowerCase().includes(query.toLowerCase())) {
+        if (lines[i].toLowerCase().includes(queryLower)) {
           matches.push({ line: i + 1, content: lines[i] });
         }
       }
@@ -99,6 +119,84 @@ export class SearchContentsHandler implements ToolHandler {
     }
 
     return results.length >= maxResults;
+  }
+
+  /**
+   * Read stats for a batch of file paths in parallel.
+   */
+  private async readStatsBatch(filePaths: string[]): Promise<Map<string, import("../utils/electronFs").FsStats | null>> {
+    const statsMap = new Map<string, import("../utils/electronFs").FsStats | null>();
+    const promises = filePaths.map(async (fp) => {
+      try {
+        const stat = await filesystem.getStats(fp);
+        statsMap.set(fp, stat);
+      } catch {
+        statsMap.set(fp, null);
+      }
+    });
+    await Promise.all(promises);
+    return statsMap;
+  }
+
+  /**
+   * Check if files are binary in parallel.
+   */
+  private async checkBinaryBatch(filePaths: string[]): Promise<Map<string, boolean>> {
+    const binaryMap = new Map<string, boolean>();
+    const promises = filePaths.map(async (fp) => {
+      try {
+        const isBinary = await filesystem.isBinaryFile(fp);
+        binaryMap.set(fp, isBinary);
+      } catch {
+        binaryMap.set(fp, false);
+      }
+    });
+    await Promise.all(promises);
+    return binaryMap;
+  }
+
+  /**
+   * Read file contents for a batch of paths in parallel.
+   */
+  private async readFilesBatch(filePaths: string[]): Promise<Map<string, string>> {
+    const contentMap = new Map<string, string>();
+    const promises = filePaths.map(async (fp) => {
+      try {
+        const content = await filesystem.readFile(fp);
+        if (content) {
+          contentMap.set(fp, content);
+        }
+      } catch {
+        // ignore
+      }
+    });
+    await Promise.all(promises);
+    return contentMap;
+  }
+
+  /**
+   * Check if a file path should be included in the search based on extension.
+   * Returns false for files with extensions that are commonly binary.
+   */
+  private shouldSearchFile(filePath: string): boolean {
+    const ext = this.getExtension(filePath);
+    // Skip common binary extensions
+    const binaryExtensions = new Set([
+      ".png", ".jpg", ".jpeg", ".gif", ".bmp", ".ico", ".svg", ".webp",
+      ".zip", ".tar", ".gz", ".rar", ".7z", ".bz2",
+      ".exe", ".dll", ".so", ".dylib", ".o", ".a", ".lib",
+      ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+      ".mp3", ".mp4", ".avi", ".mov", ".wav", ".flac",
+      ".woff", ".woff2", ".ttf", ".otf", ".eot",
+      ".class", ".pyc", ".pyo", ".pyd", ".js.map",
+      ".node", ".wasm",
+    ]);
+
+    if (binaryExtensions.has(ext)) return false;
+    // If it has a known text extension, include it
+    if (TEXT_EXTENSIONS.has(ext)) return true;
+    // For files with unknown extensions, we'll check if they're binary later
+    return true;
   }
 
   private async searchDirectory(
@@ -120,8 +218,11 @@ export class SearchContentsHandler implements ToolHandler {
       const entries = await filesystem.readDirectory(dirPath);
       const entriesList: string[] = entries.map(e => e.entry);
 
+      // Collect file and directory paths separately
+      const files: string[] = [];
+      const directories: { path: string; entry: string }[] = [];
+
       for (const entry of entriesList) {
-        if (results.length >= maxResults) return true;
         if (entry.startsWith(".")) continue;
 
         const entryRelPath = `${folderPath === dirPath ? "" : dirPath.replace(folderPath + "/", "")}${entry}`;
@@ -141,15 +242,78 @@ export class SearchContentsHandler implements ToolHandler {
           if (!stat) continue;
 
           if (stat.isDirectory) {
-            const done = await this.searchDirectory(fullPath, query, results, maxResults, depth + 1, projectId, folderPath);
-            if (done) return true;
+            directories.push({ path: fullPath, entry });
           } else {
-            const done = await this.searchFile(fullPath, query, maxResults, results);
-            if (done) return true;
+            files.push(fullPath);
           }
         } catch {
           continue;
         }
+      }
+
+      // Batch process files in parallel
+      if (files.length > 0) {
+        // First filter by extension
+        const eligibleFiles = files.filter(f => this.shouldSearchFile(f));
+        
+        // Batch read stats for eligible files
+        const statsMap = await this.readStatsBatch(eligibleFiles);
+
+        // Filter out files that are too large
+        const candidateFiles = eligibleFiles.filter(f => {
+          const stat = statsMap.get(f);
+          return stat && !stat.isDirectory && stat.size <= 500_000;
+        });
+
+        if (candidateFiles.length > 0) {
+          // Batch check for binary files
+          const binaryMap = await this.checkBinaryBatch(candidateFiles);
+
+          // Filter out binary files
+          const textFiles = candidateFiles.filter(f => !binaryMap.get(f));
+
+          if (textFiles.length > 0) {
+            // Batch read file contents
+            const contentMap = await this.readFilesBatch(textFiles);
+
+            // Search through contents
+            const queryLower = query.toLowerCase();
+            for (const filePath of textFiles) {
+              if (results.length >= maxResults) break;
+
+              const content = contentMap.get(filePath);
+              if (!content) continue;
+
+              const stat = statsMap.get(filePath);
+              if (!stat) continue;
+
+              const lines = content.split("\n");
+              const matches: MatchInfo[] = [];
+
+              for (let i = 0; i < lines.length; i++) {
+                if (lines[i].toLowerCase().includes(queryLower)) {
+                  matches.push({ line: i + 1, content: lines[i] });
+                }
+              }
+
+              if (matches.length > 0) {
+                results.push({
+                  path: filePath,
+                  size: stat.size || 0,
+                  matches,
+                });
+              }
+            }
+          }
+        }
+      }
+
+      // Recurse into subdirectories sequentially (can't easily parallelize directory traversal
+      // due to permission checks that depend on projectId)
+      for (const dir of directories) {
+        if (results.length >= maxResults) break;
+        const done = await this.searchDirectory(dir.path, query, results, maxResults, depth + 1, projectId, folderPath);
+        if (done) return true;
       }
     } catch {
       return false;

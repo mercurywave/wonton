@@ -1,6 +1,6 @@
 // electronFs.ts - Filesystem abstraction that works in both Electron and browser mode
 
-interface FsStats {
+export interface FsStats {
   size: number;
   isDirectory: boolean;
   isFile: boolean;
@@ -80,6 +80,11 @@ export const filesystem = {
   async getStats(filePath: string): Promise<FsStats> {
     throwIfNotElectron();
     return window.electronAPI.filesystem.getStats(filePath);
+  },
+
+  async isBinaryFile(filePath: string): Promise<boolean> {
+    throwIfNotElectron();
+    return window.electronAPI.filesystem.isBinaryFile(filePath);
   },
 
   async getJoinedPath(basePath: string, relativePath: string): Promise<string> {

@@ -183,6 +183,32 @@ const filesystemHandlers: Record<string, (event: Electron.IpcMainInvokeEvent, ..
     }
   },
 
+  async isBinaryFile(_event, filePath) {
+    if (typeof filePath !== "string" || filePath.trim() === "") {
+      return false;
+    }
+
+    try {
+      const stat = await fs.stat(filePath);
+      if (stat.isDirectory() || !stat.isFile()) return false;
+
+      // Read the first 512 bytes to check for binary content
+      const buffer = await fs.readFile(filePath, { encoding: null, flag: "r" });
+      const chunk = buffer.slice(0, 512);
+
+      // Check for null bytes which are indicative of binary files
+      for (let i = 0; i < chunk.length; i++) {
+        if (chunk[i] === 0x00) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch {
+      return false;
+    }
+  },
+
   async getJoinedPath(_event, basePath, relativePath) {
     return path.join(basePath, relativePath);
   },

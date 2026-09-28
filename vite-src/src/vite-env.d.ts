@@ -11,6 +11,7 @@ interface ElectronAPI {
     remove: (filePath: string) => Promise<void>;
     readDirectory: (dirPath: string) => Promise<{ entry: string }[]>;
     getStats: (filePath: string) => Promise<{ size: number; isDirectory: boolean; isFile: boolean; modifiedTime: number; createdTime: number }>;
+    isBinaryFile: (filePath: string) => Promise<boolean>;
     getJoinedPath: (basePath: string, relativePath: string) => Promise<string>;
     getAbsolutePath: (filePath: string) => Promise<string>;
     getRelativePath: (fromPath: string, toPath: string) => Promise<string>;
