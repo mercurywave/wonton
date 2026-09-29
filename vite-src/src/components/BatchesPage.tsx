@@ -108,8 +108,13 @@ export default function BatchesPage() {
   );
 
   const [batchModel, setBatchModel] = useState(settings.porkbunModelId || "");
+  const isInitialMountRef = useRef(true);
 
   useEffect(() => {
+    if (isInitialMountRef.current) {
+      isInitialMountRef.current = false;
+      return;
+    }
     setBatchModel(settings.porkbunModelId || "");
   }, [settings.porkbunModelId]);
 

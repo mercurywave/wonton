@@ -1,4 +1,10 @@
 import { useState, useEffect } from "react";
+
+interface Flow {
+  name: string;
+  description?: string;
+  isCommand?: boolean;
+}
 import { GitBranch, FolderOpen, Loader2, Play, Wrench } from "lucide-react";
 import styles from "../components/WorkflowsPage.module.css";
 import AgentsSettings from "../components/AgentsSettings";
@@ -44,13 +50,13 @@ function SectionHeader({ title, path }: { title: string; path: string }) {
 }
 
 function FlowCard({ flow, isDisabled, isOverridden, hasConflict, onToggle }: {
-  flow: any;
+  flow: Flow;
   isDisabled: boolean;
   isOverridden: boolean;
   hasConflict: boolean;
   onToggle: () => void;
 }) {
-  const isCommand = (flow as any).isCommand;
+  const isCommand = flow.isCommand;
   const toggleLabel = isDisabled ? "Disabled" : "Enabled";
 
   return (

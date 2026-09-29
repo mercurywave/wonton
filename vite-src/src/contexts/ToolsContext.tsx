@@ -92,14 +92,16 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
         // tools dir may not exist yet
       }
 
-      const handler = (_event: any, ev: any) => {
-        if (!ev || !ev.id) return;
-        const watcherKey = ev.id;
+      type WatchChangeEvent = { id: string };
+      const handler = (_event: Electron.IpcRendererEvent, ev: unknown) => {
+        const event = ev as WatchChangeEvent | undefined;
+        if (!event || !event.id) return;
+        const watcherKey = event.id;
         if (watcherKey !== watcherKeyRef.current) return;
         scheduleRefresh();
       };
 
-      window.electronAPI.events.on("watch:change", handler);
+      window.electronAPI.events.on("watch:change", handler as (event: Electron.IpcRendererEvent, ...args: unknown[]) => void);
 
       const stopWatcher = async (key: string) => {
         if (key) {
