@@ -118,7 +118,6 @@ export default function WorkflowsPage() {
   // Load preset commands from projectMeta
   useEffect(() => {
     if (!activeProjectId) {
-      setPresetCommands({});
       return;
     }
     const load = () => {

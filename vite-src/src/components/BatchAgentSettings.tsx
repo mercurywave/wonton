@@ -75,12 +75,12 @@ export default function BatchAgentSettings() {
   const { settings, updateSettings, servers } = useSettings();
 
   const enabled = Boolean(settings.porkbunServerUrl?.trim());
-  const [queueStart, setQueueStart] = useState("09:00");
-  const [queueEnd, setQueueEnd] = useState("17:00");
-  const [queueBehavior, setQueueBehavior] = useState<PorkbunQueueBehavior>("schedule");
-  const [savedQueueStart, setSavedQueueStart] = useState("09:00");
-  const [savedQueueEnd, setSavedQueueEnd] = useState("17:00");
-  const [savedQueueBehavior, setSavedQueueBehavior] = useState<PorkbunQueueBehavior>("schedule");
+  const [queueStart, setQueueStart] = useState(() => "09:00");
+  const [queueEnd, setQueueEnd] = useState(() => "17:00");
+  const [queueBehavior, setQueueBehavior] = useState<PorkbunQueueBehavior>(() => "schedule");
+  const [savedQueueStart, setSavedQueueStart] = useState(() => "09:00");
+  const [savedQueueEnd, setSavedQueueEnd] = useState(() => "17:00");
+  const [savedQueueBehavior, setSavedQueueBehavior] = useState<PorkbunQueueBehavior>(() => "schedule");
   const [queueLoading, setQueueLoading] = useState(false);
   const [queueError, setQueueError] = useState<string | null>(null);
   const [health, setHealth] = useState<PorkbunHealthStatus | null>(null);
@@ -117,15 +117,6 @@ export default function BatchAgentSettings() {
 
   useEffect(() => {
     if (!client) {
-      setQueueStart("09:00");
-      setQueueEnd("17:00");
-      setQueueBehavior("schedule");
-      setSavedQueueStart("09:00");
-      setSavedQueueEnd("17:00");
-      setSavedQueueBehavior("schedule");
-      setQueueError(null);
-      setHealth(null);
-      setQueueStats(null);
       return;
     }
 
@@ -162,7 +153,7 @@ export default function BatchAgentSettings() {
     };
   }, [client, refreshQueueStatus]);
 
-  const applyQueueConfig = async (nextStart: string, nextEnd: string, nextBehavior: PorkbunQueueBehavior = queueBehavior) => {
+  const applyQueueConfig = useCallback(async (nextStart: string, nextEnd: string, nextBehavior: PorkbunQueueBehavior = queueBehavior) => {
     if (!client) return;
 
     const startTime = localTimeToUtcTime(nextStart, 9);
@@ -193,7 +184,7 @@ export default function BatchAgentSettings() {
     } finally {
       setQueueLoading(false);
     }
-  };
+  }, [client, queueBehavior, refreshQueueStatus]);
 
   const selectedLlmServer = useMemo(
     () => servers.find(
@@ -255,6 +246,8 @@ export default function BatchAgentSettings() {
     }
   }, [serverState]);
 
+  const scheduleQueueSaveRef = useRef<(() => void) | null>(null);
+
   const scheduleQueueSave = useCallback(() => {
     if (!client) return;
 
@@ -266,7 +259,7 @@ export default function BatchAgentSettings() {
       const startFocused = document.activeElement === queueStartRef.current;
       const endFocused = document.activeElement === queueEndRef.current;
       if (startFocused || endFocused) {
-        scheduleQueueSave();
+        scheduleQueueSaveRef.current?.();
         return;
       }
 
@@ -275,12 +268,13 @@ export default function BatchAgentSettings() {
   }, [applyQueueConfig, client, queueEnd, queueStart]);
 
   useEffect(() => {
+    scheduleQueueSaveRef.current = scheduleQueueSave;
     return () => {
       if (saveQueueTimerRef.current !== null) {
         window.clearTimeout(saveQueueTimerRef.current);
       }
     };
-  }, []);
+  }, [scheduleQueueSave]);
 
   return (
     <div>

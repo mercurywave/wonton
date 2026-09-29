@@ -9,6 +9,7 @@ import { resolveTempFilePath, getProjectDataDir } from "../utils/platformUtils";
 import { TempFileReservation } from "../types/chat";
 import { useEventBus } from "../contexts";
 import SelectionBubble from "./SelectionBubble";
+import type { IpcRendererEvent } from "electron";
 
 interface TempFileViewerPanelProps {
   uniqueName: string;
@@ -70,24 +71,27 @@ export default function TempFileViewerPanel({
       if (err instanceof Error) {
         setError(err.message);
       } else if (typeof err === "object" && err !== null) {
-        setError((err as any).message || (err as any).msg || JSON.stringify(err));
+        setError(String((err as Record<string, unknown>).message ?? (err as Record<string, unknown>).msg ?? JSON.stringify(err)));
       } else {
         setError(String(err));
       }
     }
   }, [uniqueName, projectId, reservedTempFiles]);
 
+  const watcherKeyRef = useRef<string>("");
+  const loadFileRef = useRef(loadFile);
+
+  useEffect(() => {
+    loadFileRef.current = loadFile;
+  }, [loadFile]);
+
   useEffect(() => {
     if (!projectId || !reservedTempFiles.some((f) => f.uniqueName === uniqueName)) {
       onClose();
       return;
     }
-    loadFile();
-  }, [uniqueName, projectId, loadFile, onClose]);
-
-  const watcherKeyRef = useRef<string>("");
-  const loadFileRef = useRef(loadFile);
-  loadFileRef.current = loadFile;
+    loadFileRef.current();
+  }, [uniqueName, projectId, onClose]);
 
   useEffect(() => {
     if (!projectId || !reservedTempFiles.some((f) => f.uniqueName === uniqueName)) {
@@ -117,7 +121,8 @@ export default function TempFileViewerPanel({
         const watcherKey = watcherId.watcherId;
         watcherKeyRef.current = watcherKey;
 
-        const handler = (_event: any, ev: any) => {
+        const handler = (_event: IpcRendererEvent, ...args: unknown[]) => {
+          const ev = args[0] as { id: string; filename: string } | undefined;
           if (ev && ev.id === watcherKey && ev.filename === uniqueName) {
             loadFileRef.current();
           }

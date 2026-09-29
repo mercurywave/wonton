@@ -53,10 +53,10 @@ export class ExecuteSubagentHandler implements ToolHandler {
     }
 
     const definition = JSON.parse(JSON.stringify(this.definition)) as ToolDefinition;
-    (definition.function as any).description = description;
+    (definition.function as Record<string, unknown>).description = description;
 
     if (agentNames.length > 0) {
-      const props = (definition.function as any).parameters.properties;
+      const props = (definition.function as Record<string, unknown>).parameters.properties;
       props.agentName.enum = agentNames;
     }
 

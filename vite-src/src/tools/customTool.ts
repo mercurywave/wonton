@@ -32,7 +32,7 @@ export async function executeCustomTool(
       context.showFeedback,
     );
 
-    const fn = new Function("won", "args", `return (async () => {${tool.code}})();`) as (won: any, args: object) => Promise<string>;
+    const fn = new Function("won", "args", `return (async () => {${tool.code}})();`) as (won: unknown, args: object) => Promise<string>;
     const result = await fn(won, args);
     return { callId: "", content: typeof result === "string" ? result : String(result) };
   } catch (err) {

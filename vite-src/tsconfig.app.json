@@ -15,7 +15,7 @@
     "jsx": "react-jsx",
 
     /* Types */
-    "types": ["node"],
+    "types": ["node", "electron"],
 
     /* Linting */
     "strict": true,
