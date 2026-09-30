@@ -194,6 +194,7 @@ export interface Won {
   openFile(uniqueName: string): void;
   getChatHistory(): ChatHistoryEntry[];
   getChatName(): string;
+  setChatName(name: string): Promise<void>;
   pushMessage(entry: ChatHistoryEntry): Promise<void>;
   createNewVersion(): Promise<void>;
   createChatWithHistory(

@@ -115,6 +115,7 @@ All JavaScript hooks receive a `won` object. Below is the complete API surface:
 | `pushMessage` | `(entry: { role: string; content: string }) => Promise<void>` | Manually append a message to the chat history |
 | `getChatHistory` | `() => ChatHistoryEntry[]` | Get the current chat log as `{ role, content }` entries |
 | `getChatName` | `() => string` | Get the current chat's name |
+| `setChatName` | `(name: string) => Promise<void>` | Set the current chat's name |
 | `getChatDraft` | `() => string` | Get the text the user has typed but not yet sent |
 | `setChatDraft` | `(draft: string) => Promise<void>` | Set the text in the input field |
 

@@ -145,6 +145,9 @@ export function buildWon(
       const meta = chatStore.getChat(projectId, chatId);
       return meta?.name ?? "";
     },
+    async setChatName(name: string) {
+      await chatStore.updateChatMeta(projectId, chatId, { name });
+    },
     async setWorkflowData(partial) {
       const meta = chatStore.getChat(projectId, chatId);
       const merged = { ...(meta?.workflowData ?? {}), ...partial };
@@ -245,7 +248,7 @@ export function buildWon(
     },
     async runQuery(messages: string | ChatHistoryEntry[], options) {
       const messageArr: ChatHistoryEntry[] = (typeof messages === 'string') 
-        ? [{ content: messages, role: 'user' }]
+        ? [{ content: messages.trim(), role: 'user' }]
         : messages;
       const settings = loadAndResolveSettings();
       const chat = chatStore.getChat(projectId, chatId);

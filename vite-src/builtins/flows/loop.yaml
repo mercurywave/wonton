@@ -9,6 +9,11 @@ states:
         onEnter: |
         hookAdjustPrompt: |
             await won.set("prompt", userContent);
+            let title = await won.runQuery(`
+                Generate a brief title for the following user prompt:
+                ${userContent}
+            `);
+            await won.setChatName(title);
             await won.pushMessage({ role: 'user', content: userContent });
             let count = await won.prompt("Number of times to repeat");
             if(Number.parseInt(count) < 1) {
@@ -25,5 +30,5 @@ states:
                 content: "Loop completed" 
             });
             won.setStatus('');
-            won.finishWorkflow();
+            won.toast("Loop completed", "success");
             return "";
