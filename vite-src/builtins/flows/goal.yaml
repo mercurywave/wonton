@@ -1,0 +1,42 @@
+name: Goal
+id: goal-v1.0
+description: Achieve a specific goal through repeated tasks
+initialState: prep
+schemaVersion: 1
+states:
+    prep:
+        message: Enter goal to achieve
+        onEnter: |
+        hookAdjustPrompt: |
+            await won.set("prompt", userContent);
+            await won.pushMessage({ role: 'user', content: userContent });
+            if(won.getChatHistory().length < 1) {
+                let title = await won.runQuery(`
+                    Generate a brief title for the following user prompt:
+                    ${userContent}
+                `);
+                await won.setChatName(title);
+            }
+            // TODO: there's no way to cancel this...
+            for(let i = 1; i <= 9; i++) {
+                won.setStatus(`Iteration ${i}`);
+                let agentId = await won.createSubagent();
+                let prompt = `
+                    Handle the next step towards achieving the following goal:
+                    \`\`\`${userContent}\`\`\`
+                `;
+                await won.runAgent(agentId, prompt);
+                let results = await won.runAgent(agentId, `
+                    YES or NO: Does any work remain towards achieving the original goal?
+                `);
+                if(results.trim().toUpperCase() === "NO") {
+                    break;
+                }
+            }
+            await won.pushMessage({
+                role: 'assistant', 
+                content: "Goal Achieved" 
+            });
+            won.setStatus('');
+            won.toast("Goal Achieved", "success");
+            return "";
