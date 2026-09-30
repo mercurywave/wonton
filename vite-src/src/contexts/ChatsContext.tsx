@@ -351,6 +351,7 @@ return 'Exit code: ' + result.code + '\\n\\nSTDOUT:\\n' + result.stdout + '\\n\\
   const wrappedSendMessage = useCallback(
     async (content: string, modelId: string) => {
       const adjusted = await workflowExecuteAdjustPrompt(content);
+      if(adjusted === "") return;
       await sendMessage(adjusted, modelId, (adjusted !== content) ? content : undefined);
     },
     [workflowExecuteAdjustPrompt, sendMessage]

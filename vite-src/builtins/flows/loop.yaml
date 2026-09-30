@@ -1,0 +1,29 @@
+name: Loop
+id: loop-v1.0
+description: Repeat a task X times
+initialState: prep
+schemaVersion: 1
+states:
+    prep:
+        message: Enter prompt to repeat
+        onEnter: |
+        hookAdjustPrompt: |
+            await won.set("prompt", userContent);
+            await won.pushMessage({ role: 'user', content: userContent });
+            let count = await won.prompt("Number of times to repeat");
+            if(Number.parseInt(count) < 1) {
+                return "";
+            }
+            count = Number.parseInt(count);
+            for(let i = 1; i <= count; i++) {
+                won.setStatus(`Iteration ${i} of ${count}`);
+                let agentId = await won.createSubagent();
+                await won.runAgent(agentId, userContent);
+            }
+            await won.pushMessage({
+                role: 'assistant', 
+                content: "Loop completed" 
+            });
+            won.setStatus('');
+            won.finishWorkflow();
+            return "";
