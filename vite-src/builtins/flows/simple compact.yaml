@@ -1,0 +1,15 @@
+name: Simple Compact
+id: SimpleCompact-v1.0
+description: Removes tool calls and intermediate agent responses
+schemaVersion: 1
+commandName: compact
+command: |
+    console.log("macro run");
+    let history = won.getChatHistory();
+    await won.createNewVersion();
+    for(let c of history){
+        if (c.role === 'tool') return;
+        if (c.content === '') return;
+        console.log(c);
+        await won.pushMessage(c);
+    }

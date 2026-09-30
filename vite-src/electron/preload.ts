@@ -40,6 +40,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   dataDir: {
     getAppPath: () => ipcRenderer.invoke("dataDir:getAppPath"),
     getHomeDir: () => ipcRenderer.invoke("dataDir:getHomeDir"),
+    getBuiltinsPath: () => ipcRenderer.invoke("dataDir:getBuiltinsPath"),
     getPlatform: () => ipcRenderer.invoke("dataDir:getPlatform"),
   },
 

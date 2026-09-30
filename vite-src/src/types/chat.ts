@@ -131,6 +131,7 @@ export interface ProjectCustomTool {
   name: string;
   description: string;
   code: string;
+  source?: "builtin" | "project";
 }
 
 export interface Flow {
@@ -142,7 +143,7 @@ export interface Flow {
   states?: Record<string, FlowState>;
   command?: string;
   isCommand?: boolean;
-  source?: string; // "global" or project ID
+  source?: "builtin" | "global" | string;
   tools?: FlowCustomTool[];
 }
 

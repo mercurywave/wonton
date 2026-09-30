@@ -62,6 +62,15 @@
 			"out/electron/**/*",
 			"public/**/*"
 		],
+		"extraResources": [
+			{
+				"from": "builtins",
+				"to": "builtins",
+				"filter": [
+					"**/*.yaml"
+				]
+			}
+		],
 		"extraMetadata": {
 			"main": "out/electron/main.cjs"
 		},

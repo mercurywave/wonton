@@ -21,6 +21,7 @@ interface FlowsContextValue {
   commandFlows: Flow[];
   isLoading: boolean;
   refreshFlows: () => Promise<void>;
+  builtInFlowsPath: string;
   globalFlowsPath: string;
   projectFlowsPath: string;
   toggleFlow: (flowId: string) => Promise<void>;
@@ -36,6 +37,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
   const [flows, setFlows] = useState<Flow[]>(() => flowStore.getFlows());
   const [disabledFlows, setDisabledFlows] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [builtInFlowsPath, setBuiltInFlowsPath] = useState(() => flowStore.getBuiltInFlowsPath());
   const [globalFlowsPath, setGlobalFlowsPath] = useState(() => flowStore.getGlobalFlowsPath());
   const [projectFlowsPath, setProjectFlowsPath] = useState(() => flowStore.getProjectFlowsPath());
   const [conflictIds, setConflictIds] = useState<string[]>(() => flowStore.getConflictIds());
@@ -61,6 +63,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
     await flowStore.refresh();
     setFlows(flowStore.getFlows());
+    setBuiltInFlowsPath(flowStore.getBuiltInFlowsPath());
     setGlobalFlowsPath(flowStore.getGlobalFlowsPath());
     setProjectFlowsPath(flowStore.getProjectFlowsPath());
     setConflictIds(flowStore.getConflictIds());
@@ -88,6 +91,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
           await flowStore.refresh();
           if (!cancelled) {
             setFlows(flowStore.getFlows());
+            setBuiltInFlowsPath(flowStore.getBuiltInFlowsPath());
             setGlobalFlowsPath(flowStore.getGlobalFlowsPath());
             setProjectFlowsPath(flowStore.getProjectFlowsPath());
             setConflictIds(flowStore.getConflictIds());
@@ -168,6 +172,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
 
     const unsubscribe = flowStore.subscribe(() => {
       setFlows(flowStore.getFlows());
+      setBuiltInFlowsPath(flowStore.getBuiltInFlowsPath());
       setGlobalFlowsPath(flowStore.getGlobalFlowsPath());
       setProjectFlowsPath(flowStore.getProjectFlowsPath());
       setConflictIds(flowStore.getConflictIds());
@@ -245,6 +250,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       commandFlows,
       isLoading,
       refreshFlows,
+      builtInFlowsPath,
       globalFlowsPath,
       projectFlowsPath,
       toggleFlow,
@@ -252,7 +258,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       conflictFiles,
       overriddenGlobalIds,
     }),
-    [flows, disabledFlows, enabledWorkflows, commandFlows, isLoading, globalFlowsPath, projectFlowsPath, conflictIds, conflictFiles, overriddenGlobalIds]
+    [flows, disabledFlows, enabledWorkflows, commandFlows, isLoading, builtInFlowsPath, globalFlowsPath, projectFlowsPath, conflictIds, conflictFiles, overriddenGlobalIds]
   );
 
   return <FlowsContext.Provider value={value}>{children}</FlowsContext.Provider>;

@@ -1,0 +1,49 @@
+name: Feature
+id: Feature-v1.0
+description: Create a design and implement a new feature
+initialState: design
+schemaVersion: 1
+states:
+    design:
+        message: Describe the feature
+        onEnter: |
+        hookAdjustPrompt: |
+            let file = await won.reserveTempFile("design.md");
+            await won.set("design", file);
+            return `
+                Flesh this request out and write a PRD for the feature into ${file}.
+                Include all necessary details and requirements in the file instead of replying.
+                Only reply with questions for clarity or to prompt the user for feedback after you have a draft.
+                Do NOT write any any new code or change any other files.
+                > ${userContent}`;
+        onSendPrompt: |
+            let file = await won.get("design");
+            console.log(file);
+            won.openFile(file);
+        onChatResponse: |
+            await won.advance("review");
+    review:
+        message: Ready to implement?
+        actionButtons:
+            -   label: Go
+                idx: 1
+        hookAdjustPrompt: |
+            return `
+                Update the PRD to reflect these crtiques.
+                Do NOT write any any new code or change any other files.
+                > ${userContent}`;
+        onActionButton: |
+            if(idx === 1) {
+                let file = await won.get("design");
+                await won.advance("implement");
+                await won.createNewVersion();
+                // I don't know if this is still needed... it probably shouldn't be
+                await new Promise((resolve) => setTimeout(resolve, 2000));
+                await won.submitPrompt(`
+                    Implement the feature based on the PRD in ${file}.
+                `);
+            }
+    implement:
+        message: Implementing...
+        onChatResponse: |
+            won.finishWorkflow();

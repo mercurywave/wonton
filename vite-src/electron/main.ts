@@ -326,6 +326,12 @@ async function dataDirGetHomeDir(_event: Electron.IpcMainInvokeEvent) {
   return os.homedir();
 }
 
+async function dataDirGetBuiltinsPath(_event: Electron.IpcMainInvokeEvent) {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, "builtins")
+    : path.join(app.getAppPath(), "builtins");
+}
+
 async function dataDirGetPlatform(_event: Electron.IpcMainInvokeEvent) {
   return process.platform;
 }
@@ -333,6 +339,7 @@ async function dataDirGetPlatform(_event: Electron.IpcMainInvokeEvent) {
 // Register dataDir IPC handlers
 ipcMain.handle("dataDir:getAppPath", dataDirGetAppPath);
 ipcMain.handle("dataDir:getHomeDir", dataDirGetHomeDir);
+ipcMain.handle("dataDir:getBuiltinsPath", dataDirGetBuiltinsPath);
 ipcMain.handle("dataDir:getPlatform", dataDirGetPlatform);
 
 // notifications module

@@ -89,6 +89,18 @@ export async function getToolsDirPath(projectId: string): Promise<string> {
   return await joinPath(projectDir, TOOLS_DIR_NAME);
 }
 
+export async function getBuiltInFlowsDirPath(): Promise<string> {
+  if (!isBackendConnected()) return "";
+  const builtinsPath = await window.electronAPI.dataDir.getBuiltinsPath();
+  return await joinPath(builtinsPath, FLOWS_DIR_NAME);
+}
+
+export async function getBuiltInToolsDirPath(): Promise<string> {
+  if (!isBackendConnected()) return "";
+  const builtinsPath = await window.electronAPI.dataDir.getBuiltinsPath();
+  return await joinPath(builtinsPath, TOOLS_DIR_NAME);
+}
+
 export function isBackendConnected(): boolean {
   return typeof window !== "undefined" && "electronAPI" in window;
 }

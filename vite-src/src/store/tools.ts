@@ -1,6 +1,7 @@
 import { ProjectCustomTool } from "../types/chat";
 import {
   isBackendConnected,
+  getBuiltInToolsDirPath,
   getToolsDirPath,
 } from "../utils/platformUtils";
 import { filesystem } from "../utils/electronFs";
@@ -10,6 +11,7 @@ const TOOL_EXT = ".yaml";
 
 interface LoadResult {
   tools: ProjectCustomTool[];
+  builtInToolsPath: string;
   toolsDirPath: string;
 }
 
@@ -17,6 +19,7 @@ type Listener = () => void;
 
 interface ToolStore {
   getTools(): ProjectCustomTool[];
+  getBuiltInToolsPath(): string;
   getToolsDirPath(): string;
   load(projectId: string): Promise<void>;
   refresh(): Promise<void>;
@@ -31,6 +34,7 @@ interface ToolStoreInternal extends ToolStore {
 
 const state = {
   tools: [] as ProjectCustomTool[],
+  builtInToolsPath: "",
   toolsDirPath: "",
   isLoaded: false,
   _currentProjectId: "",
@@ -43,7 +47,7 @@ function dispatch() {
   }
 }
 
-async function loadToolsFromDirectory(dirPath: string): Promise<ProjectCustomTool[]> {
+async function loadToolsFromDirectory(dirPath: string, source: "builtin" | "project"): Promise<ProjectCustomTool[]> {
   let entries: { entry: string }[] = [];
   try {
     entries = await filesystem.readDirectory(dirPath);
@@ -68,6 +72,7 @@ async function loadToolsFromDirectory(dirPath: string): Promise<ProjectCustomToo
         name: data.name as string,
         description: data.description as string,
         code: data.code as string,
+        source,
       });
     } catch (e) {
       console.warn(`loadToolsFromDirectory: failed to parse ${name}:`, e);
@@ -79,14 +84,21 @@ async function loadToolsFromDirectory(dirPath: string): Promise<ProjectCustomToo
 
 async function loadToolsFromDisk(projectId: string): Promise<LoadResult> {
   if (!isBackendConnected()) {
-    return { tools: [...state.tools], toolsDirPath: state.toolsDirPath };
+    return { tools: [...state.tools], builtInToolsPath: state.builtInToolsPath, toolsDirPath: state.toolsDirPath };
   }
 
+  const builtInToolsDir = await getBuiltInToolsDirPath();
   const toolsDir = await getToolsDirPath(projectId);
 
-  const tools = await loadToolsFromDirectory(toolsDir);
+  const builtInTools = await loadToolsFromDirectory(builtInToolsDir, "builtin");
+  const projectTools = await loadToolsFromDirectory(toolsDir, "project");
+  const projectToolNames = new Set(projectTools.map((tool) => tool.name));
+  const tools = [
+    ...projectTools.sort((a, b) => a.name.localeCompare(b.name)),
+    ...builtInTools.filter((tool) => !projectToolNames.has(tool.name)).sort((a, b) => a.name.localeCompare(b.name)),
+  ];
 
-  return { tools, toolsDirPath: toolsDir };
+  return { tools, builtInToolsPath: builtInToolsDir, toolsDirPath: toolsDir };
 }
 
 async function ensureToolsDirectory(projectId: string): Promise<void> {
@@ -120,6 +132,10 @@ const toolStore: ToolStoreInternal = {
     return state.tools;
   },
 
+  getBuiltInToolsPath() {
+    return state.builtInToolsPath;
+  },
+
  getToolsDirPath() {
     return state.toolsDirPath;
   },
@@ -142,6 +158,7 @@ const toolStore: ToolStoreInternal = {
   async refresh() {
     const result = await loadToolsFromDisk(state._currentProjectId);
     state.tools = result.tools;
+    state.builtInToolsPath = result.builtInToolsPath;
     state.toolsDirPath = result.toolsDirPath;
     dispatch();
   },

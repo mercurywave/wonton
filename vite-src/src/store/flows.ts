@@ -1,6 +1,7 @@
 import { Flow } from "../types/chat";
 import {
   isBackendConnected,
+  getBuiltInFlowsDirPath,
   getFlowsDirPath,
 } from "../utils/platformUtils";
 import { filesystem } from "../utils/electronFs";
@@ -10,6 +11,7 @@ const FLOW_EXT = ".yaml";
 
 interface LoadResult {
   flows: Flow[];
+  builtInFlowsPath: string;
   globalFlowsPath: string;
   projectFlowsPath: string;
   conflictIds: string[];
@@ -21,6 +23,7 @@ type Listener = () => void;
 
 interface FlowStore {
   getFlows(): Flow[];
+  getBuiltInFlowsPath(): string;
   getGlobalFlowsPath(): string;
   getProjectFlowsPath(): string;
   getConflictIds(): string[];
@@ -39,6 +42,7 @@ interface FlowStoreInternal extends FlowStore {
 
 const state = {
   flows: [] as Flow[],
+  builtInFlowsPath: "",
   globalFlowsPath: "",
   projectFlowsPath: "",
   conflictIds: [] as string[],
@@ -108,11 +112,15 @@ async function loadFlowsFromDirectory(dirPath: string, source: string): Promise<
 
 async function loadFlowsFromDisk(projectId: string): Promise<LoadResult> {
   if (!isBackendConnected()) {
-    return { flows: [...state.flows], globalFlowsPath: state.globalFlowsPath, projectFlowsPath: state.projectFlowsPath, conflictIds: [], conflictFiles: {}, overriddenGlobalIds: [] };
+    return { flows: [...state.flows], builtInFlowsPath: state.builtInFlowsPath, globalFlowsPath: state.globalFlowsPath, projectFlowsPath: state.projectFlowsPath, conflictIds: [], conflictFiles: {}, overriddenGlobalIds: [] };
   }
 
+  const builtInFlowsDir = await getBuiltInFlowsDirPath();
   const globalFlowsDir = await getFlowsDirPath(undefined);
   const projectFlowsDir = await getFlowsDirPath(projectId);
+
+  const builtInResult = await loadFlowsFromDirectory(builtInFlowsDir, "builtin");
+  const builtInFlows = new Map<string, Flow>(builtInResult.flows.map((flow) => [flow.id, flow]));
 
   // Load global flows first
   const globalResult = await loadFlowsFromDirectory(globalFlowsDir, "global");
@@ -130,27 +138,23 @@ async function loadFlowsFromDisk(projectId: string): Promise<LoadResult> {
     }
   }
 
-  // Merge: global + project overrides
-  const mergedFlows = new Map<string, Flow>();
-  for (const [id, flow] of globalFlows) {
-    mergedFlows.set(id, flow);
-  }
-  for (const [id, flow] of projectFlows) {
-    mergedFlows.set(id, flow);
-  }
-
   // Combine conflicts (project-level conflicts take precedence in conflictFiles)
-  const combinedConflictIds = new Set<string>(globalResult.conflictIds);
+  const combinedConflictIds = new Set<string>(builtInResult.conflictIds);
+  globalResult.conflictIds.forEach((id) => combinedConflictIds.add(id));
   projectResult.conflictIds.forEach((id) => combinedConflictIds.add(id));
-  const combinedConflictFiles: Record<string, string> = { ...globalResult.conflictFiles, ...projectResult.conflictFiles };
+  const combinedConflictFiles: Record<string, string> = { ...builtInResult.conflictFiles, ...globalResult.conflictFiles, ...projectResult.conflictFiles };
 
-  // Sort: project flows first (by name), then global flows (by name)
+  // Higher-precedence sources replace lower-precedence definitions with the same ID.
   const projectFlowList = Array.from(projectFlows.values()).sort((a, b) => a.name.localeCompare(b.name));
   const globalFlowList = Array.from(globalFlows.values())
+    .filter((flow) => !projectFlows.has(flow.id))
     .sort((a, b) => a.name.localeCompare(b.name));
-  const flows = [...projectFlowList, ...globalFlowList];
+  const builtInFlowList = Array.from(builtInFlows.values())
+    .filter((flow) => !globalFlows.has(flow.id) && !projectFlows.has(flow.id))
+    .sort((a, b) => a.name.localeCompare(b.name));
+  const flows = [...projectFlowList, ...globalFlowList, ...builtInFlowList];
 
-  return { flows, globalFlowsPath: globalFlowsDir, projectFlowsPath: projectFlowsDir, conflictIds: Array.from(combinedConflictIds), conflictFiles: combinedConflictFiles, overriddenGlobalIds };
+  return { flows, builtInFlowsPath: builtInFlowsDir, globalFlowsPath: globalFlowsDir, projectFlowsPath: projectFlowsDir, conflictIds: Array.from(combinedConflictIds), conflictFiles: combinedConflictFiles, overriddenGlobalIds };
 }
 
 const flowStore: FlowStoreInternal = {
@@ -159,6 +163,10 @@ const flowStore: FlowStoreInternal = {
 
   getFlows() {
     return state.flows;
+  },
+
+  getBuiltInFlowsPath() {
+    return state.builtInFlowsPath;
   },
 
   getGlobalFlowsPath() {
@@ -198,6 +206,7 @@ const flowStore: FlowStoreInternal = {
   async refresh() {
     const result = await loadFlowsFromDisk(state._currentProjectId);
     state.flows = result.flows;
+    state.builtInFlowsPath = result.builtInFlowsPath;
     state.globalFlowsPath = result.globalFlowsPath;
     state.projectFlowsPath = result.projectFlowsPath;
     state.conflictIds = result.conflictIds;

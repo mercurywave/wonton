@@ -17,6 +17,7 @@ interface ToolsContextValue {
   tools: ProjectCustomTool[];
   isLoading: boolean;
   refreshTools: () => Promise<void>;
+  builtInToolsPath: string;
   toolsDirPath: string;
 }
 
@@ -26,6 +27,7 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
   const { state: nav } = useNav();
   const [tools, setTools] = useState<ProjectCustomTool[]>(() => toolStore.getTools());
   const [isLoading, setIsLoading] = useState(true);
+  const [builtInToolsPath, setBuiltInToolsPath] = useState(() => toolStore.getBuiltInToolsPath());
   const [toolsDirPath, setToolsDirPath] = useState(() => toolStore.getToolsDirPath());
   const watcherKeyRef = useRef<string>("");
   const refreshTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -38,6 +40,7 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     await toolStore.refresh();
     setTools(toolStore.getTools());
+    setBuiltInToolsPath(toolStore.getBuiltInToolsPath());
     setToolsDirPath(toolStore.getToolsDirPath());
     setIsLoading(false);
   }, [nav.projectId]);
@@ -61,6 +64,7 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
           await toolStore.refresh();
           if (!cancelled) {
             setTools(toolStore.getTools());
+            setBuiltInToolsPath(toolStore.getBuiltInToolsPath());
             setToolsDirPath(toolStore.getToolsDirPath());
           }
         } catch {
@@ -127,6 +131,7 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
 
     const unsubscribe = toolStore.subscribe(() => {
       setTools(toolStore.getTools());
+      setBuiltInToolsPath(toolStore.getBuiltInToolsPath());
       setToolsDirPath(toolStore.getToolsDirPath());
     });
 
@@ -146,9 +151,10 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
       tools,
       isLoading,
       refreshTools,
+      builtInToolsPath,
       toolsDirPath,
     }),
-    [tools, isLoading, toolsDirPath]
+    [tools, isLoading, builtInToolsPath, toolsDirPath]
   );
 
   return <ToolsContext.Provider value={value}>{children}</ToolsContext.Provider>;

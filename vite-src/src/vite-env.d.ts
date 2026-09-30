@@ -32,6 +32,7 @@ interface ElectronAPI {
   dataDir: {
     getAppPath: () => Promise<string>;
     getHomeDir: () => Promise<string>;
+    getBuiltinsPath: () => Promise<string>;
     getPlatform: () => Promise<string>;
   };
   events: {

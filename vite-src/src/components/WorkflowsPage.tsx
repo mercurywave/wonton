@@ -108,18 +108,18 @@ const presetFields = [
 ];
 
 export default function WorkflowsPage() {
-  const { flows, disabledFlows, isLoading, globalFlowsPath, projectFlowsPath, toggleFlow, conflictIds, conflictFiles, overriddenGlobalIds } = useFlowsContext();
+  const { flows, disabledFlows, isLoading, globalFlowsPath, projectFlowsPath, toggleFlow, conflictIds, conflictFiles } = useFlowsContext();
   const { tools, toolsDirPath } = useToolsContext();
   const { activeProjectId } = useNav();
   const [activeTab, setActiveTab] = useState<"workflows" | "tools" | "agents">("workflows");
   const [presetCommands, setPresetCommands] = useState<Record<string, string>>({});
   const windowsOnly = isWindowsSync();
-  const overriddenSet = new Set(overriddenGlobalIds);
   const hasConflict = conflictIds.length > 0;
 
-  // Split flows into project-level and global
-  const projectFlows = flows.filter((f) => f.source && f.source !== "global");
+  // Sources are already deduplicated by precedence in the flow store.
+  const projectFlows = flows.filter((f) => f.source && f.source !== "global" && f.source !== "builtin");
   const globalFlows = flows.filter((f) => f.source === "global");
+  const builtInFlows = flows.filter((f) => f.source === "builtin");
 
   // Load preset commands from projectMeta
   useEffect(() => {
@@ -227,7 +227,26 @@ export default function WorkflowsPage() {
                                 key={flow.id}
                                 flow={flow}
                                 isDisabled={disabledFlows.includes(flow.id)}
-                                isOverridden={overriddenSet.has(flow.id)}
+                                isOverridden={false}
+                                hasConflict={hasConflict}
+                                onToggle={() => toggleFlow(flow.id)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {builtInFlows.length > 0 && (
+                        <div className={styles.section}>
+                          <div className={styles.sectionHeader}>
+                            <h3 className={styles.sectionTitle}>Built-in Workflows</h3>
+                          </div>
+                          <div className={styles.flowsList}>
+                            {builtInFlows.map((flow) => (
+                              <FlowCard
+                                key={flow.id}
+                                flow={flow}
+                                isDisabled={disabledFlows.includes(flow.id)}
+                                isOverridden={false}
                                 hasConflict={hasConflict}
                                 onToggle={() => toggleFlow(flow.id)}
                               />
@@ -299,6 +318,8 @@ export default function WorkflowsPage() {
 function ToolsSection({ tools, toolsDirPath, presetCommands, updatePresetCommand }: { tools: import("../types/chat").ProjectCustomTool[]; toolsDirPath: string; presetCommands: Record<string, string>; updatePresetCommand: (key: string, value: string) => Promise<void> }) {
   const [isOpening, setIsOpening] = useState(false);
   const windowsOnly = isWindowsSync();
+  const projectTools = tools.filter((tool) => tool.source !== "builtin");
+  const builtInTools = tools.filter((tool) => tool.source === "builtin");
 
   const handleOpen = async () => {
     if (!isBackendConnected() || !toolsDirPath || isOpening) return;
@@ -359,11 +380,32 @@ function ToolsSection({ tools, toolsDirPath, presetCommands, updatePresetCommand
           </p>
         </div>
       ) : (
-        <div className={styles.flowsList}>
-          {tools.map((tool) => (
-            <ToolCard key={tool.name} tool={tool} />
-          ))}
-        </div>
+        <>
+          {projectTools.length > 0 && (
+            <div className={styles.section}>
+              <div className={styles.sectionHeader}>
+                <h3 className={styles.sectionTitle}>Project Tools</h3>
+              </div>
+              <div className={styles.flowsList}>
+                {projectTools.map((tool) => (
+                  <ToolCard key={tool.name} tool={tool} />
+                ))}
+              </div>
+            </div>
+          )}
+          {builtInTools.length > 0 && (
+            <div className={styles.section}>
+              <div className={styles.sectionHeader}>
+                <h3 className={styles.sectionTitle}>Built-in Tools</h3>
+              </div>
+              <div className={styles.flowsList}>
+                {builtInTools.map((tool) => (
+                  <ToolCard key={tool.name} tool={tool} />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

@@ -1,0 +1,41 @@
+name: Mini-Feature
+id: mini-feature-v1.0
+description: Implement a new feature
+initialState: design
+schemaVersion: 1
+states:
+    design:
+        message: Describe the feature
+        onEnter: |
+        hookAdjustPrompt: |
+            return `
+                Evaluate what development would be required to complete the following request.
+                Start by exploring the code base.
+                Reply with a summary of changes to demonstrate understanding of the request to the user.
+                Don't make any code changes until the user approves the plan.
+                > ${userContent}`;
+        onChatResponse: |
+            await won.advance("review");
+    review:
+        message: Ready to implement?
+        actionButtons:
+            -   label: Go (minor changes)
+                idx: 1
+        onActionButton: |
+            if(idx === 1) {
+                let prompt = won.getChatDraft();
+                if(prompt !== ""){
+                    prompt = `
+                        Implement the changes, but revise it in this way:
+                        ${prompt}
+                    `;
+                } else {
+                    prompt = `Implement the changes`;
+                }
+                await won.advance("implement");
+                await won.submitPrompt(prompt);
+            }
+    implement:
+        message: Implementing...
+        onChatResponse: |
+            won.finishWorkflow();
