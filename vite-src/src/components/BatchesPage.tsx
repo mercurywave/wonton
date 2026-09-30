@@ -309,7 +309,7 @@ export default function BatchesPage() {
     } finally {
       setBusyId(null);
     }
-  }, [client, markTaskDone]);
+  }, [client, markBatchDoneLocally, markTaskDone]);
 
   const handleApplyPatch = useCallback(async (taskId: string) => {
     if (!client) return;
@@ -355,7 +355,7 @@ export default function BatchesPage() {
     } finally {
       setBusyId(null);
     }
-  }, [activeProject?.folderPath, client, gitAvailable, markTaskDone, refreshData]);
+  }, [activeProject, client, gitAvailable, markBatchDoneLocally, markTaskDone]);
 
   const handleActivateQueue = useCallback(async () => {
     if (!client) return;
@@ -438,7 +438,7 @@ export default function BatchesPage() {
     } finally {
       setCreating(false);
     }
-  }, [activeProject?.folderPath, batchModel, client, maxIterations, persistBatch, prompt, refreshData, settings.porkbunLlmServerId, settings.porkbunModelId, title]);
+  }, [activeProject, batchModel, client, maxIterations, persistBatch, prompt, refreshData, settings.porkbunLlmServerId, settings.porkbunModelId, title]);
 
   const handleTaskAction = useCallback(async (taskId: string, action: "run" | "cancel" | "retry") => {
     if (!client) return;
@@ -527,12 +527,14 @@ export default function BatchesPage() {
     [batches]
   );
 
+  const thirtyMinutesAgo = useRef(Date.now() - 30 * 60 * 1000).current;
+
   const hiddenOldDoneTasks = useMemo(
     () =>
       sortedTasks.filter((task) => {
         const doneAt = task.done_at ?? doneAtByTask[task.id] ?? null;
         if (!doneAt) return false;
-        return Date.now() - new Date(doneAt).getTime() > 30 * 60 * 1000;
+        return new Date(doneAt).getTime() <= thirtyMinutesAgo;
       }),
     [doneAtByTask, sortedTasks]
   );
@@ -546,7 +548,7 @@ export default function BatchesPage() {
       return sortedTasks.filter((task) => {
         const doneAt = task.done_at ?? doneAtByTask[task.id] ?? null;
         if (!doneAt) return true;
-        return Date.now() - new Date(doneAt).getTime() <= 30 * 60 * 1000;
+        return new Date(doneAt).getTime() > thirtyMinutesAgo;
       });
     },
     [doneAtByTask, showOldDoneTasks, sortedTasks]
