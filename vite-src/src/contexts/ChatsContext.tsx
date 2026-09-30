@@ -10,7 +10,7 @@ import {
 } from "react";
 import { useProjectChats } from "../hooks/useProjectChats";
 import { useChatApi } from "../hooks/useChatApi";
-import { useChatWorkflow, executeCommand as runExecuteCommand } from "../hooks/useChatWorkflow";
+import { useChatWorkflow, submitChatPrompt, executeCommand as runExecuteCommand } from "../hooks/useChatWorkflow";
 import { useSettings } from "./SettingsContext";
 import { useProjects } from "./ProjectsContext";
 import { useNav } from "./NavContext";
@@ -251,8 +251,6 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   const {
     executeAdjustPrompt: workflowExecuteAdjustPrompt,
-    onSendPrompt: workflowExecuteOnSendPrompt,
-    onChatResponse: workflowExecuteOnChatResponse,
     onActionButtonClick: workflowOnActionButtonClick,
     advance,
     currentFlow,
@@ -320,8 +318,6 @@ return 'Exit code: ' + result.code + '\\n\\nSTDOUT:\\n' + result.stdout + '\\n\\
     activeProject?.folderPath,
     activeLogId,
     refreshAndNotify,
-    () => workflowExecuteOnSendPrompt(),
-    (response: ChatMessage) => workflowExecuteOnChatResponse(response),
     selectedChatMeta?.activeAgentId,
     allAgents,
     wrappedShowFeedback,
@@ -350,11 +346,22 @@ return 'Exit code: ' + result.code + '\\n\\nSTDOUT:\\n' + result.stdout + '\\n\\
 
   const wrappedSendMessage = useCallback(
     async (content: string, modelId: string) => {
-      const adjusted = await workflowExecuteAdjustPrompt(content);
-      if(adjusted === "") return;
-      await sendMessage(adjusted, modelId, (adjusted !== content) ? content : undefined);
+      if (!activeProjectId || !selectedChatId) return;
+      await submitChatPrompt({
+        projectId: activeProjectId,
+        chatId: selectedChatId,
+        prompt: content,
+        showFeedback: wrappedShowFeedback,
+        submit: async (processedPrompt, originalPrompt) => (
+          await sendMessage(
+            processedPrompt,
+            modelId,
+            processedPrompt !== originalPrompt ? originalPrompt : undefined,
+          )
+        ),
+      });
     },
-    [workflowExecuteAdjustPrompt, sendMessage]
+    [activeProjectId, selectedChatId, wrappedShowFeedback, sendMessage]
   );
 
   const [historyMessages, setHistoryMessages] = useState<Record<string, ChatMessage[]>>({});
@@ -504,7 +511,7 @@ return 'Exit code: ' + result.code + '\\n\\nSTDOUT:\\n' + result.stdout + '\\n\\
       enabledToolNames,
       onToolSetChange,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowExecuteAdjustPrompt, workflowExecuteOnSendPrompt, workflowExecuteOnChatResponse, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

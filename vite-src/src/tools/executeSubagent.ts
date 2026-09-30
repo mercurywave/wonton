@@ -56,8 +56,12 @@ export class ExecuteSubagentHandler implements ToolHandler {
     (definition.function as Record<string, unknown>).description = description;
 
     if (agentNames.length > 0) {
-      const props = (definition.function as Record<string, unknown>).parameters.properties;
-      props.agentName.enum = agentNames;
+      const functionDefinition = definition.function as unknown as {
+        parameters: {
+          properties: Record<string, { enum?: string[] }>;
+        };
+      };
+      functionDefinition.parameters.properties.agentName.enum = agentNames;
     }
 
     return definition;
@@ -166,9 +170,6 @@ export class ExecuteSubagentHandler implements ToolHandler {
       agentId: agent.id,
       agent,
       reasoningEffort: subagentThinking,
-      onUpdateMessage: () => {
-        // No UI update needed for subagent — it's a background tool call
-      },
       onChatUpdated,
       onValidate: context.showFeedback,
     });

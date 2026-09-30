@@ -38,6 +38,65 @@ interface UseChatWorkflowReturn {
   advance(nextStateKey: string): Promise<void>;
 }
 
+interface SubmitChatPromptOptions {
+  projectId: string;
+  chatId: string;
+  prompt: string;
+  showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
+  submit: (prompt: string, originalPrompt: string) => Promise<ChatMessage | undefined>;
+}
+
+async function runWorkflowPromptHook(
+  won: Won,
+  projectId: string,
+  chatId: string,
+  hookName: "hookAdjustPrompt" | "onSendPrompt" | "onChatResponse",
+  prompt: string,
+  response?: ChatMessage,
+): Promise<string | undefined> {
+  const meta = chatStore.getChat(projectId, chatId);
+  const flow = flowStore.getFlows().find((candidate) => candidate.id === meta?.workflowId);
+  const state = flow?.states?.[meta?.workflowStateKey ?? ""];
+  const hook = state?.[hookName];
+  if (!hook) return undefined;
+
+  const hookFn = new Function(
+    "won",
+    "userContent",
+    "response",
+    `return (async () => {${hook}})();`,
+  ) as unknown as (won: Won, userContent: string, response?: ChatMessage) => Promise<string | undefined>;
+
+  try {
+    return await hookFn(won, prompt, response);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    addToast(`${hookName} hook failed: ${message}`, "error");
+    console.error(`${hookName} hook failed:`, err);
+    return undefined;
+  }
+}
+
+export async function submitChatPrompt({
+  projectId,
+  chatId,
+  prompt,
+  showFeedback,
+  submit,
+}: SubmitChatPromptOptions): Promise<void> {
+  const originalPrompt = prompt.trim().split("\n").map((line) => line.trim()).join("\n");
+  if (!originalPrompt) return;
+
+  const won = buildWon(projectId, chatId, undefined, showFeedback);
+  const adjustedPrompt = await runWorkflowPromptHook(won, projectId, chatId, "hookAdjustPrompt", originalPrompt);
+  const processedPrompt = typeof adjustedPrompt === "string" ? adjustedPrompt.trim() : originalPrompt;
+  if (!processedPrompt) return;
+
+  await runWorkflowPromptHook(won, projectId, chatId, "onSendPrompt", processedPrompt);
+  const response = await submit(processedPrompt, originalPrompt);
+  await runWorkflowPromptHook(won, projectId, chatId, "onChatResponse", processedPrompt, response);
+}
+
 // logId is assumed to mean that this is running in a subagent/historic version
 // Don't pass from main chat thread even if you know it
 export function buildWon(
@@ -401,7 +460,6 @@ export function buildWon(
         agent,
         allAgents,
         reasoningEffort,
-        onUpdateMessage: () => {},
         onChatUpdated: () => {},
         onValidate: showFeedback,
       });
@@ -423,6 +481,7 @@ export function buildWon(
       const resolvedAgentId = chat?.activeAgentId || "builtin:default";
       const agent = allAgents.find((a) => a.id === resolvedAgentId);
       const mainLogId = chatStore.getLogId(projectId, chatId) ?? "";
+      await chatLogsStore.load(projectId, mainLogId);
       const chatMessages = chatLogsStore.getLog(projectId, mainLogId) || [];
       const systemPrompt = agent?.systemPrompt || projectMeta?.systemPrompt || settings.systemPrompt;
       const model = chat?.activeModel || projectMeta?.defaultModel || settings.defaultModel || "";
@@ -479,7 +538,6 @@ export function buildWon(
         reasoningEffort,
         customTools: customToolDefs.length > 0 ? customToolDefs : undefined,
         enabledToolNames,
-        onUpdateMessage: () => {},
         onChatUpdated: () => {},
         onValidate: showFeedback,
       });
@@ -497,11 +555,24 @@ export function buildWon(
       addToast(message, severity);
     },
     async submitPrompt(prompt: string) {
-      prompt = prompt.trim().split("\n").map(t => t.trim()).join("\n");
       if (!chatId || !projectId) {
         throw new Error("Cannot submitPrompt: no active chat or project");
       }
-      emit("extension-submit-prompt", { prompt });
+      if (logId) { throw new Error("Cannot submitPrompt from sub agent"); }
+
+      await submitChatPrompt({
+        projectId,
+        chatId,
+        prompt,
+        showFeedback,
+        submit: async (processedPrompt) => {
+          await buildWon(projectId, chatId, undefined, showFeedback).runPrompt(processedPrompt);
+          const mainLogId = chatStore.getLogId(projectId, chatId);
+          return mainLogId
+            ? [...(chatLogsStore.getLog(projectId, mainLogId) ?? [])].reverse().find((message) => message.role === "assistant")
+            : undefined;
+        },
+      });
     },
   };
 }

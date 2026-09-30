@@ -34,7 +34,6 @@ interface ToolCallLoopOptions {
   reasoningEffort?: ReasoningEffort;
   customTools?: FlowCustomTool[];
   enabledToolNames?: string[];
-  onUpdateMessage?: (messageId: string, content: string, toolCalls?: ToolCall[], role?: ChatMessage["role"], toolCallId?: string, reasoningContent?: string, toolExecutionMs?: number) => void;
   onChatUpdated?: () => void;
   onValidate?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
   onFinish?: () => void;
@@ -65,7 +64,6 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     reasoningEffort,
     customTools,
     enabledToolNames,
-    onUpdateMessage,
     onChatUpdated,
     onValidate,
     onFinish,
@@ -92,6 +90,37 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     persistedMessageIds.add(userMessage.id);
   }
 
+  if (projectId && logId) {
+    chatLogsStore.setPendingMessage(projectId, logId, {
+      id: crypto.randomUUID(),
+      role: "assistant",
+      content: "",
+      timestamp: Date.now(),
+      toolCalls: [],
+    });
+  }
+
+  const updatePendingMessage = (
+    messageId: string,
+    content: string,
+    toolCalls?: ToolCall[],
+    role?: ChatMessage["role"],
+    toolCallId?: string,
+    reasoningContent?: string,
+  ) => {
+    if (!projectId || !logId || role === "tool") return;
+    const pending = chatLogsStore.getPendingMessage(projectId, logId);
+    const baseMessage = pending?.id === messageId ? pending : { id: messageId, timestamp: Date.now() };
+    chatLogsStore.updatePendingMessage(projectId, logId, {
+      ...baseMessage,
+      role: role ?? "assistant",
+      content,
+      reasoningContent,
+      toolCalls: toolCalls ?? [],
+      toolCallId,
+    } as ChatMessage);
+  };
+
   while (hasMoreToolCalls && round < MAX_TOOL_ROUNDS) {
     const { stream: roundStream } = await makeApiCall(
       settings,
@@ -109,8 +138,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     let parsedStats: LLMStats | null = null;
     const toolCallsMap = new Map<number, { id: string; name: string; args: string }>();
 
-    // Notify caller of new assistant message
-    onUpdateMessage?.(assistantId, "", [], "assistant");
+    updatePendingMessage(assistantId, "", [], "assistant");
 
     const decoder = new TextDecoder();
     let buffer = "";
@@ -133,7 +161,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
         if (result.reasoningText) {
           accumulatedReasoning.push(result.reasoningText);
         }
-        onUpdateMessage?.(assistantId, accumulated.join(""), Array.from(toolCallsMap.entries())
+        updatePendingMessage(assistantId, accumulated.join(""), Array.from(toolCallsMap.entries())
           .filter(([, call]) => call.id && call.name)
           .map(([, call]) => ({ id: call.id, name: call.name, arguments: call.args })),
           "assistant",
@@ -245,12 +273,10 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
         };
         toolResults.push(toolResultMessage);
 
-        // Broadcast partial tool result message immediately
-        onUpdateMessage?.(toolResultMessage.id, toolResultMessage.content ?? "", [], "tool", toolResultMessage.toolCallId);
+        updatePendingMessage(toolResultMessage.id, toolResultMessage.content ?? "", [], "tool", toolResultMessage.toolCallId);
       }
 
-      // Notify caller of updated assistant message
-      onUpdateMessage?.(assistantId, assistantMessage.content ?? "", toolCalls, "assistant");
+      updatePendingMessage(assistantId, assistantMessage.content ?? "", toolCalls, "assistant");
 
       // Execute tool calls and update results
       for (let i = 0; i < toolCalls.length; i++) {
@@ -303,7 +329,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
         const toolResultMessage = toolResults[i];
         toolResultMessage.content = result.content;
         toolResultMessage.toolExecutionMs = Date.now() - executionStartTime;
-        onUpdateMessage?.(toolResultMessage.id, result.content, [], "tool", toolResultMessage.toolCallId, undefined, toolResultMessage.toolExecutionMs);
+        updatePendingMessage(toolResultMessage.id, result.content, [], "tool", toolResultMessage.toolCallId);
       }
 
       // Persist assistant message and its tool results in order
@@ -368,8 +394,6 @@ export function useChatApi(
   folderPath?: string,
   logId?: string,
   onChatUpdated?: () => void,
-  onSendPrompt?: () => Promise<void>,
-  onChatResponse?: (response: ChatMessage) => Promise<void>,
   agentId?: string,
   allAgents?: Agent[],
   onValidate?: (projectId: string, chatId: string, logId: string, payload: import("../contexts").FeedbackPayload) => Promise<number | string | void>,
@@ -477,17 +501,6 @@ export function useChatApi(
 
       setIsLoading(true);
 
-      if(chatId && projectId && logId){
-        const pendingMsg: ChatMessage = {
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content: "",
-          timestamp: Date.now(),
-          toolCalls: [],
-        };
-        chatLogsStore.setPendingMessage(projectId, logId, pendingMsg);
-      }
-
       try {
         const resolvedAgentId = agentId || "builtin:default";
         const agent = allAgents?.find((a) => a.id === resolvedAgentId);
@@ -510,8 +523,6 @@ export function useChatApi(
 
         const resolvedTools = await getAvailableTools(folderPath, agent, allAgents, enabledToolNames);
 
-        await onSendPrompt?.();
-
         const toolCallResult = await runToolCallLoop({
           settings,
           systemPrompt,
@@ -529,30 +540,11 @@ export function useChatApi(
           reasoningEffort,
           customTools,
           enabledToolNames,
-          onUpdateMessage: (messageId, messageContent, messageToolCalls, messageRole, messageToolCallId, messageReasoningContent) => {
-            if (logId && messageRole !== "tool") {
-              const pending = chatLogsStore.getPendingMessage(projectId!, logId);
-              const baseMsg = (pending?.id === messageId) ? pending : { id: messageId, timestamp: Date.now() };
-              chatLogsStore.updatePendingMessage(projectId!, logId, {
-                ...baseMsg,
-                content: messageContent,
-                reasoningContent: messageReasoningContent,
-                toolCalls: messageToolCalls || [],
-                role: (messageRole || "assistant") as ChatMessage["role"],
-                toolCallId: messageToolCallId,
-              });
-            }
-          },
           onChatUpdated,
           onValidate,
         });
 
-        // Run onChatResponse hook on the final assistant message
-        if (toolCallResult) {
-          await onChatResponse?.(toolCallResult.finalMessage);
-        }
-
-        // Tool result messages are added inline in onUpdateMessage
+        return toolCallResult.finalMessage;
 
       } catch (error) {
         if (error instanceof Error && error.name === "AbortError") {
@@ -565,6 +557,7 @@ export function useChatApi(
           timestamp: Date.now(),
         };
         setMessages((prev) => [...prev, errorMessage]);
+        return undefined;
       } finally {
         setIsLoading(false);
         if (projectId && logId) {
@@ -572,7 +565,7 @@ export function useChatApi(
         }
       }
     },
-    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, folderPath, onSendPrompt, onChatResponse, agentId, onValidate, customTools, enabledToolNames]
+    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, folderPath, agentId, onValidate, customTools, enabledToolNames]
   );
 
   const stopGeneration = useCallback(() => {
