@@ -156,6 +156,7 @@ export interface FlowState {
   message: string;
   onEnter?: string;
   hookAdjustPrompt?: string;
+  hookInterceptPrompt?: string;
   onSendPrompt?: string;
   onChatResponse?: string;
   onActionButton?: string;

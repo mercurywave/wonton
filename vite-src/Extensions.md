@@ -29,6 +29,7 @@ Each state within `states` can define:
 | `message` | `string` | Prompt shown to the user for this state |
 | `onEnter` | `string` | JavaScript code executed when entering the state |
 | `hookAdjustPrompt` | `string` | JavaScript that transforms the user's prompt before sending it to the LLM. Receives `userContent` as a parameter. Must return a string. |
+| `hookInterceptPrompt` | `string` | JavaScript that runs instead of the LLM tool-call loop. Receives `userContent` as a parameter and runs before `onSendPrompt`. |
 | `onSendPrompt` | `string` | JavaScript executed just before the user's prompt is sent to the LLM |
 | `onChatResponse` | `string` | JavaScript executed when the LLM responds |
 | `onActionButton` | `string` | JavaScript executed when an action button is clicked. Receives `idx` (the button's index) as a parameter |
@@ -174,7 +175,7 @@ All JavaScript hooks receive a `won` object. Below is the complete API surface:
 
 - All JavaScript hooks are executed in an `async` function scope, so `await` is available throughout.
 - `onEnter`, `onSendPrompt`, `onChatResponse`, and `onActionButton` hooks receive the `won` object as their first argument.
-- `hookAdjustPrompt` receives both `won` and `userContent` and must return a string.
+- `hookAdjustPrompt` and `hookInterceptPrompt` receive both `won` and `userContent`; `hookAdjustPrompt` must return a string.
 - `onActionButton` receives `won` and the button's `idx` (number).
 - `runQuery` and `pushMessage` are the primary ways to interact with the LLM from hooks.
 - The `won` object persists data across state transitions via `set`/`get` within the workflow's data store.

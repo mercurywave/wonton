@@ -50,7 +50,7 @@ async function runWorkflowPromptHook(
   won: Won,
   projectId: string,
   chatId: string,
-  hookName: "hookAdjustPrompt" | "onSendPrompt" | "onChatResponse",
+  hookName: "hookAdjustPrompt" | "hookInterceptPrompt" | "onSendPrompt" | "onChatResponse",
   prompt: string,
   response?: ChatMessage,
 ): Promise<string | undefined> {
@@ -92,8 +92,15 @@ export async function submitChatPrompt({
   const processedPrompt = typeof adjustedPrompt === "string" ? adjustedPrompt.trim() : originalPrompt;
   if (!processedPrompt) return;
 
+  const meta = chatStore.getChat(projectId, chatId);
+  const flow = flowStore.getFlows().find((candidate) => candidate.id === meta?.workflowId);
+  const state = flow?.states?.[meta?.workflowStateKey ?? ""];
+  const intercepted = Boolean(state?.hookInterceptPrompt);
+  if (intercepted) {
+    await runWorkflowPromptHook(won, projectId, chatId, "hookInterceptPrompt", processedPrompt);
+  }
   await runWorkflowPromptHook(won, projectId, chatId, "onSendPrompt", processedPrompt);
-  const response = await submit(processedPrompt, originalPrompt);
+  const response = intercepted ? undefined : await submit(processedPrompt, originalPrompt);
   await runWorkflowPromptHook(won, projectId, chatId, "onChatResponse", processedPrompt, response);
 }
 
