@@ -1,10 +1,10 @@
-import { useRef, useEffect, useCallback, useMemo, useState, memo } from "react";
+import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import React from "react";
-import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play, Brain, Copy, Undo2, Utensils, Hammer, ChevronDown } from "lucide-react";
+import { Send, StopCircle, GitBranch, X, Play, Utensils, Hammer, ChevronDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
-import { ChatMessage as ChatMessageType, LLMStats, Flow, ToolDefinition } from "../types/chat";
+import { ChatMessage as ChatMessageType, Flow, ToolDefinition } from "../types/chat";
 import { useContextWindow } from "../hooks/useContextWindow";
 import { useSelectionBubble } from "../hooks/useSelectionBubble";
 import { useSettings, useAgentsContext, useChats, useProjects, useNav, useFlowsContext, useToolsContext, useEventBus } from "../contexts";
@@ -24,7 +24,8 @@ import { getDisplayName } from "../utils/modelUtils";
 import { getAvailableTools, getOptionalTools } from "../tools";
 import { projectMetaStore } from "../store/projectMeta";
 import { ProjectMeta } from "../types/chat";
-import ToolCallSection from "./ToolCallSection";
+import ResponseTurnGroup from "./ResponseTurnGroup";
+import { useResponseTurns } from "../hooks/useResponseTurns";
 
 interface ChatPanelProps {
   messages: ChatMessageType[];
@@ -35,93 +36,6 @@ interface ChatPanelProps {
   onFileSelect?: (uniqueName: string) => void;
   tempFileOptions?: Array<{ baseName: string; uniqueName: string }>;
   activeTempFileUniqueName?: string | null;
-}
-
-function formatTokensPerSecond(completionTokens: number, timeMs: number): string {
-  const seconds = timeMs / 1000;
-  if (seconds <= 0) return "—";
-  const tps = (completionTokens / seconds).toFixed(1);
-  return `${tps} tok/s`;
-}
-
-function formatDuration(ms: number): string {
-  const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  if (minutes > 0) {
-    return `${minutes}m ${seconds}s`;
-  }
-  return `${seconds}s`;
-}
-
-function MessageStats({ stats, modelAliases }: { stats: LLMStats; modelAliases: Record<string, string> }) {
-  const seconds = stats.timeMs / 1000;
-  const displayTps = formatTokensPerSecond(stats.completionTokens, stats.timeMs);
-
-  const hasTimings = stats.predictedN != null || stats.predictedMs != null;
-  const formatMs = (ms?: number): string => {
-    if (ms == null) return "—";
-    if (ms >= 1000) return `${(ms / 1000).toFixed(2)}s`;
-    return `${ms.toFixed(1)}ms`;
-  };
-  const formatRate = (rate?: number): string => {
-    if (rate == null) return "—";
-    return `${rate.toFixed(1)} tok/s`;
-  };
-
-  return (
-    <div className={styles.bubbleStats}>
-      <span className={styles.duration}>{formatDuration(stats.timeMs)}</span>
-      <span className={styles.tps}>{displayTps}</span>
-      <span className={styles.model}>{getDisplayName(stats.model, modelAliases)}</span>
-      {hasTimings && (
-        <div className={styles.bubbleStatsTooltip}>
-          <div className={styles.tooltipRow}>
-            <span className={styles.tooltipLabel}>Prompt</span>
-            <span className={styles.tooltipValue}>{stats.promptTokens.toLocaleString()} tokens</span>
-          </div>
-          <div className={styles.tooltipRow}>
-            <span className={styles.tooltipLabel}>Completion</span>
-            <span className={styles.tooltipValue}>{stats.completionTokens.toLocaleString()} tokens</span>
-          </div>
-          <div className={styles.tooltipRow}>
-            <span className={styles.tooltipLabel}>Total</span>
-            <span className={styles.tooltipValue}>{stats.totalTokens.toLocaleString()} tokens</span>
-          </div>
-          <div className={styles.tooltipRow}>
-            <span className={styles.tooltipLabel}>Time</span>
-            <span className={styles.tooltipValue}>{seconds >= 1 ? `${seconds.toFixed(1)}s` : `${stats.timeMs}ms`}</span>
-          </div>
-          <div className={styles.tooltipRow}>
-            <span className={styles.tooltipLabel}>Predicted</span>
-            <span className={styles.tooltipValue}>{stats.predictedN} tokens ({formatMs(stats.predictedMs)})</span>
-          </div>
-          <div className={styles.tooltipRow}>
-            <span className={styles.tooltipLabel}>Predicted Rate</span>
-            <span className={styles.tooltipValue}>{formatRate(stats.predictedPerSecond)}</span>
-          </div>
-          <div className={styles.tooltipRow}>
-            <span className={styles.tooltipLabel}>Predicted/token</span>
-            <span className={styles.tooltipValue}>{formatMs(stats.predictedPerTokenMs)}</span>
-          </div>
-          <div className={styles.tooltipRow}>
-            <span className={styles.tooltipLabel}>Prompt Time</span>
-            <span className={styles.tooltipValue}>{formatMs(stats.promptMs)}</span>
-          </div>
-          <div className={styles.tooltipRow}>
-            <span className={styles.tooltipLabel}>Prompt Rate</span>
-            <span className={styles.tooltipValue}>{formatRate(stats.promptPerSecond)}</span>
-          </div>
-          {stats.cacheN != null && (
-            <div className={styles.tooltipRow}>
-              <span className={styles.tooltipLabel}>Cache Hit</span>
-              <span className={styles.tooltipValue}>{stats.cacheN} tokens from cache</span>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
 }
 
 function WorkflowSelector({ workflows, onSelect, selectedWorkflowId }: { workflows: Flow[]; onSelect: (id: string) => void; selectedWorkflowId?: string }) {
@@ -161,176 +75,6 @@ function WorkflowSelector({ workflows, onSelect, selectedWorkflowId }: { workflo
   );
 }
 
-const MessageBubble = memo(function MessageBubble({ message, modelAliases, toolResultMessages, chatId, onUserMessageAction }: { message: ChatMessageType; modelAliases: Record<string, string>; toolResultMessages?: ChatMessageType[]; chatId?: string; onUserMessageAction?: (params: { chatId: string; messageId: string; action: 'copy' | 'rollback' }) => Promise<void> }) {
-  const isUser = message.role === "user";
-  const hasStats = message.role !== "user" && message.stats;
-  const hasToolCalls = message.toolCalls && message.toolCalls.length > 0;
-  const hasAdjusted = isUser && message.originalContent && message.originalContent !== message.content;
-  const hasReasoning = message.role === "assistant" && message.reasoningContent && message.reasoningContent.trim();
-
-  const [showAdjusted, setShowAdjusted] = useState(false);
-
-  const toolCallResults = useMemo(() => {
-    if (!toolResultMessages) return {};
-    const results: Record<string, { content: string; toolExecutionMs?: number }> = {};
-    for (const tr of toolResultMessages) {
-      if (tr.role === "tool" && tr.toolCallId) {
-        results[tr.toolCallId] = { content: tr.content ?? "", toolExecutionMs: tr.toolExecutionMs };
-      }
-    }
-    return results;
-  }, [toolResultMessages]);
-
-  const displayContent = hasAdjusted ? (showAdjusted ? message.content : message.originalContent) : message.content;
-  const showContent = displayContent?.trim();
-
-  if (hasAdjusted) {
-    return (
-      <div className={`${styles.message} ${styles.messageWithAdjusted} ${isUser ? styles.user : styles.assistant}`}>
-        <div className={styles.bubbleWrapper}>
-          <div className={`${styles.bubble} ${!showContent ? styles.noContent : ""}`}>
-            <div className={styles.adjustedToggle}>
-              <button
-                className={styles.toggleBtn}
-                onClick={() => setShowAdjusted((p) => !p)}
-                title={showAdjusted ? "Show modified" : "Show original"}
-              >
-                <ArrowRightLeft size={12} />
-              </button>
-            </div>
-            {showContent && (
-              <div className={styles.content}>
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
-              </div>
-            )}
-            {hasStats && <MessageStats stats={message.stats!} modelAliases={modelAliases} />}
-          </div>
-        </div>
-        {isUser && chatId && onUserMessageAction && (
-          <div className={styles.messageUserActions}>
-            <button
-              className={styles.userActionButton}
-              onClick={() => onUserMessageAction({ chatId, messageId: message.id, action: 'copy' })}
-              title="Copy message"
-            >
-              <Copy size={12} />
-            </button>
-            <button
-              className={styles.userActionButton}
-              onClick={() => onUserMessageAction({ chatId, messageId: message.id, action: 'rollback' })}
-              title="Roll back to here"
-            >
-              <Undo2 size={12} />
-            </button>
-          </div>
-        )}
-        {hasToolCalls && (
-          <div className={styles.toolCallContainer}>
-            {message.toolCalls!.map((tc) => (
-              <ToolCallSection key={tc.id} toolCall={tc} result={toolCallResults[tc.id]?.content} toolExecutionMs={toolCallResults[tc.id]?.toolExecutionMs} />
-            ))}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className={`${styles.message} ${isUser ? styles.user : styles.assistant}`}>
-      {hasReasoning && (
-        <div className={`${styles.message} ${styles.reasoningSection} ${styles.content}`}>
-          <details>
-            <summary>
-              <Brain size={12} />
-              Reasoning
-            </summary>
-            <div className={styles.reasoningContent}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.reasoningContent}</ReactMarkdown>
-            </div>
-          </details>
-        </div>
-      )}
-      <div className={styles.bubbleWrapper}>
-        <div className={`${styles.bubble} ${!showContent ? styles.noContent : ""}`}>
-          {showContent && (
-            <div className={styles.content}>
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
-            </div>
-          )}
-          {hasStats && <MessageStats stats={message.stats!} modelAliases={modelAliases} />}
-        </div>
-      </div>
-      {isUser && chatId && onUserMessageAction && (
-        <div className={styles.messageUserActions}>
-          <button
-            className={styles.userActionButton}
-            onClick={() => onUserMessageAction({ chatId, messageId: message.id, action: 'copy' })}
-            title="Copy message"
-          >
-            <Copy size={12} />
-          </button>
-          <button
-            className={styles.userActionButton}
-            onClick={() => onUserMessageAction({ chatId, messageId: message.id, action: 'rollback' })}
-            title="Roll back to here"
-          >
-            <Undo2 size={12} />
-          </button>
-        </div>
-      )}
-      {hasToolCalls && (
-        <div className={styles.toolCallContainer}>
-          {message.toolCalls!.map((tc) => (
-            <ToolCallSection key={tc.id} toolCall={tc} result={toolCallResults[tc.id]?.content} toolExecutionMs={toolCallResults[tc.id]?.toolExecutionMs} />
-          ))}
-        </div>
-      )}
-    </div>
-  );
-});
-
-const MessageList = memo(function MessageList({ messages, modelAliases, selectedChatId, onUserMessageAction }: { messages: ChatMessageType[]; modelAliases: Record<string, string>; selectedChatId: string | null; onUserMessageAction?: (params: { chatId: string; messageId: string; action: 'copy' | 'rollback' }) => Promise<void> }) {
-  const elements: React.ReactElement[] = [];
-  const skip: Set<number> = new Set();
-
-  for (let i = 0; i < messages.length; i++) {
-    if (skip.has(i)) continue;
-
-    const msg = messages[i];
-
-    if (msg.toolCalls && msg.toolCalls.length > 0) {
-      const toolResultMessages: ChatMessageType[] = [];
-      for (let j = i + 1; j < messages.length; j++) {
-        if (skip.has(j)) break;
-        const next = messages[j];
-        if (next.role === "tool" && next.toolCallId) {
-          if (msg.toolCalls!.some((tc) => tc.id === next.toolCallId)) {
-            toolResultMessages.push(next);
-            skip.add(j);
-          } else {
-            break;
-          }
-        } else {
-          break;
-        }
-      }
-      elements.push(
-        <div key={msg.id}>
-          <MessageBubble message={msg} modelAliases={modelAliases} toolResultMessages={toolResultMessages} chatId={selectedChatId ?? undefined} onUserMessageAction={onUserMessageAction} />
-        </div>
-      );
-      continue;
-    }
-
-    elements.push(
-      <div key={msg.id}>
-        <MessageBubble message={msg} modelAliases={modelAliases} chatId={selectedChatId ?? undefined} onUserMessageAction={onUserMessageAction} />
-      </div>
-    );
-  }
-
-  return elements;
-});
 
 export default function ChatPanel({
   messages,
@@ -341,6 +85,7 @@ export default function ChatPanel({
   onFileSelect,
   activeTempFileUniqueName: activeFileUniqueName
 }: ChatPanelProps) {
+  const responseTurns = useResponseTurns(messages, isLoading);
   const { visibleModels, resolvedSettings, settings } = useSettings();
   const { mainAgents, allAgents } = useAgentsContext();
   const { projects } = useProjects();
@@ -810,7 +555,17 @@ export default function ChatPanel({
               selectedWorkflowId={(resolvedWorkflow?.id)}
             />
           )}
-          <MessageList messages={messages} modelAliases={resolvedSettings.modelAliases} selectedChatId={selectedChatId} onUserMessageAction={onUserMessageAction} />
+          {responseTurns.map((turn, idx) => (
+            <ResponseTurnGroup
+              key={turn.userMessage.id + "-" + idx}
+              turnGroup={turn}
+              modelAliases={resolvedSettings.modelAliases}
+              selectedChatId={selectedChatId}
+              onUserMessageAction={onUserMessageAction}
+              isStreaming={isLoading}
+              isLastVisible={idx >= Math.max(0, responseTurns.length - 3)}
+            />
+          ))}
             {isProcessing && (
               <div className={styles.thinkingIndicator}>
                 <span className={styles.dot}></span>

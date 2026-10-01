@@ -262,6 +262,13 @@ export interface Task {
   priority?: TaskPriority;
 }
 
+export interface ResponseTurnGroup {
+  userMessage: ChatMessage;
+  intermediateMessages: ChatMessage[];
+  finalAssistantMessage: ChatMessage;
+  isCompleted: boolean;
+}
+
 export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows" | "stats" | "batches" | "tasks" | "references";
 
 export interface ServerModel {
