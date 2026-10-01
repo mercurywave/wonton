@@ -83,11 +83,11 @@ function buildSearchResults(
     for (const msg of messages) {
       if (quotes.length >= 3) break;
 
-      const lowerContent = msg.content.toLowerCase();
+      const lowerContent = (msg.content ?? "").toLowerCase();
       const idx = lowerContent.indexOf(lowerQuery);
       if (idx === -1) continue;
 
-      const quote = extractQuoteAroundMatch(msg.content, idx, queryLength);
+      const quote = extractQuoteAroundMatch(msg.content ?? "", idx, queryLength);
       quotes.push(quote);
     }
 
@@ -156,10 +156,10 @@ export default function ChatHistoryPage({
     if (!messages) return "";
     const userMsg = messages.find((m) => m.role === "user");
     if (!userMsg) return "";
-    if (userMsg.content.length > 200) {
-      return userMsg.content.slice(0, 200) + "...";
+    if ((userMsg.content ?? "").length > 200) {
+      return (userMsg.content ?? "").slice(0, 200) + "...";
     }
-    return userMsg.content;
+    return userMsg.content ?? "";
   }, [historyMessages]);
 
   const formatDate = (timestamp: number): string => {
