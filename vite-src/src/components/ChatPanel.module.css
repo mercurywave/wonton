@@ -654,6 +654,52 @@
   position: relative;
 }
 
+.staticSelector {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  box-sizing: border-box;
+  cursor: default;
+  border-radius: 6px;
+  padding: 6px 12px;
+  border: transparent 1px solid;
+}
+
+.staticSelector[data-type="model"] {
+  max-width: 250px;
+  min-width: 150px;
+}
+
+.staticSelector[data-type="agent"] {
+  max-width: 200px;
+  min-width: 140px;
+}
+
+.staticSelector[data-type="thinking"] {
+  max-width: 140px;
+  min-width: 100px;
+}
+
+.staticLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-family: inherit;
+  color: #888;
+  line-height: 1.4;
+}
+
+.staticChevron {
+  flex-shrink: 0;
+  opacity: 0.4;
+  color: #888;
+  width: 14px;
+  height: 14px;
+}
+
 .inputArea {
   border: none;
   padding: 0 20px 0px;

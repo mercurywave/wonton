@@ -1,6 +1,6 @@
 import { useRef, useEffect, useCallback, useMemo, useState, memo } from "react";
 import React from "react";
-import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play, Brain, Copy, Undo2, Utensils, Hammer } from "lucide-react";
+import { Send, StopCircle, GitBranch, X, ArrowRightLeft, Play, Brain, Copy, Undo2, Utensils, Hammer, ChevronDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
@@ -348,14 +348,17 @@ export default function ChatPanel({
   const { 
     chats,
     selectedChatId,
-    activeAgentId,
     activeModel,
+    activeReasoningEffort,
     onActionButtonClick,
     executeCommand: runCommand,
     setSelectedChatWorkflowId,
     onUserMessageAction,
     enabledToolNames,
     onToolSetChange,
+    effectiveAgent,
+    effectiveToolNames,
+    isMainLog,
   } = useChats();
 
   const [extensionStatus, setExtensionStatus] = useState<string | null>(null);
@@ -473,19 +476,15 @@ export default function ChatPanel({
     });
   }, [projectMeta]);
 
-  // Resolve the effective system prompt for display
-  const resolvedSystemPrompt = useMemo(() => {
-    const currentChat = chats.find((c) => c.id === selectedChatId);
-    const agentId = currentChat?.activeAgentId || activeAgentId;
-    const agent = allAgents.find((a) => a.id === agentId);
-    const agentSystemPrompt = agent?.systemPrompt;
-    return agentSystemPrompt || resolvedSettings.systemPrompt;
-  }, [allAgents, activeAgentId, selectedChatId, resolvedSettings.systemPrompt]);
-
   const currentChat = useMemo(() => {
     if (!selectedChatId) return null;
     return chats.find((c) => c.id === selectedChatId) ?? null;
   }, [chats, selectedChatId]);
+
+  // Resolve the effective system prompt for display (uses centralized effectiveAgent from context)
+  const resolvedSystemPrompt = useMemo(() => {
+    return effectiveAgent?.systemPrompt || resolvedSettings.systemPrompt;
+  }, [effectiveAgent, resolvedSettings.systemPrompt]);
 
   const resolvedWorkflow = flows.find((f) => f.id === currentChat?.workflowId);
   const resolvedStateMessage = resolvedWorkflow?.states?.[currentChat?.workflowStateKey ?? ""]?.message;
@@ -546,10 +545,9 @@ export default function ChatPanel({
 
   useEffect(() => {
     const loadTools = async () => {
-      const agent = allAgents.find((a) => a.id === activeAgentId);
       const [tools, optionalTools] = await Promise.all([
-        getAvailableTools(activeProject?.folderPath, agent, allAgents, enabledToolNames),
-        getOptionalTools(activeProject?.folderPath, agent, allAgents),
+        getAvailableTools(activeProject?.folderPath, effectiveAgent, allAgents, effectiveToolNames),
+        getOptionalTools(activeProject?.folderPath, effectiveAgent, allAgents),
       ]);
       
       // Merge project tools with workflow tools (workflow tools overwrite by name)
@@ -574,7 +572,7 @@ export default function ChatPanel({
       setOptionalTools(optionalTools);
     };
     loadTools();
-  }, [activeProject?.folderPath, activeAgentId, allAgents, enabledToolNames, resolvedWorkflow?.tools, projectTools]);
+  }, [activeProject?.folderPath, effectiveAgent, allAgents, effectiveToolNames, resolvedWorkflow?.tools, projectTools]);
   const { maxTokens } = useContextWindow(activeModel, resolvedSettings, settings.defaultContextWindow);
 
   const usageTokens = useMemo(() => {
@@ -921,14 +919,35 @@ export default function ChatPanel({
       <div className={styles.footer}>
         <div className={styles.footerContainer}>
           <div className={styles.footerSelectors}>
-            <ModelPicker
-              models={visibleModels}
-              modelAliases={resolvedSettings.modelAliases}
-            />
-            <AgentPicker
-              agents={mainAgents}
-            />
-            <ThinkingPicker />
+            {isMainLog ? (
+              <ModelPicker
+                models={visibleModels}
+                modelAliases={resolvedSettings.modelAliases}
+              />
+            ) : (
+              <div className={styles.staticSelector} data-type="model">
+                <span className={styles.staticLabel}>{getDisplayName(activeModel, resolvedSettings.modelAliases)}</span>
+                <ChevronDown size={14} className={styles.staticChevron} />
+              </div>
+            )}
+            {isMainLog ? (
+              <AgentPicker agents={mainAgents} />
+            ) : (
+              <div className={styles.staticSelector} data-type="agent">
+                <span className={styles.staticLabel}>{effectiveAgent?.name || "Unknown"}</span>
+                <ChevronDown size={14} className={styles.staticChevron} />
+              </div>
+            )}
+            {isMainLog ? (
+              <ThinkingPicker />
+            ) : (
+              <div className={styles.staticSelector} data-type="thinking">
+                <span className={styles.staticLabel}>
+                  {activeReasoningEffort === "none" ? "None" : activeReasoningEffort === "low" ? "Low" : activeReasoningEffort === "medium" ? "Medium" : activeReasoningEffort === "high" ? "High" : "None"}
+                </span>
+                <ChevronDown size={14} className={styles.staticChevron} />
+              </div>
+            )}
           </div>
           <div className={styles.footerRight}>
             <button

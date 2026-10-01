@@ -1,13 +1,4 @@
-import {
-  createContext,
-  useContext,
-  useState,
-  useCallback,
-  useRef,
-  ReactNode,
-  useMemo,
-  useEffect,
-} from "react";
+import { createContext, useContext, useState, useCallback, useRef, ReactNode, useMemo, useEffect } from "react";
 import { useProjectChats } from "../hooks/useProjectChats";
 import { useChatApi } from "../hooks/useChatApi";
 import { useChatWorkflow, submitChatPrompt, executeCommand as runExecuteCommand } from "../hooks/useChatWorkflow";
@@ -20,7 +11,7 @@ import { useToolsContext } from "./ToolsContext";
 import { FeedbackPayload, useFeedback } from "./FeedbackContext";
 import { useNotificationsContext } from "./NotificationsContext";
 import { isBackendConnected } from "../utils/platformUtils";
-import { ChatMessage, ChatMeta, FlowActionButton, ReasoningEffort, SubagentMeta } from "../types/chat";
+import { Agent, ChatMessage, ChatMeta, FlowActionButton, ReasoningEffort, SubagentMeta } from "../types/chat";
 import { chatLogsStore } from "../store/chatLogs";
 import { chatStore } from "../store/chats";
 
@@ -56,6 +47,11 @@ interface ChatsContextValue {
   onReasoningEffortChange: (effort: ReasoningEffort) => Promise<void>;
   enabledToolNames: string[];
   onToolSetChange: (toolNames: string[]) => Promise<void>;
+  // Effective values when viewing a subagent log (resolved from subagent meta)
+  effectiveAgent: Agent | undefined;
+  effectiveToolNames: string[];
+  // Whether the currently selected log is the main chat log
+  isMainLog: boolean;
 }
 
 const ChatsContext = createContext<ChatsContextValue | null>(null);
@@ -130,12 +126,42 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     return selectedChatMeta.subagents?.find((s) => s.logId === navLogId) ?? null;
   }, [navLogId, selectedChatMeta]);
 
-  // Resolve the effective active model (subagent override, chat override, or settings default)
+  // Resolve the active version history entry when viewing a version log
+  const activeVersionEntry = useMemo(() => {
+    if (!navLogId || !selectedChatMeta) return null;
+    if (navLogId === selectedChatMeta.logId) return null;
+    if (navLogId === selectedChatMeta.queriesLogId) return null;
+    return selectedChatMeta.versionHistory?.find((v) => v.logId === navLogId) ?? null;
+  }, [navLogId, selectedChatMeta]);
+
+  // Resolve the effective active model (subagent > version > chat > settings)
   const activeModel = useMemo(() => {
     if (!selectedChatMeta) return resolvedSettings.defaultModel;
     if (activeSubagentMeta?.model) return activeSubagentMeta.model;
+    if (activeVersionEntry?.model) return activeVersionEntry.model;
     return selectedChatMeta.activeModel ?? resolvedSettings.defaultModel;
-  }, [selectedChatMeta, activeSubagentMeta, resolvedSettings.defaultModel]);
+  }, [selectedChatMeta, activeSubagentMeta, activeVersionEntry, resolvedSettings.defaultModel]);
+
+  // Resolve the effective agent for display (subagent > version > chat > builtin:default)
+  const effectiveAgent = useMemo(() => {
+    if (!selectedChatMeta) return allAgents.find((a) => a.id === "builtin:default");
+    if (activeSubagentMeta) {
+      return allAgents.find((a) => a.id === activeSubagentMeta.agentId);
+    }
+    if (activeVersionEntry?.agentId) {
+      return allAgents.find((a) => a.id === activeVersionEntry.agentId);
+    }
+    const agentId = selectedChatMeta.activeAgentId || "builtin:default";
+    return allAgents.find((a) => a.id === agentId);
+  }, [selectedChatMeta, activeSubagentMeta, activeVersionEntry, allAgents]);
+
+  // Resolve the effective tool names for display (subagent override, chat override, or settings)
+  const effectiveToolNames = useMemo(() => {
+    if (activeSubagentMeta) {
+      return activeSubagentMeta.toolSet || [];
+    }
+    return selectedChatMeta?.enabledToolNames || [];
+  }, [selectedChatMeta, activeSubagentMeta]);
 
   // Callback to change the active agent for the selected chat
   const onAgentChange = useCallback(
@@ -178,12 +204,13 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     [selectedChatId, activeProjectId, activeSubagentMeta, resolvedSettings.defaultModel, updateSubagentMeta]
   );
 
-  // Resolve the effective active reasoning effort (subagent override, chat override, or settings default)
+  // Resolve the effective active reasoning effort (subagent > version > chat > settings)
   const activeReasoningEffort = useMemo(() => {
     if (!selectedChatMeta) return settings.reasoningEffort;
     if (activeSubagentMeta?.thinking !== undefined) return activeSubagentMeta.thinking;
+    if (activeVersionEntry?.reasoningEffort !== undefined) return activeVersionEntry.reasoningEffort;
     return selectedChatMeta.reasoningEffort ?? settings.reasoningEffort;
-  }, [selectedChatMeta, activeSubagentMeta, settings.reasoningEffort]);
+  }, [selectedChatMeta, activeSubagentMeta, activeVersionEntry, settings.reasoningEffort]);
 
   // Callback to change the active reasoning effort for the selected chat or subagent
   const onReasoningEffortChange = useCallback(
@@ -223,6 +250,12 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const activeLogId = useMemo(() => {
     if (navLogId) return navLogId;
     return selectedChatMeta?.logId;
+  }, [navLogId, selectedChatMeta]);
+
+  // Whether the currently selected log is the main chat log (not a subagent or version log)
+  const isMainLog = useMemo(() => {
+    if (!selectedChatMeta) return false;
+    return !navLogId || navLogId === selectedChatMeta.logId;
   }, [navLogId, selectedChatMeta]);
 
   // Resolve the selected agent's system prompt and full agent object
@@ -510,8 +543,11 @@ return 'Exit code: ' + result.code + '\\n\\nSTDOUT:\\n' + result.stdout + '\\n\\
       onReasoningEffortChange,
       enabledToolNames,
       onToolSetChange,
+      effectiveAgent,
+      effectiveToolNames,
+      isMainLog,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange, effectiveAgent, effectiveToolNames, isMainLog]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

@@ -78,6 +78,9 @@ export interface VersionHistoryEntry {
   logId: string;
   createdAt: number;
   updatedAt: number;
+  model?: string;
+  agentId?: string;
+  reasoningEffort?: ReasoningEffort;
 }
 
 export interface TempFileReservation {

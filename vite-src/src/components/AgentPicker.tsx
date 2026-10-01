@@ -13,7 +13,9 @@ export default function AgentPicker({
 }: AgentPickerProps) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const { activeAgentId, onAgentChange } =  useChats();
+  const { effectiveAgent, activeAgentId, onAgentChange } =  useChats();
+  // Use effectiveAgent for display (subagent-aware), fall back to activeAgentId
+  const displayAgentId = effectiveAgent?.id ?? activeAgentId;
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -30,7 +32,7 @@ export default function AgentPicker({
 
   if (agents.length === 0) return null;
 
-  const activeAgent = agents.find((a) => a.id === activeAgentId);
+  const activeAgent = agents.find((a) => a.id === displayAgentId);
   const displayName = activeAgent?.name || "Default";
 
   return (
@@ -57,7 +59,7 @@ export default function AgentPicker({
               <button
                 key={agent.id}
                 className={`${styles.option} ${
-                  agent.id === activeAgentId ? styles.active : ""
+                  agent.id === displayAgentId ? styles.active : ""
                 }`}
                 onClick={() => {
                   onAgentChange(agent.id);
@@ -65,7 +67,7 @@ export default function AgentPicker({
                 }}
               >
                 <span className={styles.optionLabel}>{agent.name}</span>
-                {agent.id === activeAgentId && (
+                {agent.id === displayAgentId && (
                   <span className={styles.checkmark}>✓</span>
                 )}
               </button>

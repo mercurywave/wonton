@@ -374,7 +374,14 @@ const chatStore: ChatsStore = {
 
     const versionHistory = [
       ...(chat.versionHistory || []),
-      { logId: chat.logId, createdAt: chat.versionCreatedAt || chat.createdAt, updatedAt: chat.updatedAt },
+      {
+        logId: chat.logId,
+        createdAt: chat.versionCreatedAt || chat.createdAt,
+        updatedAt: chat.updatedAt,
+        model: chat.activeModel,
+        agentId: chat.activeAgentId,
+        reasoningEffort: chat.reasoningEffort,
+      },
     ];
     const newLogId = await chatLogsStore.createLog(projectId);
 
