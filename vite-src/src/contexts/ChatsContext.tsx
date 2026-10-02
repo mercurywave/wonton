@@ -314,8 +314,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
         tools.push({
           name: preset.name,
           description: `Runs the ${preset.label} command for this project: ${cmd}`,
-          code: `const result = await won.runCommand(${JSON.stringify(cmd)});
-return 'Exit code: ' + result.code + '\\n\\nSTDOUT:\\n' + result.stdout + '\\n\\nSTDERR:\\n' + result.stderr;`,
+          code: `return won.runCommand(${JSON.stringify(cmd)});`,
         });
       }
     }

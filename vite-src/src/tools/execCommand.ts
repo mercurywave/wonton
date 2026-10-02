@@ -1,19 +1,20 @@
 import { ToolHandler, ToolContext, ToolDefinition } from "./handler";
 import { ToolResult } from "../types/chat";
 import { FeedbackPayload, emit } from "../contexts";
-import { truncateContent } from "./truncationTools";
+import { reserveTempFile, writeTempFile } from "../utils/tempFiles";
 import { getPlatform } from "../utils/platformUtils";
 
 export const EXEC_COMMAND_TOOL_NAME = "exec";
 
-const MAX_LINES = 200;
-const MAX_BYTES = 50 * 256;
+// Threshold: if output exceeds this, write to temp file instead of inline
+const LARGE_OUTPUT_THRESHOLD = 4096; // 4KB
 
 interface ExecResult {
   stdout: string;
   stderr: string;
   status: number | null;
-  truncated: boolean;
+  tempFileIds?: string[];
+  hasLargeOutput: boolean;
 }
 
 export class ExecCommandHandler implements ToolHandler {
@@ -26,7 +27,7 @@ export class ExecCommandHandler implements ToolHandler {
     function: {
       name: EXEC_COMMAND_TOOL_NAME,
       description:
-        "Executes a shell command on the system within the project's folder. Returns stdout, stderr, exit status, and truncation info as JSON.",
+        "Executes a shell command on the system within the project's folder. Returns stdout, stderr, exit status, and temp file paths if output is large. Large output is written to temp files that the agent can read.",
       parameters: {
         type: "object",
         properties: {
@@ -46,7 +47,7 @@ export class ExecCommandHandler implements ToolHandler {
     const platform = await getPlatform();
     const platformName = platform === "win32" ? "Windows" : platform === "darwin" ? "macOS" : platform === "linux" ? "Linux" : platform;
     const definition = JSON.parse(JSON.stringify(this.definition)) as ToolDefinition;
-    (definition.function as Record<string, unknown>).description = `Executes a shell command on the system within the project's folder (Running on ${platformName}). Returns stdout, stderr, exit status, and truncation info as JSON.`;
+    (definition.function as Record<string, unknown>).description = `Executes a shell command on the system within the project's folder (Running on ${platformName}). Returns stdout, stderr, exit status, and temp file paths if output is large. Large output is written to temp files that the agent can read.`;
     return definition;
   }
 
@@ -60,6 +61,7 @@ export class ExecCommandHandler implements ToolHandler {
   async execute(args: object, context: ToolContext): Promise<ToolResult> {
     const { command } = args as { command: string };
     const { folderPath, showFeedback, projectId, chatId, logId } = context;
+    const tempFileIds: string[] = [];
 
     if (!folderPath) {
       return {
@@ -138,22 +140,34 @@ export class ExecCommandHandler implements ToolHandler {
       };
     }
 
-    const stdoutTruncated = truncateContent(execResult.stdout, MAX_LINES, MAX_BYTES);
-    const stderrTruncated = truncateContent(execResult.stderr, MAX_LINES, MAX_BYTES);
+    const stdout = execResult.stdout;
+    const stderr = execResult.stderr;
+
+    // Write large output to temp files, small output inline
+    let stdoutRef: string | null = null;
+    let stderrRef: string | null = null;
+
+    if (stdout.length > LARGE_OUTPUT_THRESHOLD && projectId && chatId) {
+      const stdoutTempFile = await reserveTempFile(projectId, chatId, "stdout.txt");
+      tempFileIds.push(stdoutTempFile);
+      await writeTempFile(projectId, stdoutTempFile, stdout);
+      stdoutRef = stdoutTempFile;
+    }
+
+    if (stderr.length > LARGE_OUTPUT_THRESHOLD && projectId && chatId) {
+      const stderrTempFile = await reserveTempFile(projectId, chatId, "stderr.txt");
+      tempFileIds.push(stderrTempFile);
+      await writeTempFile(projectId, stderrTempFile, stderr);
+      stderrRef = stderrTempFile;
+    }
 
     const output: ExecResult = {
-      stdout: stdoutTruncated.content,
-      stderr: stderrTruncated.content,
+      stdout: stdoutRef ?? stdout,
+      stderr: stderrRef ?? stderr,
       status: execResult.status,
-      truncated: stdoutTruncated.wasTruncated || stderrTruncated.wasTruncated,
+      tempFileIds: tempFileIds.length > 0 ? tempFileIds : undefined,
+      hasLargeOutput: !!(stdoutRef || stderrRef),
     };
-
-    if (stdoutTruncated.wasTruncated) {
-      output.stdout += `\n\n// [stdout truncated: ${stdoutTruncated.originalLines} lines -> ${stdoutTruncated.returnedLines} lines]`;
-    }
-    if (stderrTruncated.wasTruncated) {
-      output.stderr += `\n\n// [stderr truncated: ${stderrTruncated.originalLines} lines -> ${stderrTruncated.returnedLines} lines]`;
-    }
 
     return {
       callId: "",

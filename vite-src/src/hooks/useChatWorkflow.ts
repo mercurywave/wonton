@@ -2,7 +2,7 @@ import { useRef, useCallback, useMemo } from "react";
 import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won, SubagentMeta, SubagentOptions, ReasoningEffort, FlowCustomTool } from "../types/chat";
 import { FeedbackPayload, addToast } from "../contexts";
 import { agentStore } from "../store/agents";
-import { generateUniqueFileName, getProjectDataDir, resolveTempFilePath } from "../utils/platformUtils";
+import { resolveTempFilePath } from "../utils/platformUtils";
 import { filesystem } from "../utils/electronFs";
 import { sanitizeAndResolvePath } from "../tools/pathTools";
 import { chatStore } from "../store/chats";
@@ -17,6 +17,10 @@ import { runQuery as runQueryImpl } from "./useLLMQuery";
 import { runToolCallLoop } from "./useChatApi";
 import { filterToAvailableTools } from "../tools";
 import { getAgentByName, resolveAgentFolderPath } from "../utils/agents";
+import { reserveTempFile as reserveTempFileUtil, writeTempFile } from "../utils/tempFiles";
+
+// Threshold: if output exceeds this, write to temp file instead of inline
+const LARGE_OUTPUT_THRESHOLD = 4096; // 4KB
 
 interface UseChatWorkflowOptions {
   workflowId?: string;
@@ -113,36 +117,7 @@ export function buildWon(
   showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>,
 ): Won {
   async function reserveTempFile(baseName?: string): Promise<string> {
-    const name = baseName ?? "temp.txt";
-    const meta = chatStore.getChat(projectId, chatId);
-    const existing = (meta?.reservedTempFiles) ?? [];
-
-    const nextBase = (() => {
-      const matching = existing.filter((r) => r.baseName === name);
-      if (matching.length === 0) return name;
-      const nextIndex = matching.length + 1;
-      return `${name} (${nextIndex})`;
-    })();
-
-    const folders: string[] = [];
-    const dataDir = await getProjectDataDir(projectId);
-    if (dataDir) {
-      folders.push(`${dataDir}/tmp`);
-    }
-    const folderPath = projectStore.getProjectById(projectId)?.folderPath;
-    if (folderPath) {
-      folders.push(folderPath);
-    }
-
-    const uniqueName = await generateUniqueFileName(name, folders);
-
-    const updated = [...existing, { baseName: nextBase, uniqueName }];
-    await chatStore.updateChatMeta(projectId, chatId, {
-      reservedTempFiles: updated,
-      updatedAt: Date.now(),
-    });
-
-    return uniqueName;
+    return reserveTempFileUtil(projectId, chatId, baseName);
   }
 
   async function readFile(path: string): Promise<string> {
@@ -346,7 +321,37 @@ export function buildWon(
     async setChatDraft(draft: string) {
       await chatStore.setChatDraft(projectId, chatId, draft);
     },
-    async runCommand(command: string) {
+    async runCommand(command: string): Promise<string> {
+      const { stdout, stderr, code } = await this.runCommandDetails(command);
+
+      const tempFileIds: string[] = [];
+      let stdoutContent = stdout;
+      let stderrContent = stderr;
+
+      if (stdout.length > LARGE_OUTPUT_THRESHOLD) {
+        const stdoutTempFile = await reserveTempFileUtil(projectId, chatId, "stdout.txt");
+        tempFileIds.push(stdoutTempFile);
+        await writeTempFile(projectId, stdoutTempFile, stdout);
+        stdoutContent = `[Output truncated, written to temp file: ${stdoutTempFile}]`;
+      }
+
+      if (stderr.length > LARGE_OUTPUT_THRESHOLD) {
+        const stderrTempFile = await reserveTempFileUtil(projectId, chatId, "stderr.txt");
+        tempFileIds.push(stderrTempFile);
+        await writeTempFile(projectId, stderrTempFile, stderr);
+        stderrContent = `[Output truncated, written to temp file: ${stderrTempFile}]`;
+      }
+
+      let output = `Exit code: ${code}\n\n`;
+      if (tempFileIds.length > 0) {
+        output += `STDOUT:\n${stdoutContent}\n\nSTDERR:\n${stderrContent}\n\n`
+          + `Note: Large output was written to temp files. Read them using the temp file selector.`;
+      } else {
+        output += `STDOUT:\n${stdout}\n\nSTDERR:\n${stderr}`;
+      }
+      return output;
+    },
+    async runCommandDetails(command: string): Promise<{ stdout: string; stderr: string; code: number | null }> {
       const folderPath = projectStore.getProjectById(projectId)?.folderPath;
       const result = await window.electronAPI.os.execCommand(command, folderPath);
       return { stdout: result.stdout, stderr: result.stderr, code: result.status };
