@@ -6,7 +6,7 @@ export const DEFAULT_AGENT: Agent = {
   name: "Default",
   systemPrompt: "You are a helpful assistant.",
   main: true,
-  defaultToolSet: ["glob", "grep", "read", "write", "edit", "message"],
+  toolPermissions: { mode: "exclude", tools: ["exec"] },
   subagentAllowlist: ["builtin:subagent", "builtin:explore", "builtin:docs"],
 };
 
@@ -16,7 +16,7 @@ export const EXPLORE_AGENT: Agent = {
   systemPrompt:
     "Explore the project structure and code. Summarize key findings, architecture, and dependencies in concise executive summaries",
   main: false,
-  defaultToolSet: ["glob", "grep", "read"],
+  toolPermissions: { mode: "include", tools: ["glob", "grep", "read"] },
   subagentAllowlist: [],
 };
 
@@ -26,7 +26,7 @@ export const SUBAGENT_AGENT: Agent = {
   systemPrompt:
     "You are a specialized subagent. Your task is to complete the specific request given to you by the main agent. Use the available tools to accomplish the task thoroughly and efficiently. Return a clear, complete result when finished.",
   main: false,
-  defaultToolSet: ["glob", "grep", "read", "write", "edit"],
+  toolPermissions: { mode: "exclude", tools: ["message", "exec"] },
   subagentAllowlist: [],
 };
 
@@ -36,7 +36,7 @@ export const DOCS_AGENT: Agent = {
   systemPrompt:
     "You are a documentation specialist. You have access to the project's docs folder in the appdata directory. Use your tools to search and manage documentation. When asked about frameworks, APIs, or reference material, check the docs folder for relevant files first.",
   main: true,
-  defaultToolSet: ["glob", "grep", "read", "write", "edit", "message"],
+  toolPermissions: { mode: "include", tools: ["glob", "grep", "read", "write", "edit"] },
   folderOverride: DOCS_FOLDER_OVERRIDE,
   subagentAllowlist: [],
 };
@@ -46,7 +46,7 @@ export const BASH_AGENT: Agent = {
   name: "Bash",
   systemPrompt: "You are a helpful assistant.",
   main: true,
-  defaultToolSet: ["glob", "grep", "read", "write", "edit", "message", "exec"],
+  toolPermissions: { mode: "exclude", tools: [] },
   subagentAllowlist: ["builtin:subagent", "builtin:explore", "builtin:docs"],
 };
 

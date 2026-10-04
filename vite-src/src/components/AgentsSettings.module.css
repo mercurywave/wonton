@@ -351,3 +351,92 @@
   background: rgba(168, 140, 245, 0.1);
   border: 1px solid rgba(168, 140, 245, 0.2);
 }
+
+.modeBadge {
+  font-size: 10px;
+  color: #f0a050;
+  background: rgba(240, 160, 80, 0.1);
+  border: 1px solid rgba(240, 160, 80, 0.2);
+  padding: 1px 5px;
+  border-radius: 8px;
+  margin-left: 4px;
+}
+
+.toolPermissionsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toolModeToggle {
+  display: flex;
+  gap: 4px;
+}
+
+.toolModeButton {
+  background: none;
+  border: 1px solid #2a2a4a;
+  color: #888;
+  padding: 6px 12px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex: 1;
+}
+
+.toolModeButton:hover {
+  border-color: #4a6cf7;
+  color: #e0e0e0;
+}
+
+.toolModeButton.active {
+  background: #4a6cf7;
+  border-color: #4a6cf7;
+  color: #fff;
+}
+
+.toolCheckboxes {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 6px;
+  padding: 8px;
+  background: #0f0f1a;
+  border-radius: 6px;
+  border: 1px solid #2a2a4a;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.toolCheckboxLabel {
+  font-size: 12px;
+  color: #666;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  grid-column: 1 / -1;
+}
+
+.toolCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #c0c0d0;
+  cursor: pointer;
+  padding: 3px 5px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.toolCheckbox:hover {
+  background: rgba(74, 108, 247, 0.08);
+}
+
+.toolCheckbox input[type="checkbox"] {
+  accent-color: #4a6cf7;
+  width: 13px;
+  height: 13px;
+  cursor: pointer;
+}

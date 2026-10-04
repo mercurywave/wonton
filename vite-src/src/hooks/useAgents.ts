@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Agent } from "../types/chat";
+import { Agent, AgentToolPermissions } from "../types/chat";
 import { agentStore } from "../store/agents";
 import { BUILTIN_AGENTS } from "../utils/agents";
 
@@ -58,12 +58,12 @@ export function useAgentsData() {
     };
   }, [refresh]);
 
-  const addAgent = useCallback(async (name: string, systemPrompt: string, defaultToolSet?: string[], folderOverride?: string, subagentAllowlist?: string[]) => {
-    await agentStore.addAgent(name, systemPrompt, defaultToolSet, folderOverride, subagentAllowlist);
+  const addAgent = useCallback(async (name: string, systemPrompt: string, toolPermissions?: AgentToolPermissions, folderOverride?: string, subagentAllowlist?: string[]) => {
+    await agentStore.addAgent(name, systemPrompt, toolPermissions, folderOverride, subagentAllowlist);
   }, []);
 
-  const updateAgent = useCallback(async (id: string, name: string, systemPrompt: string, subagentAllowlist?: string[]) => {
-    await agentStore.updateAgent(id, name, systemPrompt, subagentAllowlist);
+  const updateAgent = useCallback(async (id: string, name: string, systemPrompt: string, toolPermissions?: AgentToolPermissions, subagentAllowlist?: string[]) => {
+    await agentStore.updateAgent(id, name, systemPrompt, toolPermissions, subagentAllowlist);
   }, []);
 
   const deleteAgent = useCallback(async (id: string) => {

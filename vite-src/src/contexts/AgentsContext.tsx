@@ -4,7 +4,7 @@ import {
   useMemo,
   ReactNode,
 } from "react";
-import { Agent } from "../types/chat";
+import { Agent, AgentToolPermissions } from "../types/chat";
 import { agentStore } from "../store/agents";
 import { useAgentsData } from "../hooks/useAgents";
 
@@ -12,8 +12,8 @@ interface AgentsContextValue {
   customAgents: Agent[];
   allAgents: Agent[];
   mainAgents: Agent[];
-  addAgent: (name: string, systemPrompt: string, defaultToolSet?: string[], folderOverride?: string, subagentAllowlist?: string[]) => Promise<void>;
-  updateAgent: (id: string, name: string, systemPrompt: string, subagentAllowlist?: string[]) => Promise<void>;
+  addAgent: (name: string, systemPrompt: string, toolPermissions?: AgentToolPermissions, folderOverride?: string, subagentAllowlist?: string[]) => Promise<void>;
+  updateAgent: (id: string, name: string, systemPrompt: string, toolPermissions?: AgentToolPermissions, subagentAllowlist?: string[]) => Promise<void>;
   deleteAgent: (id: string) => Promise<void>;
 }
 

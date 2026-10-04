@@ -1,10 +1,13 @@
 import { useState, useMemo } from "react";
 import { CircleUser, Plus, Trash2, Pencil, Save, X } from "lucide-react";
 import styles from "../components/AgentsSettings.module.css";
-import { Agent } from "../types/chat";
+import { Agent, ToolPermissionMode } from "../types/chat";
 import { BUILTIN_AGENTS } from "../utils/agents";
-import { getMainAgents } from "../hooks/useAgents";
+import { getMainAgents, getAllAgents } from "../hooks/useAgents";
 import { useAgentsContext } from "../contexts";
+import { getAllToolNames } from "../tools";
+
+const ALL_TOOLS = getAllToolNames().sort();
 
 export default function AgentsSettings() {
   const { customAgents, addAgent, updateAgent, deleteAgent } = useAgentsContext();
@@ -13,18 +16,28 @@ export default function AgentsSettings() {
   const [editingAgentId, setEditingAgentId] = useState<string | null>(null);
   const [agentName, setAgentName] = useState("");
   const [agentPrompt, setAgentPrompt] = useState("");
+  const [agentToolMode, setAgentToolMode] = useState<ToolPermissionMode>("include");
+  const [agentSelectedTools, setAgentSelectedTools] = useState<string[]>([]);
   const [agentAllowlist, setAgentAllowlist] = useState<string[]>([]);
   const [editName, setEditName] = useState("");
   const [editPrompt, setEditPrompt] = useState("");
+  const [editToolMode, setEditToolMode] = useState<ToolPermissionMode>("include");
+  const [editSelectedTools, setEditSelectedTools] = useState<string[]>([]);
   const [editAllowlist, setEditAllowlist] = useState<string[]>([]);
 
   const allAvailableAgents = useMemo(() => getMainAgents(customAgents), [customAgents]);
+  const allAgentsList = useMemo(() => getAllAgents(customAgents), [customAgents]);
 
   const handleAddAgent = async () => {
     if (!agentName.trim() || !agentPrompt.trim()) return;
-    await addAgent(agentName.trim(), agentPrompt.trim(), undefined, undefined, agentAllowlist.length > 0 ? agentAllowlist : undefined);
+    const toolPermissions = agentSelectedTools.length > 0
+      ? { mode: agentToolMode, tools: agentSelectedTools }
+      : undefined;
+    await addAgent(agentName.trim(), agentPrompt.trim(), toolPermissions, undefined, agentAllowlist.length > 0 ? agentAllowlist : undefined);
     setAgentName("");
     setAgentPrompt("");
+    setAgentToolMode("include");
+    setAgentSelectedTools([]);
     setAgentAllowlist([]);
     setShowAddAgent(false);
   };
@@ -37,15 +50,30 @@ export default function AgentsSettings() {
     setEditingAgentId(agent.id);
     setEditName(agent.name);
     setEditPrompt(agent.systemPrompt);
+    
+    if (agent.toolPermissions) {
+      setEditToolMode(agent.toolPermissions.mode);
+      setEditSelectedTools([...agent.toolPermissions.tools]);
+    } else {
+      // No tool permissions defined - default to empty include list
+      setEditToolMode("include");
+      setEditSelectedTools([]);
+    }
+    
     setEditAllowlist(agent.subagentAllowlist || []);
   };
 
   const handleSaveEdit = async (id: string) => {
     if (!editName.trim() || !editPrompt.trim()) return;
-    await updateAgent(id, editName.trim(), editPrompt.trim(), editAllowlist.length > 0 ? editAllowlist : undefined);
+    const toolPermissions = editSelectedTools.length > 0
+      ? { mode: editToolMode, tools: editSelectedTools }
+      : undefined;
+    await updateAgent(id, editName.trim(), editPrompt.trim(), toolPermissions, editAllowlist.length > 0 ? editAllowlist : undefined);
     setEditingAgentId(null);
     setEditName("");
     setEditPrompt("");
+    setEditToolMode("include");
+    setEditSelectedTools([]);
     setEditAllowlist([]);
   };
 
@@ -53,7 +81,18 @@ export default function AgentsSettings() {
     setEditingAgentId(null);
     setEditName("");
     setEditPrompt("");
+    setEditToolMode("include");
+    setEditSelectedTools([]);
     setEditAllowlist([]);
+  };
+
+  const getAgentTools = (agent: Agent): string[] => {
+    return agent.toolPermissions?.tools ?? [];
+  };
+
+  const getToolModeLabel = (mode: ToolPermissionMode | undefined): string => {
+    if (!mode) return "";
+    return mode === "include" ? "include" : "exclude";
   };
 
   return (
@@ -75,12 +114,19 @@ export default function AgentsSettings() {
                 ? agent.systemPrompt.slice(0, 120) + "..."
                 : agent.systemPrompt}
             </div>
-            {(agent.defaultToolSet || agent.subagentAllowlist) && (
+            {(getAgentTools(agent).length > 0 || (agent.subagentAllowlist?.length ?? 0) > 0) && (
               <div className={styles.tagSection}>
-                {agent.defaultToolSet && agent.defaultToolSet.length > 0 && (
+                {getAgentTools(agent).length > 0 && (
                   <div className={styles.tagRow}>
-                    <span className={styles.tagLabel}>Tools</span>
-                    {agent.defaultToolSet.map((tool) => (
+                    <span className={styles.tagLabel}>
+                      Tools 
+                      {agent.toolPermissions && (
+                        <span className={styles.modeBadge}>
+                          {getToolModeLabel(agent.toolPermissions.mode)}
+                        </span>
+                      )}
+                    </span>
+                    {getAgentTools(agent).map((tool) => (
                       <span key={tool} className={`${styles.tagBubble} ${styles.toolTag}`}>{tool}</span>
                     ))}
                   </div>
@@ -147,6 +193,46 @@ export default function AgentsSettings() {
                     />
                   </div>
                   <div className={styles.editField}>
+                    <label>Tool Permissions</label>
+                    <div className={styles.toolPermissionsSection}>
+                      <div className={styles.toolModeToggle}>
+                        <button
+                          className={`${styles.toolModeButton} ${editToolMode === "include" ? styles.active : ""}`}
+                          onClick={() => setEditToolMode("include")}
+                          type="button"
+                        >
+                          Include (only these)
+                        </button>
+                        <button
+                          className={`${styles.toolModeButton} ${editToolMode === "exclude" ? styles.active : ""}`}
+                          onClick={() => setEditToolMode("exclude")}
+                          type="button"
+                        >
+                          Exclude (all except)
+                        </button>
+                      </div>
+                      <div className={styles.toolCheckboxes}>
+                        <span className={styles.toolCheckboxLabel}>Select tools:</span>
+                        {ALL_TOOLS.map((tool) => (
+                          <label key={tool} className={styles.toolCheckbox}>
+                            <input
+                              type="checkbox"
+                              checked={editSelectedTools.includes(tool)}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setEditSelectedTools([...editSelectedTools, tool]);
+                                } else {
+                                  setEditSelectedTools(editSelectedTools.filter((t) => t !== tool));
+                                }
+                              }}
+                            />
+                            <span>{tool}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                  <div className={styles.editField}>
                     <label>Allowed Subagents</label>
                     <div className={styles.allowlistCheckboxes}>
                       {allAvailableAgents.map((a: Agent) => (
@@ -197,12 +283,19 @@ export default function AgentsSettings() {
                       ? agent.systemPrompt.slice(0, 120) + "..."
                       : agent.systemPrompt}
                   </div>
-                  {(agent.defaultToolSet || agent.subagentAllowlist) && (
+                  {(getAgentTools(agent).length > 0 || (agent.subagentAllowlist?.length ?? 0) > 0) && (
                     <div className={styles.tagSection}>
-                      {agent.defaultToolSet && agent.defaultToolSet.length > 0 && (
+                      {getAgentTools(agent).length > 0 && (
                         <div className={styles.tagRow}>
-                          <span className={styles.tagLabel}>Tools</span>
-                          {agent.defaultToolSet.map((tool) => (
+                          <span className={styles.tagLabel}>
+                            Tools
+                            {agent.toolPermissions && (
+                              <span className={styles.modeBadge}>
+                                {getToolModeLabel(agent.toolPermissions.mode)}
+                              </span>
+                            )}
+                          </span>
+                          {getAgentTools(agent).map((tool) => (
                             <span key={tool} className={`${styles.tagBubble} ${styles.toolTag}`}>{tool}</span>
                           ))}
                         </div>
@@ -211,7 +304,7 @@ export default function AgentsSettings() {
                         <div className={styles.tagRow}>
                           <span className={styles.tagLabel}>Subagents</span>
                           {agent.subagentAllowlist.map((id) => {
-                            const subagent = [...BUILTIN_AGENTS, ...customAgents].find((a) => a.id === id);
+                            const subagent = allAgentsList.find((a) => a.id === id);
                             return subagent ? (
                               <span key={id} className={`${styles.tagBubble} ${styles.subagentTag}`}>{subagent.name}</span>
                             ) : null;
@@ -245,6 +338,46 @@ export default function AgentsSettings() {
               placeholder="System prompt for this agent"
               rows={4}
             />
+          </div>
+          <div className={styles.addAgentField}>
+            <label>Tool Permissions</label>
+            <div className={styles.toolPermissionsSection}>
+              <div className={styles.toolModeToggle}>
+                <button
+                  className={`${styles.toolModeButton} ${agentToolMode === "include" ? styles.active : ""}`}
+                  onClick={() => setAgentToolMode("include")}
+                  type="button"
+                >
+                  Include (only these)
+                </button>
+                <button
+                  className={`${styles.toolModeButton} ${agentToolMode === "exclude" ? styles.active : ""}`}
+                  onClick={() => setAgentToolMode("exclude")}
+                  type="button"
+                >
+                  Exclude (all except)
+                </button>
+              </div>
+              <div className={styles.toolCheckboxes}>
+                <span className={styles.toolCheckboxLabel}>Select tools:</span>
+                {ALL_TOOLS.map((tool) => (
+                  <label key={tool} className={styles.toolCheckbox}>
+                    <input
+                      type="checkbox"
+                      checked={agentSelectedTools.includes(tool)}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setAgentSelectedTools([...agentSelectedTools, tool]);
+                        } else {
+                          setAgentSelectedTools(agentSelectedTools.filter((t) => t !== tool));
+                        }
+                      }}
+                    />
+                    <span>{tool}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
           <div className={styles.addAgentField}>
             <label>Allowed Subagents</label>
@@ -282,6 +415,8 @@ export default function AgentsSettings() {
                 setShowAddAgent(false);
                 setAgentName("");
                 setAgentPrompt("");
+                setAgentToolMode("include");
+                setAgentSelectedTools([]);
                 setAgentAllowlist([]);
               }}
               type="button"

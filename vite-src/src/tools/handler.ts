@@ -28,4 +28,7 @@ export interface ToolHandler {
   execute(args: object, context: ToolContext, toolCall: ToolCall): Promise<ToolResult>;
   getToolDefinitions?(folderPath?: string, agent?: Agent, allAgents?: Agent[]): Promise<ToolDefinition>;
   isAvailable?(folderPath?: string, agent?: Agent, allAgents?: Agent[]): boolean;
+  // Per-agent overrides: add this tool to specific agents' sets, or hide from specific agents
+  addToAgents?: string[];
+  hiddenFromAgents?: string[];
 }

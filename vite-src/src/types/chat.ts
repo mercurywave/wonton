@@ -51,12 +51,21 @@ export interface ToolDefinition {
   };
 }
 
+export type ToolPermissionMode = "include" | "exclude";
+
+export interface AgentToolPermissions {
+  mode: ToolPermissionMode;
+  tools: string[];
+}
+
 export interface Agent {
   id: string;
   name: string;
   systemPrompt: string;
   main: boolean;
+  /** @deprecated Use toolPermissions instead */
   defaultToolSet?: string[];
+  toolPermissions?: AgentToolPermissions;
   folderOverride?: string;
   subagentAllowlist?: string[];
 }

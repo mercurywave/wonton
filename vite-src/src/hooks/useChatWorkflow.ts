@@ -18,9 +18,22 @@ import { runToolCallLoop } from "./useChatApi";
 import { filterToAvailableTools } from "../tools";
 import { getAgentByName, resolveAgentFolderPath } from "../utils/agents";
 import { reserveTempFile as reserveTempFileUtil, writeTempFile } from "../utils/tempFiles";
+import { getAllToolNames } from "../tools";
 
 // Threshold: if output exceeds this, write to temp file instead of inline
 const LARGE_OUTPUT_THRESHOLD = 4096; // 4KB
+
+function getToolSetFromPermissions(agent: import("../types/chat").Agent | undefined): string[] {
+  if (!agent?.toolPermissions) return [];
+  if (agent.toolPermissions.mode === "include") {
+    return agent.toolPermissions.tools;
+  }
+  if (agent.toolPermissions.mode === "exclude") {
+    const allTools = getAllToolNames();
+    return allTools.filter(name => !agent.toolPermissions!.tools.includes(name));
+  }
+  return [];
+}
 
 interface UseChatWorkflowOptions {
   workflowId?: string;
@@ -406,7 +419,7 @@ export function buildWon(
       const subagentMeta: SubagentMeta = {
         id: subagentId,
         agentId: agent.id,
-        toolSet: agent.defaultToolSet || [],
+        toolSet: getToolSetFromPermissions(agent),
         query: "",
         status: "running",
         createdAt: Date.now(),
@@ -500,7 +513,8 @@ export function buildWon(
       const reasoningEffort = (chat?.reasoningEffort as ReasoningEffort | undefined) || settings.reasoningEffort;
       const folderPath = projectStore.getProjectById(projectId)?.folderPath;
       const enabledToolNames = chat?.enabledToolNames ?? [];
-      const toolNames = [...new Set([...(agent?.defaultToolSet ?? []), ...enabledToolNames])];
+      const agentToolSet = agent ? getToolSetFromPermissions(agent) : [];
+      const toolNames = [...new Set([...agentToolSet, ...enabledToolNames])];
       const userChatMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: "user",

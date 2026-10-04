@@ -1,4 +1,4 @@
-import { Agent } from "../types/chat";
+import { Agent, AgentToolPermissions } from "../types/chat";
 import {
   AGENTS_FILE_NAME,
   isBackendConnected,
@@ -12,8 +12,8 @@ type Listener = () => void;
 interface AgentStore {
   getCustomAgents(): Agent[];
   load(): Promise<void>;
-  addAgent(name: string, systemPrompt: string, defaultToolSet?: string[], folderOverride?: string, subagentAllowlist?: string[]): Promise<void>;
-  updateAgent(id: string, name: string, systemPrompt: string, subagentAllowlist?: string[]): Promise<void>;
+  addAgent(name: string, systemPrompt: string, toolPermissions?: AgentToolPermissions, folderOverride?: string, subagentAllowlist?: string[]): Promise<void>;
+  updateAgent(id: string, name: string, systemPrompt: string, toolPermissions?: AgentToolPermissions, subagentAllowlist?: string[]): Promise<void>;
   deleteAgent(id: string): Promise<void>;
   getAllAgents(): Agent[];
   getMainAgents(): Agent[];
@@ -90,13 +90,13 @@ const agentStore: AgentStoreInternal = {
     state.isLoaded = true;
   },
 
-  async addAgent(name: string, systemPrompt: string, defaultToolSet?: string[], folderOverride?: string, subagentAllowlist?: string[]) {
+  async addAgent(name: string, systemPrompt: string, toolPermissions?: AgentToolPermissions, folderOverride?: string, subagentAllowlist?: string[]) {
     const newAgent: Agent = {
       id: `custom:${crypto.randomUUID()}`,
       name,
       systemPrompt,
       main: false,
-      ...(defaultToolSet !== undefined && { defaultToolSet }),
+      ...(toolPermissions !== undefined && { toolPermissions }),
       ...(folderOverride !== undefined && { folderOverride }),
       ...(subagentAllowlist !== undefined && { subagentAllowlist }),
     };
@@ -105,13 +105,14 @@ const agentStore: AgentStoreInternal = {
     dispatch();
   },
 
-  async updateAgent(id: string, name: string, systemPrompt: string, subagentAllowlist?: string[]) {
+  async updateAgent(id: string, name: string, systemPrompt: string, toolPermissions?: AgentToolPermissions, subagentAllowlist?: string[]) {
     const idx = state.customAgents.findIndex((a) => a.id === id);
     if (idx === -1) return;
     state.customAgents[idx] = {
       ...state.customAgents[idx],
       name,
       systemPrompt,
+      ...(toolPermissions !== undefined && { toolPermissions }),
       ...(subagentAllowlist !== undefined && { subagentAllowlist }),
     };
     await _save();

@@ -5,6 +5,7 @@ import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
 import { getAgentByName, resolveAgentFolderPath } from "../utils/agents";
 import { getAllAgents, loadAgentsFile } from "../hooks/useAgents";
+import { getAllToolNames } from "./index";
 import { SubagentMeta } from "../types/chat";
 
 export const EXECUTE_SUBAGENT_TOOL_NAME = "message";
@@ -126,11 +127,27 @@ export class ExecuteSubagentHandler implements ToolHandler {
     const subagentLogId = toolCall.logId ?? crypto.randomUUID();
     await chatLogsStore.reserveLog(projectId, subagentLogId);
 
+    // Helper to resolve tool set from permissions
+    function resolveToolSet(agent: Agent): string[] {
+      if (agent.toolPermissions) {
+        if (agent.toolPermissions.mode === "include") {
+          return agent.toolPermissions.tools;
+        }
+        if (agent.toolPermissions.mode === "exclude") {
+          const allTools = getAllToolNames();
+          return allTools.filter(name => !agent.toolPermissions!.tools.includes(name));
+        }
+      }
+      return [];
+    }
+
+    const resolvedToolSet = resolveToolSet(agent);
+
     // Create subagent meta
     const subagentMeta: SubagentMeta = {
       id: subagentId,
       agentId,
-      toolSet: agent.defaultToolSet || [],
+      toolSet: resolvedToolSet,
       query,
       status: "running",
       createdAt: Date.now(),
@@ -159,7 +176,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
       settings,
       systemPrompt: agent.systemPrompt,
       model: subagentModel,
-      toolNames: agent.defaultToolSet || [],
+      toolNames: resolvedToolSet,
       folderPath: subagentFolderPath,
       initialMessages: [subagentUserMessage],
       signal: undefined,
