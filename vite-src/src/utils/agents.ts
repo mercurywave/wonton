@@ -41,16 +41,7 @@ export const DOCS_AGENT: Agent = {
   subagentAllowlist: [],
 };
 
-export const BASH_AGENT: Agent = {
-  id: "builtin:bash",
-  name: "Bash",
-  systemPrompt: "You are a helpful assistant.",
-  main: true,
-  toolPermissions: { mode: "exclude", tools: [] },
-  subagentAllowlist: ["builtin:subagent", "builtin:explore", "builtin:docs"],
-};
-
-export const BUILTIN_AGENTS: Agent[] = [DEFAULT_AGENT, EXPLORE_AGENT, SUBAGENT_AGENT, DOCS_AGENT, BASH_AGENT];
+export const BUILTIN_AGENTS: Agent[] = [DEFAULT_AGENT, EXPLORE_AGENT, SUBAGENT_AGENT, DOCS_AGENT];
 
 export function getAgentById(agents: Agent[], id: string): Agent | undefined {
   return agents.find((a) => a.id === id);
