@@ -8,6 +8,7 @@ import { WriteFileHandler } from "./writeFile";
 import { EditFileHandler } from "./editFile";
 import { ExecuteSubagentHandler } from "./executeSubagent";
 import { ExecCommandHandler } from "./execCommand";
+import { GitCommandHandler } from "./gitCommand";
 
 const toolHandlers: Record<string, ToolHandler> = {};
 
@@ -22,6 +23,7 @@ registerTool(WriteFileHandler.getInstance());
 registerTool(EditFileHandler.getInstance());
 registerTool(ExecuteSubagentHandler.getInstance());
 registerTool(ExecCommandHandler.getInstance());
+registerTool(GitCommandHandler.getInstance());
 
 export function getToolHandler(toolName: string): ToolHandler | undefined {
   return toolHandlers[toolName];
