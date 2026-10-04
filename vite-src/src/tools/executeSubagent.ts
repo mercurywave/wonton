@@ -189,6 +189,7 @@ export class ExecuteSubagentHandler implements ToolHandler {
       reasoningEffort: subagentThinking,
       onChatUpdated,
       onValidate: context.showFeedback,
+      customTools: context.customTools,
     });
 
     // Update subagent meta to completed

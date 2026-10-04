@@ -12,6 +12,7 @@ import { FeedbackPayload, useFeedback } from "./FeedbackContext";
 import { useNotificationsContext } from "./NotificationsContext";
 import { isBackendConnected } from "../utils/platformUtils";
 import { Agent, ChatMessage, ChatMeta, FlowActionButton, ReasoningEffort, SubagentMeta } from "../types/chat";
+import { combineCustomTools } from "../utils/customTools";
 import { chatLogsStore } from "../store/chatLogs";
 import { chatStore } from "../store/chats";
 
@@ -322,20 +323,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   }, [projectMeta]);
 
   const workflowCustomTools = useMemo(() => {
-    const toolMap = new Map<string, { name: string; description: string; code: string }>();
-    for (const t of projectTools) {
-      toolMap.set(t.name, { name: t.name, description: t.description, code: t.code });
-    }
-    if (currentFlow?.tools) {
-      for (const t of currentFlow.tools) {
-        toolMap.set(t.name, { name: t.name, description: t.description, code: t.code });
-      }
-    }
-    // Preset tools take lowest priority (will be overridden by YAML tools with same name)
-    for (const t of presetTools) {
-      toolMap.set(t.name, t);
-    }
-    return Array.from(toolMap.values());
+    return combineCustomTools(projectTools, currentFlow?.tools, presetTools);
   }, [projectTools, currentFlow?.tools, presetTools]);
 
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(

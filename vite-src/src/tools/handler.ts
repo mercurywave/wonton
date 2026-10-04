@@ -1,4 +1,4 @@
-import { Agent, ToolCall, ToolResult } from "../types/chat";
+import { Agent, FlowCustomTool, ToolCall, ToolResult } from "../types/chat";
 import { ResolvedServerSettings } from "../hooks/useChatSettings";
 import { FeedbackPayload } from "../contexts";
 
@@ -11,6 +11,7 @@ export interface ToolContext {
   onChatUpdated?: () => void;
   folderOverride?: string;
   showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
+  customTools?: FlowCustomTool[];
 }
 
 export interface ToolDefinition {

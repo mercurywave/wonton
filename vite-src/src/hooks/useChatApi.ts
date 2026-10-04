@@ -289,40 +289,26 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
         }
 
         const executionStartTime = Date.now();
+        const toolContext = {
+          folderPath,
+          projectId,
+          chatId,
+          logId,
+          settings,
+          onChatUpdated,
+          showFeedback: onValidate as any,
+          customTools,
+        };
         let result: { callId: string; content: string; isError?: boolean };
         if (customTools) {
           const customTool = findCustomTool({ tools: customTools }, tc.name);
           if (customTool) {
-            result = await executeCustomTool(customTool, args, {
-              folderPath,
-              projectId,
-              chatId,
-              logId,
-              settings,
-              onChatUpdated,
-              showFeedback: onValidate as any,
-            });
+            result = await executeCustomTool(customTool, args, toolContext);
           } else {
-            result = await executeToolCall(tc.name, tc, args, {
-              folderPath,
-              projectId,
-              chatId,
-              logId,
-              settings,
-              onChatUpdated,
-              showFeedback: onValidate as any,
-            });
+            result = await executeToolCall(tc.name, tc, args, toolContext);
           }
         } else {
-          result = await executeToolCall(tc.name, tc, args, {
-            folderPath,
-            projectId,
-            chatId,
-            logId,
-            settings,
-            onChatUpdated,
-            showFeedback: onValidate as any,
-          });
+          result = await executeToolCall(tc.name, tc, args, toolContext);
         }
 
         // Update the tool result message with actual content
