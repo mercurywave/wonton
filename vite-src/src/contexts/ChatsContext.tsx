@@ -451,9 +451,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     const { chatId: actionChatId, messageId, action } = params;
 
     if (action === 'copy') {
-      const chat = chats.find((c) => c.id === actionChatId);
-      if (!chat?.logId || !activeProjectId) return;
-      const messages = chatLogsStore.getLog(activeProjectId, chat.logId);
+      if (!activeProjectId || !activeLogId) return;
+      const currentLogId = activeLogId;
+      const messages = chatLogsStore.getLog(activeProjectId, currentLogId);
       const msg = messages?.find(m => m.id === messageId);
       if (msg) {
         await navigator.clipboard.writeText(msg.content ?? "");
@@ -488,7 +488,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       // Set draft to the rollback message content for editing
       await projectChatsUpdateChatMeta(actionChatId, { draft: rollbackMessage.content ?? "" });
     }
-  }, [chats, activeProjectId, projectChatsUpdateChatMeta]);
+  }, [chats, activeProjectId, activeLogId, projectChatsUpdateChatMeta]);
 
   // Fire onEnter for the initial state when a workflow is linked
   useEffect(() => {

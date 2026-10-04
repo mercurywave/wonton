@@ -564,6 +564,7 @@ export default function ChatPanel({
               onUserMessageAction={onUserMessageAction}
               isStreaming={isLoading}
               isLastVisible={idx >= Math.max(0, responseTurns.length - 3)}
+              isMainLog={isMainLog}
             />
           ))}
             {isProcessing && (

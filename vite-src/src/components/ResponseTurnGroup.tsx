@@ -208,9 +208,10 @@ interface ResponseTurnGroupProps {
   onUserMessageAction?: (params: { chatId: string; messageId: string; action: "copy" | "rollback" }) => Promise<void>;
   isStreaming: boolean;
   isLastVisible: boolean;
+  isMainLog: boolean;
 }
 
-export default function ResponseTurnGroup({ turnGroup, modelAliases, selectedChatId, onUserMessageAction, isStreaming, isLastVisible: _isLastVisible }: ResponseTurnGroupProps) {
+export default function ResponseTurnGroup({ turnGroup, modelAliases, selectedChatId, onUserMessageAction, isStreaming, isLastVisible: _isLastVisible, isMainLog }: ResponseTurnGroupProps) {
   const { userMessage, intermediateMessages, finalAssistantMessage, isCompleted } = turnGroup;
 
   // During streaming, show intermediate messages for the active turn
@@ -288,13 +289,15 @@ export default function ResponseTurnGroup({ turnGroup, modelAliases, selectedCha
             >
               <Copy size={12} />
             </button>
-            <button
-              className={styles.userActionButton}
-              onClick={() => onUserMessageAction({ chatId: selectedChatId, messageId: userMessage.id, action: "rollback" })}
-              title="Roll back to here"
-            >
-              <Undo2 size={12} />
-            </button>
+            {isMainLog && (
+              <button
+                className={styles.userActionButton}
+                onClick={() => onUserMessageAction({ chatId: selectedChatId, messageId: userMessage.id, action: "rollback" })}
+                title="Roll back to here"
+              >
+                <Undo2 size={12} />
+              </button>
+            )}
           </div>
         )}
       </div>
