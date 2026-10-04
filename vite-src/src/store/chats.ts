@@ -376,7 +376,7 @@ const chatStore: ChatsStore = {
       ...(chat.versionHistory || []),
       {
         logId: chat.logId,
-        createdAt: chat.versionCreatedAt || chat.createdAt,
+        createdAt: Date.now(),
         updatedAt: chat.updatedAt,
         model: chat.activeModel,
         agentId: chat.activeAgentId,
