@@ -483,7 +483,7 @@ export function useChatApi(
         originalContent: originalContent || undefined,
       };
 
-      if(projectId && chatId) await chatStore.setChatDraft(projectId, chatId, "");
+      if(projectId && chatId) await chatStore.setChatDraft(projectId, chatId, "", true);
 
       setIsLoading(true);
 

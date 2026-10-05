@@ -248,7 +248,8 @@ interface ChatsStore {
   updateChatMeta(
     projectId: string,
     chatId: string,
-    updates: Partial<ChatMeta>
+    updates: Partial<ChatMeta>,
+    silent?: boolean
   ): Promise<void>;
   refresh(projectId: string): Promise<ChatMeta[]>;
   subscribe(projectId: string, listener: Listener): () => void;
@@ -325,8 +326,8 @@ const chatStore: ChatsStore = {
     await updateChatMeta(projectId, chatId, { draft }, silent);
   },
 
-  async updateChatMeta(projectId, chatId, updates) {
-    await updateChatMeta(projectId, chatId, updates);
+  async updateChatMeta(projectId, chatId, updates, silent?: boolean) {
+    await updateChatMeta(projectId, chatId, updates, silent);
   },
 
   async refresh(projectId) {
@@ -396,7 +397,7 @@ const chatStore: ChatsStore = {
 
   async appendMessage(projectId, chatId, logId, message) {
     await chatLogsStore.appendMessage(projectId, logId, message);
-    await this.updateChatMeta(projectId, chatId, {});
+    await this.updateChatMeta(projectId, chatId, {}, true);
   },
 };
 
