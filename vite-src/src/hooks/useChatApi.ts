@@ -331,7 +331,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
       // Build next API call with assistant message and tool results appended
       currentApiMessages = [...currentApiMessages, {
         role: "assistant" as const,
-        content: assistantMessage.content,
+        content: assistantMessage.content || null,
         tool_calls: assistantMessage.toolCalls?.map((tc) => ({
           type: "function" as const,
           id: tc.id,
