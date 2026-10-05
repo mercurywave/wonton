@@ -12,7 +12,7 @@ import { FeedbackPayload, useFeedback } from "./FeedbackContext";
 import { useNotificationsContext } from "./NotificationsContext";
 import { isBackendConnected } from "../utils/platformUtils";
 import { Agent, ChatMessage, ChatMeta, FlowActionButton, ReasoningEffort, SubagentMeta } from "../types/chat";
-import { combineCustomTools } from "../utils/customTools";
+import { combineCustomTools, getPresetCommandTools } from "../utils/customTools";
 import { chatLogsStore } from "../store/chatLogs";
 import { chatStore } from "../store/chats";
 import { on as onEvent } from "./EventBusContext";
@@ -333,28 +333,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   const { tools: projectTools } = useToolsContext();
 
-  // Build preset command tools from projectMeta
-  const presetTools = useMemo(() => {
-    if (!projectMeta) return [] as { name: string; description: string; code: string }[];
-    const presets = [
-      { key: 'presetBuildCommand' as const, name: 'build', label: 'Build' },
-      { key: 'presetRunCommand' as const, name: 'run', label: 'Run' },
-      { key: 'presetLintCommand' as const, name: 'lint', label: 'Lint' },
-      { key: 'presetTestCommand' as const, name: 'test', label: 'Test' },
-    ];
-    const tools: { name: string; description: string; code: string }[] = [];
-    for (const preset of presets) {
-      const cmd = projectMeta[preset.key];
-      if (cmd && cmd.trim()) {
-        tools.push({
-          name: preset.name,
-          description: `Runs the ${preset.label} command for this project: ${cmd}`,
-          code: `return won.runCommand(${JSON.stringify(cmd)});`,
-        });
-      }
-    }
-    return tools;
-  }, [projectMeta]);
+  const presetTools = useMemo(() => getPresetCommandTools(projectMeta || undefined), [projectMeta]);
 
   const workflowCustomTools = useMemo(() => {
     return combineCustomTools(projectTools, currentFlow?.tools, presetTools);

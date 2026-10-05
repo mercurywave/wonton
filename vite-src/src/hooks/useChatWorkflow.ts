@@ -19,6 +19,7 @@ import { filterToAvailableTools } from "../tools";
 import { getAgentByName, resolveAgentFolderPath } from "../utils/agents";
 import { reserveTempFile as reserveTempFileUtil, writeTempFile } from "../utils/tempFiles";
 import { getAllToolNames } from "../tools";
+import { combineCustomTools, getPresetCommandTools } from "../utils/customTools";
 
 // Threshold: if output exceeds this, write to temp file instead of inline
 const LARGE_OUTPUT_THRESHOLD = 4096; // 4KB
@@ -144,6 +145,14 @@ export function buildWon(
 ): Won {
   async function reserveTempFile(baseName?: string): Promise<string> {
     return reserveTempFileUtil(projectId, chatId, baseName);
+  }
+
+  function getWorkflowCustomTools(): FlowCustomTool[] {
+    const projectMeta = projectMetaStore.getProjectMeta(projectId);
+    const chat = chatStore.getChat(projectId, chatId);
+    const flow = flowStore.getFlows().find((candidate) => candidate.id === chat?.workflowId);
+
+    return combineCustomTools(toolStore.getTools(), flow?.tools, getPresetCommandTools(projectMeta));
   }
 
   async function readFile(path: string): Promise<string> {
@@ -480,6 +489,7 @@ export function buildWon(
       // Resolve model and thinking from subagent meta, falling back to settings
       const model = subagentMeta.model || settings.defaultModel || "";
       const reasoningEffort = (subagentMeta.thinking as ReasoningEffort | undefined) || "none";
+      const customTools = getWorkflowCustomTools();
       
       // Run the subagent tool-call loop
       const result = await runToolCallLoop({
@@ -498,6 +508,7 @@ export function buildWon(
         agent,
         allAgents,
         reasoningEffort,
+        customTools: customTools.length > 0 ? customTools : undefined,
         onChatUpdated: () => {},
         onValidate: showFeedback,
       });
@@ -541,24 +552,7 @@ export function buildWon(
         allAgents,
         enabledToolNames,
       );
-      const customToolDefs = (() => {
-        const toolMap = new Map<string, FlowCustomTool>();
-        const projectTools = toolStore.getTools();
-        for (const t of projectTools) {
-          toolMap.set(t.name, { name: t.name, description: t.description, code: t.code });
-        }
-        if (!chat?.workflowId) {
-          return Array.from(toolMap.values());
-        }
-        const allFlows = flowStore.getFlows();
-        const flow = allFlows.find((f) => f.id === chat.workflowId);
-        if (flow?.tools) {
-          for (const t of flow.tools) {
-            toolMap.set(t.name, { name: t.name, description: t.description, code: t.code });
-          }
-        }
-        return Array.from(toolMap.values());
-      })();
+      const customTools = getWorkflowCustomTools();
       const result = await runToolCallLoop({
         settings,
         systemPrompt,
@@ -575,7 +569,7 @@ export function buildWon(
         agent,
         allAgents,
         reasoningEffort,
-        customTools: customToolDefs.length > 0 ? customToolDefs : undefined,
+        customTools: customTools.length > 0 ? customTools : undefined,
         enabledToolNames,
         onChatUpdated: () => {},
         onValidate: showFeedback,

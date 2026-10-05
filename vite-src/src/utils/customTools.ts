@@ -1,4 +1,26 @@
-import { FlowCustomTool, ProjectCustomTool } from "../types/chat";
+import { FlowCustomTool, ProjectCustomTool, ProjectMeta } from "../types/chat";
+
+export function getPresetCommandTools(projectMeta?: ProjectMeta | null): FlowCustomTool[] {
+  if (!projectMeta) return [];
+
+  const presets = [
+    { key: "presetBuildCommand" as const, name: "build", label: "Build" },
+    { key: "presetRunCommand" as const, name: "run", label: "Run" },
+    { key: "presetLintCommand" as const, name: "lint", label: "Lint" },
+    { key: "presetTestCommand" as const, name: "test", label: "Test" },
+  ];
+
+  return presets.flatMap((preset) => {
+    const command = projectMeta[preset.key];
+    return command?.trim()
+      ? [{
+          name: preset.name,
+          description: `Runs the ${preset.label} command for this project: ${command}`,
+          code: `return won.runCommand(${JSON.stringify(command)});`,
+        }]
+      : [];
+  });
+}
 
 /**
  * Combines project tools, flow tools, and preset tools into a single
