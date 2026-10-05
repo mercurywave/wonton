@@ -245,7 +245,7 @@ export default function ChatPanel({
     const options: Array<{ id: string; label: string }> = [
       { id: currentChat.logId, label: "Main" },
     ];
-    const subagents = currentChat.subagents || [];
+    const subagents = (currentChat.subagents || []).sort((a, b) => a.createdAt - b.createdAt);
     for (let i = 0; i < subagents.length; i++) {
       const subagent = subagents[i];
       const agent = allAgents.find((a) => a.id === subagent.agentId);
@@ -255,7 +255,7 @@ export default function ChatPanel({
         label: `${agentName} ${i + 1}`,
       });
     }
-    const versionHistory = currentChat.versionHistory || [];
+    const versionHistory = (currentChat.versionHistory || []).sort((a, b) => a.createdAt - b.createdAt);
     for (let i = 0; i < versionHistory.length; i++) {
       const version = versionHistory[i];
       const creationTime = new Date(version.createdAt).toLocaleTimeString();
