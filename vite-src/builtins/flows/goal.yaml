@@ -16,8 +16,8 @@ states:
                 `);
                 await won.setChatName(title);
             }
-            // TODO: there's no way to cancel this...
             for(let i = 1; i <= 9; i++) {
+                if(won.isAborted()) break;
                 won.setStatus(`Iteration ${i}`);
                 let agentId = await won.createSubagent();
                 let prompt = `
@@ -32,9 +32,11 @@ states:
                     break;
                 }
             }
-            await won.pushMessage({
-                role: 'assistant', 
-                content: "Goal Achieved" 
-            });
             won.setStatus('');
-            won.toast("Goal Achieved", "success");
+            if(!won.isAborted()) {
+                await won.pushMessage({
+                    role: 'assistant', 
+                    content: "Goal Achieved" 
+                });
+                won.toast("Goal Achieved", "success");
+            }

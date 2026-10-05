@@ -61,6 +61,7 @@ interface SubmitChatPromptOptions {
   prompt: string;
   showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
   submit: (prompt: string, originalPrompt: string) => Promise<ChatMessage | undefined>;
+  abortController?: AbortController;
 }
 
 async function runWorkflowPromptHook(
@@ -87,6 +88,10 @@ async function runWorkflowPromptHook(
   try {
     return await hookFn(won, prompt, response);
   } catch (err) {
+    // Don't show toast for abort - that's expected behavior
+    if (err instanceof DOMException && err.name === "AbortError") {
+      return undefined;
+    }
     const message = err instanceof Error ? err.message : String(err);
     addToast(`${hookName} hook failed: ${message}`, "error");
     console.error(`${hookName} hook failed:`, err);
@@ -100,11 +105,12 @@ export async function submitChatPrompt({
   prompt,
   showFeedback,
   submit,
+  abortController,
 }: SubmitChatPromptOptions): Promise<void> {
   const originalPrompt = prompt.trim().split("\n").map((line) => line.trim()).join("\n");
   if (!originalPrompt) return;
 
-  const won = buildWon(projectId, chatId, undefined, showFeedback);
+  const won = buildWon(projectId, chatId, undefined, showFeedback, abortController?.signal);
   const adjustedPrompt = await runWorkflowPromptHook(won, projectId, chatId, "hookAdjustPrompt", originalPrompt);
   const processedPrompt = typeof adjustedPrompt === "string" ? adjustedPrompt.trim() : originalPrompt;
   if (!processedPrompt) return;
@@ -117,9 +123,9 @@ export async function submitChatPrompt({
     await won.pushMessage({ role: 'user', content: processedPrompt });
     await runWorkflowPromptHook(won, projectId, chatId, "hookInterceptPrompt", processedPrompt);
   }
-  else{
+  else {
     await runWorkflowPromptHook(won, projectId, chatId, "onSendPrompt", processedPrompt);
-    const response = intercepted ? undefined : await submit(processedPrompt, originalPrompt);
+    const response = await submit(processedPrompt, originalPrompt);
     await runWorkflowPromptHook(won, projectId, chatId, "onChatResponse", processedPrompt, response);
   }
 }
@@ -131,6 +137,7 @@ export function buildWon(
   chatId: string,
   logId: string | undefined,
   showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>,
+  signal?: AbortSignal,
 ): Won {
   async function reserveTempFile(baseName?: string): Promise<string> {
     return reserveTempFileUtil(projectId, chatId, baseName);
@@ -582,6 +589,9 @@ export function buildWon(
     },
     toast(message: string, severity?: "info" | "success" | "warning" | "error") {
       addToast(message, severity);
+    },
+    isAborted() {
+      return signal?.aborted ?? false;
     },
     async submitPrompt(prompt: string) {
       if (!chatId || !projectId) {

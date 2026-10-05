@@ -31,6 +31,8 @@ interface ChatPanelProps {
   messages: ChatMessageType[];
   isLoading: boolean;
   isProcessing: boolean;
+  isWorkflowExecuting: boolean;
+  isWorkflowActive: boolean;
   onSend: (content: string, modelId: string) => Promise<void>;
   onStop: () => void;
   onFileSelect?: (uniqueName: string) => void;
@@ -80,6 +82,7 @@ export default function ChatPanel({
   messages,
   isLoading,
   isProcessing,
+  isWorkflowExecuting,
   onSend,
   onStop,
   onFileSelect,
@@ -465,7 +468,12 @@ export default function ChatPanel({
     [draft, isLoading, onSend, activeModel, setDraft]
   );
 
-  const shouldShowStopButton = isProcessing;
+  // Show stop button when:
+  // - Processing (LLM tool-call loop) and no workflow is active, OR
+  // - Workflow hook is actively executing (even without an LLM call, e.g. hookInterceptPrompt)
+  // Note: We explicitly check isWorkflowExecuting (not just isWorkflowActive) to ensure
+  // the stop button only appears after the user submits their prompt, not when just selecting a workflow
+  const shouldShowStopButton = isProcessing || isWorkflowExecuting;
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

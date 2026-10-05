@@ -234,6 +234,7 @@ export interface Won {
   finishWorkflow(): Promise<void>;
   toast(message: string, severity?: "info" | "success" | "warning" | "error"): void;
   submitPrompt(prompt: string): Promise<void>;
+  isAborted(): boolean;
 }
 
 export interface StatsEntry {

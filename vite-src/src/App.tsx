@@ -33,7 +33,7 @@ function App() {
     deleteProject,
     getProjectById,
   } = useProjects();
-  const { messages, isLoading, getIsProcessing, sendMessage, stopGeneration, setSelectedChatId, createChat, deleteChat, renameChat, chats, selectedChatId } = useChats();
+  const { messages, isLoading, getIsProcessing, sendMessage, stopGeneration, setSelectedChatId, createChat, deleteChat, renameChat, chats, selectedChatId, isWorkflowExecuting } = useChats();
   const { sidebarOpen, isMobile } = useUI();
   const { on: onEvent } = useEventBus();
   const {
@@ -200,6 +200,8 @@ function App() {
     messages,
     isLoading,
     isProcessing: selectedChatId ? getIsProcessing(selectedChatId) : false,
+    isWorkflowExecuting: isWorkflowExecuting || false,
+    isWorkflowActive: !!selectedChat?.workflowId,
     onSend: sendMessage,
     onStop: stopGeneration,
     onFileSelect: (uniqueName: string) => {

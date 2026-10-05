@@ -26,13 +26,16 @@ states:
             }
             count = Number.parseInt(count);
             for(let i = 1; i <= count; i++) {
+                if(won.isAborted()) break;
                 won.setStatus(`Iteration ${i} of ${count}`);
                 let agentId = await won.createSubagent();
                 await won.runAgent(agentId, userContent);
             }
-            await won.pushMessage({
-                role: 'assistant', 
-                content: "Loop completed" 
-            });
             won.setStatus('');
-            won.toast("Loop completed", "success");
+            if(!won.isAborted()) {
+                await won.pushMessage({
+                    role: 'assistant', 
+                    content: "Loop completed" 
+                });
+                won.toast("Loop completed", "success");
+            }

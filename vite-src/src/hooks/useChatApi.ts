@@ -10,7 +10,7 @@ import { statsStore } from "../store/stats";
 import { executeToolCall, filterToAvailableTools, getAvailableTools, executeCustomTool, findCustomTool, getCustomToolDefinitions } from "../tools";
 import { FlowCustomTool } from "../types/chat";
 import { EXECUTE_SUBAGENT_TOOL_NAME } from "../tools/executeSubagent";
-import { FeedbackPayload } from "../contexts";
+import { emit, FeedbackPayload } from "../contexts";
 
 interface ChatMessageWithToolCalls extends Omit<ChatMessage, "toolCalls"> {
   toolCalls?: ToolCall[];
@@ -560,6 +560,8 @@ export function useChatApi(
     if (projectId && logId) {
       chatLogsStore.clearPendingMessage(projectId, logId);
     }
+    // Also abort any active workflow hooks
+    emit("abortWorkflow");
   }, [projectId, logId]);
 
   return {

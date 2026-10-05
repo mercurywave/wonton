@@ -15,6 +15,7 @@ import { Agent, ChatMessage, ChatMeta, FlowActionButton, ReasoningEffort, Subage
 import { combineCustomTools } from "../utils/customTools";
 import { chatLogsStore } from "../store/chatLogs";
 import { chatStore } from "../store/chats";
+import { on as onEvent } from "./EventBusContext";
 
 interface ChatsContextValue {
   chats: ChatMeta[];
@@ -53,6 +54,8 @@ interface ChatsContextValue {
   effectiveToolNames: string[];
   // Whether the currently selected log is the main chat log
   isMainLog: boolean;
+  // Whether a workflow hook is currently executing (for stop button)
+  isWorkflowExecuting: boolean;
 }
 
 const ChatsContext = createContext<ChatsContextValue | null>(null);
@@ -297,6 +300,37 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     showFeedback: wrappedShowFeedback,
   });
 
+  // Abort controller for workflow hook cancellation
+  const workflowAbortRef = useRef<AbortController | null>(null);
+
+  // Track whether the current chat has an active workflow
+  const isWorkflowActive = useMemo(() => {
+    return Boolean(selectedChatMeta?.workflowId);
+  }, [selectedChatMeta?.workflowId]);
+
+  // Track whether a workflow hook is actively executing
+  const isWorkflowExecutingRef = useRef(false);
+  const [isWorkflowExecuting, setIsWorkflowExecuting] = useState(false);
+
+  // Clean up abort controller when workflow is removed
+  useEffect(() => {
+    if (!isWorkflowActive && workflowAbortRef.current) {
+      workflowAbortRef.current.abort();
+      workflowAbortRef.current = null;
+    }
+  }, [isWorkflowActive]);
+
+  // Listen for abortWorkflow event from stopGeneration
+  useEffect(() => {
+    const handler = () => {
+      if (workflowAbortRef.current) {
+        workflowAbortRef.current.abort();
+        workflowAbortRef.current = null;
+      }
+    };
+    return onEvent("abortWorkflow", handler);
+  }, [isWorkflowActive]);
+
   const { tools: projectTools } = useToolsContext();
 
   // Build preset command tools from projectMeta
@@ -367,21 +401,38 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const wrappedSendMessage = useCallback(
     async (content: string, modelId: string) => {
       if (!activeProjectId || !selectedChatId) return;
-      await submitChatPrompt({
-        projectId: activeProjectId,
-        chatId: selectedChatId,
-        prompt: content,
-        showFeedback: wrappedShowFeedback,
-        submit: async (processedPrompt, originalPrompt) => (
-          await sendMessage(
-            processedPrompt,
-            modelId,
-            processedPrompt !== originalPrompt ? originalPrompt : undefined,
-          )
-        ),
-      });
+      
+      // Create abort controller if workflow is active and none exists yet
+      if (isWorkflowActive && !workflowAbortRef.current) {
+        workflowAbortRef.current = new AbortController();
+      }
+      
+      // Mark workflow as executing
+      isWorkflowExecutingRef.current = true;
+      setIsWorkflowExecuting(true);
+      
+      try {
+        await submitChatPrompt({
+          projectId: activeProjectId,
+          chatId: selectedChatId,
+          prompt: content,
+          showFeedback: wrappedShowFeedback,
+          submit: async (processedPrompt, originalPrompt) => (
+            await sendMessage(
+              processedPrompt,
+              modelId,
+              processedPrompt !== originalPrompt ? originalPrompt : undefined,
+            )
+          ),
+          abortController: workflowAbortRef.current || undefined,
+        });
+      } finally {
+        // Clear workflow executing state when done
+        isWorkflowExecutingRef.current = false;
+        setIsWorkflowExecuting(false);
+      }
     },
-    [activeProjectId, selectedChatId, wrappedShowFeedback, sendMessage]
+    [activeProjectId, selectedChatId, wrappedShowFeedback, sendMessage, isWorkflowActive]
   );
 
   const [historyMessages, setHistoryMessages] = useState<Record<string, ChatMessage[]>>({});
@@ -533,8 +584,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       effectiveAgent,
       effectiveToolNames,
       isMainLog,
+      isWorkflowExecuting,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange, effectiveAgent, effectiveToolNames, isMainLog]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange, effectiveAgent, effectiveToolNames, isMainLog, isWorkflowExecuting]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;
