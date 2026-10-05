@@ -7,10 +7,9 @@ states:
     prep:
         message: Enter goal to achieve
         onEnter: |
-        hookAdjustPrompt: |
+        hookInterceptPrompt: |
             await won.set("prompt", userContent);
-            await won.pushMessage({ role: 'user', content: userContent });
-            if(won.getChatHistory().length < 1) {
+            if(won.getChatHistory().length < 2) {
                 let title = await won.runQuery(`
                     Generate a brief title for the following user prompt:
                     ${userContent}
@@ -39,4 +38,3 @@ states:
             });
             won.setStatus('');
             won.toast("Goal Achieved", "success");
-            return "";

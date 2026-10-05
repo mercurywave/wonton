@@ -114,11 +114,14 @@ export async function submitChatPrompt({
   const state = flow?.states?.[meta?.workflowStateKey ?? ""];
   const intercepted = Boolean(state?.hookInterceptPrompt);
   if (intercepted) {
+    await won.pushMessage({ role: 'user', content: processedPrompt });
     await runWorkflowPromptHook(won, projectId, chatId, "hookInterceptPrompt", processedPrompt);
   }
-  await runWorkflowPromptHook(won, projectId, chatId, "onSendPrompt", processedPrompt);
-  const response = intercepted ? undefined : await submit(processedPrompt, originalPrompt);
-  await runWorkflowPromptHook(won, projectId, chatId, "onChatResponse", processedPrompt, response);
+  else{
+    await runWorkflowPromptHook(won, projectId, chatId, "onSendPrompt", processedPrompt);
+    const response = intercepted ? undefined : await submit(processedPrompt, originalPrompt);
+    await runWorkflowPromptHook(won, projectId, chatId, "onChatResponse", processedPrompt, response);
+  }
 }
 
 // logId is assumed to mean that this is running in a subagent/historic version

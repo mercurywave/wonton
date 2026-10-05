@@ -7,9 +7,8 @@ states:
     prep:
         message: Enter prompt to repeat
         onEnter: |
-        hookAdjustPrompt: |
+        hookInterceptPrompt: |
             await won.set("prompt", userContent);
-            await won.pushMessage({ role: 'user', content: userContent });
             let count = await won.prompt("Number of times to repeat");
             if(Number.parseInt(count) < 1) {
                 await won.pushMessage({
@@ -18,7 +17,7 @@ states:
                 });
                 return "";
             }
-            if(won.getChatHistory().length < 1) {
+            if(won.getChatHistory().length < 2) {
                 let title = await won.runQuery(`
                     Generate a brief title for the following user prompt:
                     ${userContent}
@@ -37,4 +36,3 @@ states:
             });
             won.setStatus('');
             won.toast("Loop completed", "success");
-            return "";
