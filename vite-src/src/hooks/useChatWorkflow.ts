@@ -111,13 +111,16 @@ export async function submitChatPrompt({
   if (!originalPrompt) return;
 
   const won = buildWon(projectId, chatId, undefined, showFeedback, abortController?.signal);
+  const meta = chatStore.getChat(projectId, chatId);
+  const flow = flowStore.getFlows().find((candidate) => candidate.id === meta?.workflowId);
+  const state = flow?.states?.[meta?.workflowStateKey ?? ""];
+
+  await chatStore.setChatDraft(projectId, chatId, "", true);
+
   const adjustedPrompt = await runWorkflowPromptHook(won, projectId, chatId, "hookAdjustPrompt", originalPrompt);
   const processedPrompt = typeof adjustedPrompt === "string" ? adjustedPrompt.trim() : originalPrompt;
   if (!processedPrompt) return;
 
-  const meta = chatStore.getChat(projectId, chatId);
-  const flow = flowStore.getFlows().find((candidate) => candidate.id === meta?.workflowId);
-  const state = flow?.states?.[meta?.workflowStateKey ?? ""];
   const intercepted = Boolean(state?.hookInterceptPrompt);
   if (intercepted) {
     await won.pushMessage({ role: 'user', content: processedPrompt });
