@@ -146,31 +146,38 @@ export default function DocumentViewerPanel({
     return count;
   }, [lineHighlights]);
 
-  const loadFile = useCallback(async () => {
-    try {
-      const stat = await filesystem.getStats(filePath);
-      if (!stat || stat.isDirectory) {
-        setError("File not found");
-        return;
-      }
-      const fileContent = await filesystem.readFile(filePath);
-      setContent(fileContent ?? null);
-      setError(null);
-    } catch (err) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else if (typeof err === "object" && err !== null) {
-        const errorObj = err as Record<string, unknown>;
-        setError((errorObj.message as string | undefined) || (errorObj.msg as string | undefined) || JSON.stringify(err));
-      } else {
-        setError(String(err));
-      }
-    }
-  }, [filePath]);
-
   useEffect(() => {
+    let cancelled = false;
+    const loadFile = async () => {
+      try {
+        const stat = await filesystem.getStats(filePath);
+        if (!stat || stat.isDirectory) {
+          if (!cancelled) setError("File not found");
+          return;
+        }
+        const fileContent = await filesystem.readFile(filePath);
+        if (!cancelled) {
+          setContent(fileContent ?? null);
+          setError(null);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          if (err instanceof Error) {
+            setError(err.message);
+          } else if (typeof err === "object" && err !== null) {
+            const errorObj = err as Record<string, unknown>;
+            setError((errorObj.message as string | undefined) || (errorObj.msg as string | undefined) || JSON.stringify(err));
+          } else {
+            setError(String(err));
+          }
+        }
+      }
+    };
     loadFile();
-  }, [loadFile]);
+    return () => {
+      cancelled = true;
+    };
+  }, [filePath]);
 
   useEffect(() => {
     if (hasMatches && totalMatches > 0) {
