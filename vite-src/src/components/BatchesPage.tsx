@@ -82,6 +82,7 @@ function getServerState(health: PorkbunHealthStatus | null, queueStats: PorkbunQ
 }
 
 export default function BatchesPage() {
+  const [thirtyMinutesAgo] = useState(() => Date.now() - 30 * 60 * 1000);
   const { settings, servers } = useSettings();
   const { activeProjectId } = useNav();
   const { getProjectById } = useProjects();
@@ -527,8 +528,6 @@ export default function BatchesPage() {
     [batches]
   );
 
-  const thirtyMinutesAgo = useRef(Date.now() - 30 * 60 * 1000).current;
-
   const hiddenOldDoneTasks = useMemo(
     () =>
       sortedTasks.filter((task) => {
@@ -536,7 +535,7 @@ export default function BatchesPage() {
         if (!doneAt) return false;
         return new Date(doneAt).getTime() <= thirtyMinutesAgo;
       }),
-    [doneAtByTask, sortedTasks]
+    [doneAtByTask, sortedTasks, thirtyMinutesAgo]
   );
 
   const visibleTasks = useMemo(
@@ -551,7 +550,7 @@ export default function BatchesPage() {
         return new Date(doneAt).getTime() > thirtyMinutesAgo;
       });
     },
-    [doneAtByTask, showOldDoneTasks, sortedTasks]
+    [doneAtByTask, showOldDoneTasks, sortedTasks, thirtyMinutesAgo]
   );
 
   const getEffectiveStatus = useCallback((task: { id: string; done_at?: string | null; created_at?: string | null; updated_at?: string | null; error_message?: string | null }, remoteStatus?: { status?: string | null }) => {
