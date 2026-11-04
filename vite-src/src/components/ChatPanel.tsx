@@ -119,10 +119,7 @@ export default function ChatPanel({
 
   // Load draft when chat changes
   useEffect(() => {
-    if (!activeProjectId || !selectedChatId) {
-      setDraft("");
-      return;
-    }
+    if (!activeProjectId || !selectedChatId) return;
 
     const loadDraft = async () => {
       if (!isBackendConnected()) {
@@ -186,22 +183,20 @@ export default function ChatPanel({
     [commandFlows, disabledFlows]
   );
   const activeProject = projects.find((p) => p.id === activeProjectId);
-  const [projectMeta, setProjectMeta] = useState<ProjectMeta | null>(null);
+  const [projectMetaState, setProjectMetaState] = useState<ProjectMeta | null>(null);
+  const projectMeta = !activeProjectId ? null : projectMetaState;
 
   useEffect(() => {
-    if (!activeProjectId) {
-      setProjectMeta(null);
-      return;
-    }
+    if (!activeProjectId) return;
 
     const loadMeta = async () => {
       await projectMetaStore.load(activeProjectId);
-      setProjectMeta(projectMetaStore.getProjectMeta(activeProjectId));
+      setProjectMetaState(projectMetaStore.getProjectMeta(activeProjectId));
     };
 
     loadMeta();
     const unsubscribe = projectMetaStore.subscribe(activeProjectId, () => {
-      setProjectMeta(projectMetaStore.getProjectMeta(activeProjectId));
+      setProjectMetaState(projectMetaStore.getProjectMeta(activeProjectId));
     });
 
     return unsubscribe;
@@ -379,10 +374,13 @@ export default function ChatPanel({
   const { bubbleData, dismiss: dismissBubble } = useSelectionBubble(messagesContainerRef);
 
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + "px";
-    }
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (el) {
+        el.style.height = "auto";
+        el.style.height = `${Math.min(el.scrollHeight, 200)}px`;
+      }
+    });
   }, [draft]);
 
   const handleBubbleComment = useCallback((selectedText: string) => {
@@ -461,9 +459,11 @@ export default function ChatPanel({
       if (!trimmed || isLoading) return;
       setDraft("");
       await onSend(trimmed, activeModel);
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
-      }
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "auto";
+        }
+      }, 0);
     },
     [draft, isLoading, onSend, activeModel, setDraft]
   );
