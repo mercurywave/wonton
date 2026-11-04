@@ -179,30 +179,26 @@ export default function DocumentViewerPanel({
     };
   }, [filePath]);
 
-  useEffect(() => {
-    if (hasMatches && totalMatches > 0) {
-      setCurrentMatchIndex(0);
-    }
-  }, [filePath, searchQuery, hasMatches, totalMatches]);
+  const matchIndex = currentMatchIndex;
 
   const goNext = useCallback(() => {
     if (!hasMatches || totalMatches === 0) return;
-    setCurrentMatchIndex((currentMatchIndex + 1) % totalMatches);
-  }, [currentMatchIndex, hasMatches, totalMatches]);
+    setCurrentMatchIndex(prev => (prev + 1) % totalMatches);
+  }, [totalMatches]);
 
   const goPrev = useCallback(() => {
     if (!hasMatches || totalMatches === 0) return;
-    setCurrentMatchIndex((currentMatchIndex - 1 + totalMatches) % totalMatches);
-  }, [currentMatchIndex, hasMatches, totalMatches]);
+    setCurrentMatchIndex(prev => (prev - 1 + totalMatches) % totalMatches);
+  }, [totalMatches]);
 
   useLayoutEffect(() => {
     if (!contentRef.current) return;
     const marks = contentRef.current.querySelectorAll('[data-match="true"]');
-    const el = marks[currentMatchIndex];
+    const el = marks[matchIndex];
     if (el) {
       el.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, [currentMatchIndex]);
+  }, [matchIndex]);
 
   const markdown = isMarkdownFile(fileName);
 
@@ -272,7 +268,7 @@ export default function DocumentViewerPanel({
             <ChevronUp size={14} />
           </button>
           <span className={styles.navLabel}>
-            {currentMatchIndex + 1} / {totalMatches}
+            {matchIndex + 1} / {totalMatches}
           </span>
           <button className={styles.navButton} onClick={goNext} title="Next match" disabled={totalMatches <= 1}>
             <ChevronDown size={14} />
