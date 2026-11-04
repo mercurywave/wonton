@@ -161,7 +161,7 @@ async function filterAndCleanTools(
     : allAgents;
 
   // Step 1: Agent-level base set
-  let allowedNames = resolveAgentToolSet(allTools, agent);
+  const allowedNames = resolveAgentToolSet(allTools, agent);
 
   // Step 2 & 3: Tool-level overrides
   // For each tool, check if it should be added/hidden from this agent

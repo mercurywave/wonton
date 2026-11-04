@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Info, X, Loader2 } from "lucide-react";
 import styles from "./ContextRing.module.css";
 
@@ -122,43 +122,56 @@ export default function ContextRing({
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - pct / 100);
 
-  const computeTokens = useCallback(async () => {
-    setIsComputing(true);
-    setTokenResult(null);
-    try {
-      const results = await Promise.allSettled([
-        tokenize(serverUrl, model, systemPrompt),
-        tokenize(serverUrl, model, toolsJson),
-        tokenize(serverUrl, model, messagesText),
-      ]);
-
-      const values = results.map((r) =>
-        r.status === "fulfilled" ? r.value : 0
-      );
-      const total = values.reduce((a, b) => a + b, 0);
-
-      const segments: SegmentTokens[] = [
-        { label: "System Prompt", tokens: values[0], color: getSegmentColor(0) },
-        { label: "Tools", tokens: values[1], color: getSegmentColor(1) },
-        { label: "Messages", tokens: values[2], color: getSegmentColor(2) },
-      ];
-
-      setTokenResult({ segments, total });
-    } catch (err) {
-      setTokenResult({
-        segments: [],
-        total: 0,
-        error: err instanceof Error ? err.message : "Unknown error",
-      });
-    } finally {
-      setIsComputing(false);
-    }
-  }, [serverUrl, model, systemPrompt, toolsJson, messagesText]);
-
   useEffect(() => {
     if (!isOpen) return;
-    computeTokens();
-  }, [isOpen, computeTokens]);
+
+    let cancelled = false;
+
+    const runCompute = async () => {
+      setIsComputing(true);
+      setTokenResult((prev) => (cancelled ? prev : null));
+
+      try {
+        const results = await Promise.allSettled([
+          tokenize(serverUrl, model, systemPrompt),
+          tokenize(serverUrl, model, toolsJson),
+          tokenize(serverUrl, model, messagesText),
+        ]);
+
+        if (cancelled) return;
+
+        const values = results.map((r) =>
+          r.status === "fulfilled" ? r.value : 0
+        );
+        const total = values.reduce((a, b) => a + b, 0);
+
+        const segments: SegmentTokens[] = [
+          { label: "System Prompt", tokens: values[0], color: getSegmentColor(0) },
+          { label: "Tools", tokens: values[1], color: getSegmentColor(1) },
+          { label: "Messages", tokens: values[2], color: getSegmentColor(2) },
+        ];
+
+        setTokenResult({ segments, total });
+      } catch (err) {
+        if (cancelled) return;
+        setTokenResult({
+          segments: [],
+          total: 0,
+          error: err instanceof Error ? err.message : "Unknown error",
+        });
+      } finally {
+        if (!cancelled) {
+          setIsComputing(false);
+        }
+      }
+    };
+
+    runCompute();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, serverUrl, model, systemPrompt, toolsJson, messagesText]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

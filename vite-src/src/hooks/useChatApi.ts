@@ -296,7 +296,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
           logId,
           settings,
           onChatUpdated,
-          showFeedback: onValidate as any,
+          showFeedback: onValidate,
           customTools,
         };
         let result: { callId: string; content: string; isError?: boolean };
