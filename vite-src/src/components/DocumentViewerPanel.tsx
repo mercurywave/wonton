@@ -184,12 +184,12 @@ export default function DocumentViewerPanel({
   const goNext = useCallback(() => {
     if (!hasMatches || totalMatches === 0) return;
     setCurrentMatchIndex(prev => (prev + 1) % totalMatches);
-  }, [totalMatches]);
+  }, [hasMatches, totalMatches]);
 
   const goPrev = useCallback(() => {
     if (!hasMatches || totalMatches === 0) return;
     setCurrentMatchIndex(prev => (prev - 1 + totalMatches) % totalMatches);
-  }, [totalMatches]);
+  }, [hasMatches, totalMatches]);
 
   useLayoutEffect(() => {
     if (!contentRef.current) return;
