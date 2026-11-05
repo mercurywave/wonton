@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Folder, FolderOpen, Shield } from "lucide-react";
 import { FilePermission } from "../types/chat";
 import { isBackendConnected } from "../utils/platformUtils";
@@ -21,9 +21,13 @@ export default function FilePermissionsSettings({
   isLoading,
 }: FilePermissionsSettingsProps) {
   const [localFolderPath, setLocalFolderPath] = useState(folderPath || "");
+  const prevFolderPathRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
-    setLocalFolderPath(folderPath || "");
+    if (prevFolderPathRef.current !== folderPath) {
+      setLocalFolderPath(folderPath || "");
+      prevFolderPathRef.current = folderPath;
+    }
   }, [folderPath]);
 
   const handleSelectFolder = useCallback(async () => {

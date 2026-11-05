@@ -45,8 +45,18 @@ export function useProjectChats(projectId: string | undefined) {
 
   useEffect(() => {
     if (projectId) {
-      loadMeta();
-      loadChats();
+      (async () => {
+        try {
+          await loadMeta();
+        } catch (err) {
+          console.error('useProjectChats: failed to load meta:', err);
+        }
+        try {
+          await loadChats();
+        } catch (err) {
+          console.error('useProjectChats: failed to load chats:', err);
+        }
+      })();
       const unsubscribe = projectMetaStore.subscribe(projectId, refreshMeta);
       const unsubscribeChats = chatStore.subscribe(projectId, () => {
         setChats(chatStore.getChatMetas(projectId));

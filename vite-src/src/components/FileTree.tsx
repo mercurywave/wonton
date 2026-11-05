@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { ChevronRight, ChevronDown, Folder, FolderOpen, File, Lock, EyeOff, Bell } from "lucide-react";
 import { FilePermission } from "../types/chat";
 import { filesystem } from "../utils/electronFs";
@@ -64,6 +64,7 @@ function TreeNodeComponent({
   permissions,
   onPermissionChange,
   expandedPaths,
+  effectiveExpandedPaths,
   toggleExpand,
   isLoading,
 }: {
@@ -73,46 +74,57 @@ function TreeNodeComponent({
   permissions: Record<string, FilePermission> | undefined;
   onPermissionChange: (relativePath: string, permission: FilePermission) => void;
   expandedPaths: Set<string>;
+  effectiveExpandedPaths: Set<string>;
   toggleExpand: (path: string) => void;
   isLoading: boolean;
 }) {
   const [children, setChildren] = useState<TreeNode[]>([]);
   const [isLoaded, setIsLoaded] = useState(!node.isDirectory || node.hasChildren);
   const [loadError, setLoadError] = useState(false);
-  const isExpanded = expandedPaths.has(node.path);
+  const isExpanded = effectiveExpandedPaths.has(node.path);
+  const isMountedRef = useRef(true);
 
-  const loadChildren = useCallback(async () => {
-    try {
-      const entries = await filesystem.readDirectory(node.path);
-      const treeNodeList: TreeNode[] = [];
-
-      for (const e of entries) {
-        if (e.entry.startsWith(".")) continue;
-        const fullPath = `${node.path}/${e.entry}`;
-        const stat = await filesystem.getStats(fullPath);
-        if (!stat) continue;
-
-        treeNodeList.push({
-          name: e.entry,
-          path: fullPath,
-          isDirectory: stat.isDirectory,
-          hasChildren: false,
-        });
-      }
-
-      setChildren(treeNodeList);
-      setIsLoaded(true);
-    } catch {
-      setLoadError(true);
-      setIsLoaded(true);
-    }
-  }, [node.path]);
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (isExpanded && !isLoaded && !loadError && node.isDirectory) {
-      loadChildren();
+      (async () => {
+        try {
+          const entries = await filesystem.readDirectory(node.path);
+          const treeNodeList: TreeNode[] = [];
+
+          for (const e of entries) {
+            if (e.entry.startsWith(".")) continue;
+            const fullPath = `${node.path}/${e.entry}`;
+            const stat = await filesystem.getStats(fullPath);
+            if (!stat) continue;
+
+            treeNodeList.push({
+              name: e.entry,
+              path: fullPath,
+              isDirectory: stat.isDirectory,
+              hasChildren: false,
+            });
+          }
+
+          if (isMountedRef.current) {
+            setChildren(treeNodeList);
+            setIsLoaded(true);
+          }
+        } catch {
+          if (isMountedRef.current) {
+            setLoadError(true);
+            setIsLoaded(true);
+          }
+        }
+      })();
     }
-  }, [isExpanded, isLoaded, loadError, node.isDirectory, loadChildren]);
+  }, [isExpanded, isLoaded, loadError, node.isDirectory]);
 
   const handleToggleExpand = useCallback(() => {
     if (!node.isDirectory) return;
@@ -267,6 +279,7 @@ function TreeNodeComponent({
               permissions={permissions}
               onPermissionChange={onPermissionChange}
               expandedPaths={expandedPaths}
+              effectiveExpandedPaths={effectiveExpandedPaths}
               toggleExpand={toggleExpand}
               isLoading={isLoading}
             />
@@ -298,37 +311,35 @@ export default function FileTree({
   const [loadError, setLoadError] = useState(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
-  const loadRoot = useCallback(async () => {
-    try {
-      const normFolderPath = folderPath.replace(/\\/g, "/");
-      const entries = await filesystem.readDirectory(folderPath);
-      const treeNodes: TreeNode[] = [];
-
-      for (const e of entries) {
-        if (e.entry.startsWith(".")) continue;
-        const fullPath = `${normFolderPath}/${e.entry}`;
-        const stat = await filesystem.getStats(fullPath);
-        if (!stat) continue;
-
-        treeNodes.push({
-          name: e.entry,
-          path: fullPath,
-          isDirectory: stat.isDirectory,
-          hasChildren: false,
-        });
-      }
-
-      setRootNodes(treeNodes);
-      setIsLoaded(true);
-    } catch {
-      setLoadError(true);
-      setIsLoaded(true);
-    }
-  }, [folderPath]);
-
   useEffect(() => {
-    loadRoot();
-  }, [loadRoot]);
+    (async () => {
+      try {
+        const normFolderPath = folderPath.replace(/\\/g, "/");
+        const entries = await filesystem.readDirectory(folderPath);
+        const treeNodes: TreeNode[] = [];
+
+        for (const e of entries) {
+          if (e.entry.startsWith(".")) continue;
+          const fullPath = `${normFolderPath}/${e.entry}`;
+          const stat = await filesystem.getStats(fullPath);
+          if (!stat) continue;
+
+          treeNodes.push({
+            name: e.entry,
+            path: fullPath,
+            isDirectory: stat.isDirectory,
+            hasChildren: false,
+          });
+        }
+
+        setRootNodes(treeNodes);
+        setIsLoaded(true);
+      } catch {
+        setLoadError(true);
+        setIsLoaded(true);
+      }
+    })();
+  }, [folderPath]);
 
   const toggleExpand = useCallback((path: string) => {
     setExpandedPaths((prev) => {
@@ -342,28 +353,24 @@ export default function FileTree({
     });
   }, []);
 
- useEffect(() => {
+  const effectiveExpandedPaths = useMemo(() => {
+    const normFolderPath = folderPath.replace(/\\/g, "/");
+    const expanded = new Set<string>(expandedPaths);
+    
     if (isLoaded && permissions && Object.keys(permissions).length > 0) {
-      const normFolderPath = folderPath.replace(/\\/g, "/");
-      const expanded = new Set<string>(expandedPaths);
-      let needsUpdate = false;
       for (const relPath of Object.keys(permissions)) {
         const parts = relPath.split("/").filter(Boolean);
         const ancestorCount = parts.length > 1 ? parts.length - 1 : parts.length;
         for (let i = 0; i < ancestorCount; i++) {
           const ancestorRel = parts.slice(0, i + 1).join("/");
           const ancestorAbs = `${normFolderPath}/${ancestorRel}`;
-          if (!expanded.has(ancestorAbs)) {
-            expanded.add(ancestorAbs);
-            needsUpdate = true;
-          }
+          expanded.add(ancestorAbs);
         }
       }
-      if (needsUpdate) {
-        setExpandedPaths(expanded);
-      }
     }
-  }, [isLoaded, folderPath, permissions]);
+    
+    return expanded;
+  }, [expandedPaths, isLoaded, permissions, folderPath]);
 
   if (loadError && !isLoaded) {
     return (
@@ -399,7 +406,8 @@ export default function FileTree({
           folderPath={folderPath}
           permissions={permissions}
           onPermissionChange={onPermissionChange}
-          expandedPaths={expandedPaths}
+          expandedPaths={effectiveExpandedPaths}
+          effectiveExpandedPaths={effectiveExpandedPaths}
           toggleExpand={toggleExpand}
           isLoading={isLoading}
         />

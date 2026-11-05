@@ -1,4 +1,4 @@
-import { useRef, useCallback, useMemo } from "react";
+import { useRef, useCallback, useMemo, useEffect } from "react";
 import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won, SubagentMeta, SubagentOptions, ReasoningEffort, FlowCustomTool } from "../types/chat";
 import { FeedbackPayload, addToast } from "../contexts";
 import { agentStore } from "../store/agents";
@@ -663,7 +663,9 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
   }, [runOnEnterForState]);
 
   const onEnterForStateRef = useRef(runOnEnterForState);
-  onEnterForStateRef.current = runOnEnterForState;
+  useEffect(() => {
+    onEnterForStateRef.current = runOnEnterForState;
+  }, [runOnEnterForState]);
 
   const executeAdjustPrompt = useCallback(
     async (userContent: string): Promise<string> => {

@@ -110,7 +110,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   }, [chats, selectedChatId]);
 
   const chatsRef = useRef(chats);
-  chatsRef.current = chats;
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
 
   const activeProject = useMemo(
     () => projectsCtx.projects.find((p) => p.id === activeProjectId),

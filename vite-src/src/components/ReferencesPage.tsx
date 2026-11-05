@@ -167,11 +167,7 @@ export default function ReferencesPage() {
     setSearchInput(cache.query);
     setResultsState(cache.results);
     setSelectedFileState(cache.selectedFilePath);
-    if (cache.selectedFilePath) {
-      setSelectedFileName(cache.selectedFilePath.split("/").pop() || cache.selectedFilePath);
-    } else {
-      setSelectedFileName("");
-    }
+    setSelectedFileName(cache.selectedFilePath ? cache.selectedFilePath.split("/").pop() || cache.selectedFilePath : "");
   }, [activeProjectId]);
 
   // Resolve docs path

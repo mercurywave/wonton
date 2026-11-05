@@ -391,7 +391,9 @@ export function useChatApi(
   const [isLoading, setIsLoading] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
   const messagesRef = useRef<ChatMessage[]>([]);
-  messagesRef.current = messages;
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
   const loadRequestIdRef = useRef(0);
 
   useEffect(() => {
