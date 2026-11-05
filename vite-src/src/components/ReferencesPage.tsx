@@ -151,23 +151,30 @@ async function searchDocs(docsDir: string, query: string): Promise<ReferenceSear
 
 export default function ReferencesPage() {
   const { activeProjectId } = useNav();
-  const [searchInput, setSearchInput] = useState("");
-  const [results, setResultsState] = useState<ReferenceSearchResult[]>([]);
-  const [selectedFile, setSelectedFileState] = useState<string | null>(null);
-  const [selectedFileName, setSelectedFileName] = useState<string>("");
+  const [searchInput, setSearchInput] = useState(() => {
+    const cache = getCache();
+    return cache.query;
+  });
+  const [results, setResultsState] = useState<ReferenceSearchResult[]>(() => {
+    const cache = getCache();
+    return cache.results;
+  });
+  const [selectedFile, setSelectedFileState] = useState<string | null>(() => {
+    const cache = getCache();
+    return cache.selectedFilePath;
+  });
+  const [selectedFileName, setSelectedFileName] = useState(() => {
+    const cache = getCache();
+    return cache.selectedFilePath ? cache.selectedFilePath.split("/").pop() || cache.selectedFilePath : "";
+  });
   const [searching, setSearching] = useState(false);
   const [docsPath, setDocsPath] = useState<string | null>(null);
   const windowsOnly = isWindowsSync();
 
-  // Restore cached state on mount / project switch
+  // Clear cache and reset state when project changes
   useEffect(() => {
     if (!activeProjectId) return;
     clearOnProjectChange(activeProjectId);
-    const cache = getCache();
-    setSearchInput(cache.query);
-    setResultsState(cache.results);
-    setSelectedFileState(cache.selectedFilePath);
-    setSelectedFileName(cache.selectedFilePath ? cache.selectedFilePath.split("/").pop() || cache.selectedFilePath : "");
   }, [activeProjectId]);
 
   // Resolve docs path
