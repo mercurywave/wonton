@@ -25,11 +25,7 @@ export default function FeedbackPopup() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [currentRequest, dismiss]);
 
-  useEffect(() => {
-    if (!currentRequest || currentRequest.payload.type !== "text") {
-      setTextInput("");
-    }
-  }, [currentRequest]);
+  const inputKey = currentRequest ? `${currentRequest.requestId}-${currentRequest.payload.type}` : "none";
 
   if (!currentRequest || !currentPayload) return null;
 
@@ -71,6 +67,7 @@ export default function FeedbackPopup() {
             </ReactMarkdown>
             <div className={styles.textInputContainer}>
               <input
+                key={inputKey}
                 type="text"
                 className={styles.textInput}
                 placeholder={payload.placeholder || "Enter your response..."}
