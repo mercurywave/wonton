@@ -55,14 +55,11 @@ export default function StatsPage() {
   const { resolvedSettings } = useSettings();
   const { getProjectById } = useProjects();
   const [entries, setEntries] = useState<StatsEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [browserMode, setBrowserMode] = useState(false);
+  const [loading, setLoading] = useState(isBackendConnected());
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!isBackendConnected()) {
-      setBrowserMode(true);
-      setLoading(false);
       return;
     }
 
@@ -210,7 +207,7 @@ export default function StatsPage() {
     return labels;
   }, [dailyTokens]);
 
-  if (browserMode) {
+  if (!isBackendConnected()) {
     return (
       <div className={styles.container}>
         <div className={styles.content}>
