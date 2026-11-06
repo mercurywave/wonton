@@ -311,7 +311,7 @@ export function useChatSettings(): [
         });
       },
     };
-  }, [settings.servers, settings.activeServerId]);
+  }, [settings]);
 
   const resolvedSettings = useMemo(() => resolveSettings(settings), [settings]);
 

@@ -556,7 +556,7 @@ export function useChatApi(
         }
       }
     },
-    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, folderPath, agentId, onValidate, customTools, enabledToolNames]
+    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, folderPath, agentId, onValidate, customTools, enabledToolNames, allAgents, logId, onChatUpdated, reasoningEffort]
   );
 
   const stopGeneration = useCallback(() => {

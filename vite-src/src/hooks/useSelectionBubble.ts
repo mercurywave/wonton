@@ -54,12 +54,13 @@ export function useSelectionBubble(containerRef: React.RefObject<HTMLElement | n
       }
     };
 
-    containerRef.current?.addEventListener("pointerup", handlePointerUp);
-    containerRef.current?.addEventListener("pointerdown", handlePointerDown);
+    const container = containerRef.current;
+    container?.addEventListener("pointerup", handlePointerUp);
+    container?.addEventListener("pointerdown", handlePointerDown);
 
     return () => {
-      containerRef.current?.removeEventListener("pointerup", handlePointerUp);
-      containerRef.current?.removeEventListener("pointerdown", handlePointerDown);
+      container?.removeEventListener("pointerup", handlePointerUp);
+      container?.removeEventListener("pointerdown", handlePointerDown);
     };
   }, [containerRef]);
 
