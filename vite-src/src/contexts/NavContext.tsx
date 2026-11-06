@@ -48,6 +48,11 @@ export function NavProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(navReducer, initialState);
   const initializedRef = useRef(false);
   const [isLoading, setIsLoading] = useState(true);
+  const isLoadingRef = useRef(isLoading);
+
+  useEffect(() => {
+    isLoadingRef.current = isLoading;
+  }, [isLoading]);
 
   // ── Side effect: when projects are loaded, restore last project ──────────
   useEffect(() => {
@@ -79,10 +84,10 @@ export function NavProvider({ children }: { children: ReactNode }) {
 
   // ── Clear loading state when nav is ready and a chat is selected ────────
   useEffect(() => {
-    if (state.status === "ready" && state.chatId !== null && isLoading) {
+    if (state.status === "ready" && state.chatId !== null && isLoadingRef.current) {
       setIsLoading(false);
     }
-  }, [state.status, state.chatId, isLoading]);
+  }, [state.status, state.chatId]);
 
   // ── Navigation actions ──────────────────────────────────────────────────
 
