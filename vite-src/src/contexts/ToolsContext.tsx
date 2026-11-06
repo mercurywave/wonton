@@ -142,9 +142,9 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
     };
   }, [loadTools, nav.projectId]);
 
-  const refreshTools = async () => {
+  const refreshTools = useCallback(async () => {
     await loadTools();
-  };
+  }, [loadTools]);
 
   const value = useMemo(
     () => ({
@@ -154,7 +154,7 @@ export function ToolsProvider({ children }: { children: ReactNode }) {
       builtInToolsPath,
       toolsDirPath,
     }),
-    [tools, isLoading, builtInToolsPath, toolsDirPath]
+    [tools, isLoading, refreshTools, builtInToolsPath, toolsDirPath]
   );
 
   return <ToolsContext.Provider value={value}>{children}</ToolsContext.Provider>;
