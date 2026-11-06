@@ -171,7 +171,7 @@ export default function StatsPage() {
       }
     }
     return Array.from(map.values()).sort((a, b) => b.totalTokens - a.totalTokens);
-  }, [entries]);
+  }, [entries, getProjectById]);
 
   const totalTokens = useMemo(() => entries.reduce((s, e) => s + e.totalTokens, 0), [entries]);
   const totalCalls = useMemo(() => entries.length, [entries]);

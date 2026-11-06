@@ -91,7 +91,7 @@ export default function TempFileViewerPanel({
       return;
     }
     loadFileRef.current();
-  }, [uniqueName, projectId, onClose]);
+  }, [uniqueName, projectId, onClose, reservedTempFiles]);
 
   useEffect(() => {
     if (!projectId || !reservedTempFiles.some((f) => f.uniqueName === uniqueName)) {
@@ -141,7 +141,7 @@ export default function TempFileViewerPanel({
     };
 
     startWatcher();
-  }, [uniqueName, projectId]);
+  }, [uniqueName, projectId, reservedTempFiles]);
 
  
 

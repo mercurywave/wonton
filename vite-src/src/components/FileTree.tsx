@@ -124,7 +124,7 @@ function TreeNodeComponent({
         }
       })();
     }
-  }, [isExpanded, isLoaded, loadError, node.isDirectory]);
+  }, [isExpanded, isLoaded, loadError, node.isDirectory, node.path]);
 
   const handleToggleExpand = useCallback(() => {
     if (!node.isDirectory) return;
