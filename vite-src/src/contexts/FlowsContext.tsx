@@ -197,11 +197,11 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     return unsub;
   }, [nav.projectId]);
 
-  const refreshFlows = async () => {
+  const refreshFlows = useCallback(async () => {
     await loadFlows();
-  };
+  }, [loadFlows]);
 
-  const toggleFlow = async (flowId: string) => {
+  const toggleFlow = useCallback(async (flowId: string) => {
     const next = disabledFlows.includes(flowId)
       ? disabledFlows.filter((id) => id !== flowId)
       : [...disabledFlows, flowId];
@@ -210,7 +210,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
     if (projectId) {
       await projectMetaStore.setDisabledFlows(projectId, next);
     }
-  };
+  }, [disabledFlows, nav.projectId]);
 
   const enabledWorkflows = useMemo(
     () => {
@@ -258,7 +258,7 @@ export function FlowsProvider({ children }: { children: ReactNode }) {
       conflictFiles,
       overriddenGlobalIds,
     }),
-    [flows, disabledFlows, enabledWorkflows, commandFlows, isLoading, builtInFlowsPath, globalFlowsPath, projectFlowsPath, conflictIds, conflictFiles, overriddenGlobalIds]
+    [flows, disabledFlows, enabledWorkflows, commandFlows, isLoading, builtInFlowsPath, globalFlowsPath, projectFlowsPath, conflictIds, conflictFiles, overriddenGlobalIds, refreshFlows, toggleFlow]
   );
 
   return <FlowsContext.Provider value={value}>{children}</FlowsContext.Provider>;
