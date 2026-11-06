@@ -395,6 +395,7 @@ export function useChatApi(
     messagesRef.current = messages;
   }, [messages]);
   const loadRequestIdRef = useRef(0);
+  const prevChatIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (projectId && chatId) {
@@ -422,9 +423,11 @@ export function useChatApi(
         setMessages(msgs);
       });
       return unsubscribe;
-    } else {
+    } else if (prevChatIdRef.current) {
+      // Chat became invalid (projectId or chatId is now falsy)
       setMessages([]);
     }
+    prevChatIdRef.current = chatId || null;
   }, [projectId, chatId, logId]);
 
   const generateTitle = useCallback(
