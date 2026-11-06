@@ -5,7 +5,7 @@ import { useChatWorkflow, submitChatPrompt, executeCommand as runExecuteCommand 
 import { useSettings } from "./SettingsContext";
 import { useProjects } from "./ProjectsContext";
 import { useNav } from "./NavContext";
-import { useAgentsContext } from "./AgentsContext";
+import { useAgentsContext } from "./useAgentsContext";
 import { useFlowsContext } from "./FlowsContext";
 import { useToolsContext } from "./ToolsContext";
 import { FeedbackPayload, useFeedback } from "./FeedbackContext";

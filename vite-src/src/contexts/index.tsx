@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { SettingsProvider } from "./SettingsContext";
 import { ProjectsProvider } from "./ProjectsContext";
-import { AgentsProvider } from "./AgentsContext";
+import { AgentsProvider } from "./AgentsContext.tsx";
 import { FlowsProvider } from "./FlowsContext";
 import { ToolsProvider } from "./ToolsContext";
 import { ChatsProvider } from "./ChatsContext";
@@ -16,7 +16,8 @@ import { NotificationsProvider } from "./NotificationsContext";
 
 export { SettingsProvider, useSettings } from "./SettingsContext";
 export { ProjectsProvider, useProjects } from "./ProjectsContext";
-export { AgentsProvider, useAgentsContext } from "./AgentsContext";
+export { AgentsProvider } from "./AgentsContext.tsx";
+export { useAgentsContext } from "./useAgentsContext";
 export { FlowsProvider, useFlowsContext } from "./FlowsContext";
 export { ToolsProvider, useToolsContext } from "./ToolsContext";
 export { ChatsProvider, useChats } from "./ChatsContext";
