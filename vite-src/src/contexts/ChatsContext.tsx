@@ -180,7 +180,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
         await projectChatsUpdateChatMeta(resolvedChatId, { activeAgentId: undefined });
       }
     },
-    [resolvedChatId, activeProjectId]
+    [resolvedChatId, activeProjectId, projectChatsUpdateChatMeta]
   );
 
   // Helper to update a specific subagent's meta for the selected chat
@@ -208,7 +208,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
         await projectChatsUpdateChatMeta(resolvedChatId, { activeModel: undefined });
       }
     },
-    [resolvedChatId, activeProjectId, activeSubagentMeta, resolvedSettings.defaultModel, updateSubagentMeta]
+    [resolvedChatId, activeProjectId, activeSubagentMeta, resolvedSettings.defaultModel, updateSubagentMeta, projectChatsUpdateChatMeta]
   );
 
   // Resolve the effective active reasoning effort (subagent > version > chat > settings)
@@ -231,7 +231,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
         await projectChatsUpdateChatMeta(resolvedChatId, { reasoningEffort: undefined });
       }
     },
-    [resolvedChatId, activeProjectId, activeSubagentMeta, settings.reasoningEffort, updateSubagentMeta]
+    [resolvedChatId, activeProjectId, activeSubagentMeta, settings.reasoningEffort, updateSubagentMeta, projectChatsUpdateChatMeta]
   );
 
   // Resolve the effective enabled tool names for the selected chat
@@ -378,7 +378,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       const title = projectName ? `${projectName} - ${chatName}` : chatName;
       showNotification("Response complete", title);
     }
-  }, [isLoading, showNotification, selectedChatId, activeProjectId, projectsCtx.projects]);
+  }, [isLoading, resolvedChatId, showNotification, selectedChatId, activeProjectId, projectsCtx.projects]);
 
   const wrappedSendMessage = useCallback(
     async (content: string, modelId: string) => {
@@ -568,7 +568,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       isMainLog,
       isWorkflowExecuting,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, resolvedChatId, setSelectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange, effectiveAgent, effectiveToolNames, isMainLog, isWorkflowExecuting]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, resolvedChatId, setSelectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowOnActionButtonClick, wrappedExecuteCommand, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange, effectiveAgent, effectiveToolNames, isMainLog, isWorkflowExecuting, projectChatsUpdateChatMeta, workflowExecuteAdjustPrompt]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;
