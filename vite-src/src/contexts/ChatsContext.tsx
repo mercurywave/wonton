@@ -85,29 +85,30 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     isBackendConnected() ? (activeProjectId ?? undefined) : undefined
   );
 
-  // Auto-select most recent chat when the currently selected one is deleted
-  useEffect(() => {
-    if (selectedChatId && chats.some((c) => c.id === selectedChatId)) return;
-    if (chats.length === 0) {
-      setSelectedChatId(null);
-      return;
-    }
+  // Compute the resolved chat ID based on current chats (no side effects)
+  const resolvedChatId = useMemo(() => {
+    if (selectedChatId && chats.some((c) => c.id === selectedChatId)) return selectedChatId;
+    if (chats.length === 0) return null;
     const mostRecent = chats.reduce((a, b) =>
       a.updatedAt > b.updatedAt ? a : b
     );
-    setSelectedChatId(mostRecent.id);
-    if (!initialAutoSelectDone.current) {
+    return mostRecent.id;
+  }, [selectedChatId, chats]);
+
+  // Dispatch CHAT_SELECT action on initial mount (runs once)
+  useEffect(() => {
+    if (!initialAutoSelectDone.current && resolvedChatId) {
       initialAutoSelectDone.current = true;
-      dispatch({ type: "CHAT_SELECT", chatId: mostRecent.id });
+      dispatch({ type: "CHAT_SELECT", chatId: resolvedChatId });
     }
-  }, [selectedChatId, chats, dispatch]);
+  }, [resolvedChatId, dispatch]);
 
   // Derive logId from the selected chat's meta
   const selectedChatMeta = useMemo(() => {
-    if (!selectedChatId) return undefined;
-    const chat = chats.find((c) => c.id === selectedChatId);
+    if (!resolvedChatId) return undefined;
+    const chat = chats.find((c) => c.id === resolvedChatId);
     return chat;
-  }, [chats, selectedChatId]);
+  }, [chats, resolvedChatId]);
 
   const chatsRef = useRef(chats);
   useEffect(() => {
@@ -172,42 +173,42 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   // Callback to change the active agent for the selected chat
   const onAgentChange = useCallback(
     async (agentId: string) => {
-      if (!selectedChatId || !activeProjectId) return;
+      if (!resolvedChatId || !activeProjectId) return;
       if (agentId !== "builtin:default") {
-        await projectChatsUpdateChatMeta(selectedChatId, { activeAgentId: agentId });
+        await projectChatsUpdateChatMeta(resolvedChatId, { activeAgentId: agentId });
       } else {
-        await projectChatsUpdateChatMeta(selectedChatId, { activeAgentId: undefined });
+        await projectChatsUpdateChatMeta(resolvedChatId, { activeAgentId: undefined });
       }
     },
-    [selectedChatId, activeProjectId]
+    [resolvedChatId, activeProjectId]
   );
 
   // Helper to update a specific subagent's meta for the selected chat
   const updateSubagentMeta = useCallback(
     async (logId: string, partial: Partial<Pick<SubagentMeta, 'model' | 'thinking'>>) => {
-      if (!selectedChatId) return;
+      if (!resolvedChatId) return;
       const subagents = selectedChatMeta?.subagents || [];
       const updatedSubagents = subagents.map((s) =>
         s.logId === logId ? { ...s, ...partial } : s
       );
-      await projectChatsUpdateChatMeta(selectedChatId, { subagents: updatedSubagents });
+      await projectChatsUpdateChatMeta(resolvedChatId, { subagents: updatedSubagents });
     },
-    [selectedChatId, selectedChatMeta, projectChatsUpdateChatMeta]
+    [resolvedChatId, selectedChatMeta, projectChatsUpdateChatMeta]
   );
 
   // Callback to change the active model for the selected chat or subagent
   const onModelChange = useCallback(
     async (modelId: string) => {
-      if (!selectedChatId || !activeProjectId) return;
+      if (!resolvedChatId || !activeProjectId) return;
       if (activeSubagentMeta) {
         await updateSubagentMeta(activeSubagentMeta.logId, { model: modelId || undefined });
       } else if (modelId !== resolvedSettings.defaultModel) {
-        await projectChatsUpdateChatMeta(selectedChatId, { activeModel: modelId });
+        await projectChatsUpdateChatMeta(resolvedChatId, { activeModel: modelId });
       } else {
-        await projectChatsUpdateChatMeta(selectedChatId, { activeModel: undefined });
+        await projectChatsUpdateChatMeta(resolvedChatId, { activeModel: undefined });
       }
     },
-    [selectedChatId, activeProjectId, activeSubagentMeta, resolvedSettings.defaultModel, updateSubagentMeta]
+    [resolvedChatId, activeProjectId, activeSubagentMeta, resolvedSettings.defaultModel, updateSubagentMeta]
   );
 
   // Resolve the effective active reasoning effort (subagent > version > chat > settings)
@@ -221,16 +222,16 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   // Callback to change the active reasoning effort for the selected chat or subagent
   const onReasoningEffortChange = useCallback(
     async (effort: ReasoningEffort) => {
-      if (!selectedChatId || !activeProjectId) return;
+      if (!resolvedChatId || !activeProjectId) return;
       if (activeSubagentMeta) {
         await updateSubagentMeta(activeSubagentMeta.logId, { thinking: effort });
       } else if (effort !== settings.reasoningEffort) {
-        await projectChatsUpdateChatMeta(selectedChatId, { reasoningEffort: effort });
+        await projectChatsUpdateChatMeta(resolvedChatId, { reasoningEffort: effort });
       } else {
-        await projectChatsUpdateChatMeta(selectedChatId, { reasoningEffort: undefined });
+        await projectChatsUpdateChatMeta(resolvedChatId, { reasoningEffort: undefined });
       }
     },
-    [selectedChatId, activeProjectId, activeSubagentMeta, settings.reasoningEffort, updateSubagentMeta]
+    [resolvedChatId, activeProjectId, activeSubagentMeta, settings.reasoningEffort, updateSubagentMeta]
   );
 
   // Resolve the effective enabled tool names for the selected chat
@@ -242,14 +243,14 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   // Callback to change the enabled tools for the selected chat
   const onToolSetChange = useCallback(
     async (toolNames: string[]) => {
-      if (!selectedChatId || !activeProjectId) return;
+      if (!resolvedChatId || !activeProjectId) return;
       if (toolNames.length === 0) {
-        await projectChatsUpdateChatMeta(selectedChatId, { enabledToolNames: undefined });
+        await projectChatsUpdateChatMeta(resolvedChatId, { enabledToolNames: undefined });
       } else {
-        await projectChatsUpdateChatMeta(selectedChatId, { enabledToolNames: toolNames });
+        await projectChatsUpdateChatMeta(resolvedChatId, { enabledToolNames: toolNames });
       }
     },
-    [selectedChatId, activeProjectId, projectChatsUpdateChatMeta]
+    [resolvedChatId, activeProjectId, projectChatsUpdateChatMeta]
   );
 
   // Active logId: navLogId if set (explicit log selection), otherwise fall back to chat's main log
@@ -343,7 +344,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   const { messages, isLoading, sendMessage, stopGeneration } = useChatApi(
     resolvedSettings,
-    selectedChatId || undefined,
+    resolvedChatId || undefined,
     isBackendConnected() ? (activeProjectId ?? undefined) : undefined,
     projectMeta || undefined,
     activeAgentSystemPrompt,
@@ -369,9 +370,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     const prevIsLoading = prevIsLoadingRef.current;
     prevIsLoadingRef.current = isLoading;
 
-    if (prevIsLoading && !isLoading && selectedChatId) {
+    if (prevIsLoading && !isLoading && resolvedChatId) {
       const currentChats = chatsRef.current;
-      const chat = currentChats.find((c) => c.id === selectedChatId);
+      const chat = currentChats.find((c) => c.id === resolvedChatId);
       const chatName = chat?.name || "Chat";
       const projectName = projectsCtx.projects.find((p) => p.id === activeProjectId)?.name || "";
       const title = projectName ? `${projectName} - ${chatName}` : chatName;
@@ -381,7 +382,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   const wrappedSendMessage = useCallback(
     async (content: string, modelId: string) => {
-      if (!activeProjectId || !selectedChatId) return;
+      if (!activeProjectId || !resolvedChatId) return;
       
       // Create abort controller if workflow is active and none exists yet
       if (isWorkflowActive && !workflowAbortRef.current) {
@@ -395,7 +396,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       try {
         await submitChatPrompt({
           projectId: activeProjectId,
-          chatId: selectedChatId,
+          chatId: resolvedChatId,
           prompt: content,
           showFeedback: wrappedShowFeedback,
           submit: async (processedPrompt, originalPrompt) => (
@@ -413,7 +414,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
         setIsWorkflowExecuting(false);
       }
     },
-    [activeProjectId, selectedChatId, wrappedShowFeedback, sendMessage, isWorkflowActive]
+    [activeProjectId, resolvedChatId, wrappedShowFeedback, sendMessage, isWorkflowActive]
   );
 
   const [historyMessages, setHistoryMessages] = useState<Record<string, ChatMessage[]>>({});
@@ -454,22 +455,22 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   }, [projectChatsUpdateChatMeta]);
 
   const setSelectedChatWorkflowId = useCallback(async (workflowId: string | undefined, workflowStateKey?: string) => {
-    if (!selectedChatId) return;
+    if (!resolvedChatId) return;
     const updates: Partial<ChatMeta> = { workflowId, updatedAt: Date.now() };
     if (workflowStateKey !== undefined) {
       updates.workflowStateKey = workflowStateKey;
     }
-    await projectChatsUpdateChatMeta(selectedChatId, updates);
-  }, [selectedChatId, projectChatsUpdateChatMeta]);
+    await projectChatsUpdateChatMeta(resolvedChatId, updates);
+  }, [resolvedChatId, projectChatsUpdateChatMeta]);
 
   const wrappedExecuteCommand = useCallback(
     async (flowId: string) => {
       const flow = flows.find((f) => f.id === flowId);
       if (!flow?.command) return;
-      if (!selectedChatId || !activeProjectId) return;
-      await runExecuteCommand(flow.command, flowId, selectedChatId, activeProjectId, wrappedShowFeedback);
+      if (!resolvedChatId || !activeProjectId) return;
+      await runExecuteCommand(flow.command, flowId, resolvedChatId, activeProjectId, wrappedShowFeedback);
     },
-    [flows, selectedChatId, activeProjectId, wrappedShowFeedback]
+    [flows, resolvedChatId, activeProjectId, wrappedShowFeedback]
   );
 
   const getIsProcessing = useCallback((chatId: string) => {
@@ -552,7 +553,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       onActionButtonClick: workflowOnActionButtonClick,
       executeCommand: wrappedExecuteCommand,
       onUserMessageAction,
-      selectedChatId,
+      selectedChatId: resolvedChatId,
       setSelectedChatId,
       activeAgentId,
       activeModel,
@@ -567,7 +568,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       isMainLog,
       isWorkflowExecuting,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, selectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange, effectiveAgent, effectiveToolNames, isMainLog, isWorkflowExecuting]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, resolvedChatId, setSelectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowOnActionButtonClick, wrappedExecuteCommand, advance, wrappedShowFeedback, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange, effectiveAgent, effectiveToolNames, isMainLog, isWorkflowExecuting]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;
