@@ -195,22 +195,18 @@ interface ApiRequestBody {
   thinking_budget_tokens?: number;
 }
 
-export async function makeApiCall(
-  settings: ResolvedServerSettings,
+function buildApiBody(
   messages: ApiRequestBody["messages"],
   model: string,
+  stream: boolean,
   tools?: ToolDefinition[],
-  signal?: AbortSignal,
   isSubagent?: boolean,
   reasoningEffort?: ReasoningEffort
-): Promise<{ body: ApiRequestBody; stream: ReadableStreamDefaultReader<Uint8Array> }> {
-  const baseUrl = settings.serverUrl.replace(/\/+$/, "");
-  const apiUrl = `${baseUrl}/v1/chat/completions`;
-
+): ApiRequestBody {
   const body: ApiRequestBody = {
     model,
     messages,
-    stream: true,
+    stream,
   };
 
   if (tools && tools.length > 0) {
@@ -225,18 +221,69 @@ export async function makeApiCall(
     body.tool_choice = "auto";
   }
 
-  reasoningEffort ??= isSubagent ? 'medium' : 'none';
-  body.reasoning_effort = reasoningEffort;
+  const effectiveReasoningEffort = reasoningEffort ?? (isSubagent ? 'medium' : 'none');
+  body.reasoning_effort = effectiveReasoningEffort;
   body.thinking_budget_tokens = {
     none: 0,
     low: 128,
     medium: 512,
     high: 1024,
-  }[reasoningEffort];
-  
-  body.chat_template_kwargs = { 
-    enable_thinking: reasoningEffort !== 'none',
+  }[effectiveReasoningEffort];
+
+  body.chat_template_kwargs = {
+    enable_thinking: effectiveReasoningEffort !== 'none',
   };
+
+  return body;
+}
+
+export async function makeSilentApiCall(
+  settings: ResolvedServerSettings,
+  messages: ApiRequestBody["messages"],
+  model: string,
+  tools?: ToolDefinition[],
+  signal?: AbortSignal,
+  isSubagent?: boolean,
+  reasoningEffort?: ReasoningEffort
+): Promise<string> {
+  const baseUrl = settings.serverUrl.replace(/\/+$/, "");
+  const apiUrl = `${baseUrl}/v1/chat/completions`;
+
+  const body = buildApiBody(messages, model, false, tools, isSubagent, reasoningEffort);
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${settings.apiKey}`,
+    },
+    body: JSON.stringify(body),
+    signal,
+  });
+
+  if (!response.ok) {
+    const errorBody = await response.text();
+    throw new Error(`API error (${response.status}): ${errorBody}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content ?? "";
+  return content;
+}
+
+export async function makeApiCall(
+  settings: ResolvedServerSettings,
+  messages: ApiRequestBody["messages"],
+  model: string,
+  tools?: ToolDefinition[],
+  signal?: AbortSignal,
+  isSubagent?: boolean,
+  reasoningEffort?: ReasoningEffort
+): Promise<{ body: ApiRequestBody; stream: ReadableStreamDefaultReader<Uint8Array> }> {
+  const baseUrl = settings.serverUrl.replace(/\/+$/, "");
+  const apiUrl = `${baseUrl}/v1/chat/completions`;
+
+  const body = buildApiBody(messages, model, true, tools, isSubagent, reasoningEffort);
 
   const response = await fetch(apiUrl, {
     method: "POST",

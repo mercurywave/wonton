@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { ChatMessage, LLMStats, ProjectMeta, ToolCall, Agent, ReasoningEffort } from "../types/chat";
 import { ResolvedServerSettings } from "./useChatSettings";
 import { runQuery } from "./useLLMQuery";
-import { buildApiMessages, makeApiCall, mergeStats, parseSSEChunk } from "../utils/llmApi";
+import { buildApiMessages, makeApiCall, mergeStats, parseSSEChunk, makeSilentApiCall } from "../utils/llmApi";
 
 import { chatStore } from "../store/chats";
 import { chatLogsStore } from "../store/chatLogs";
@@ -28,6 +28,7 @@ interface ToolCallLoopOptions {
   chatId?: string;
   logId?: string;
   isSubagent?: boolean;
+  isMainLog?: boolean;
   agentId?: string;
   agent?: Agent;
   allAgents?: Agent[];
@@ -37,6 +38,7 @@ interface ToolCallLoopOptions {
   onChatUpdated?: () => void;
   onValidate?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
   onFinish?: () => void;
+  onSuggestionsGenerated?: (suggestions: string[]) => void;
 }
 
 interface ToolCallLoopResult {
@@ -58,6 +60,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     chatId,
     logId,
     isSubagent,
+    isMainLog,
     agentId,
     agent,
     allAgents,
@@ -67,6 +70,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     onChatUpdated,
     onValidate,
     onFinish,
+    onSuggestionsGenerated,
   } = options;
 
   const standardTools = await filterToAvailableTools(toolNames, folderPath, agent, allAgents, enabledToolNames);
@@ -365,9 +369,106 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     }
   }
 
+  // Generate follow-up suggestions for primary agent (non-subagent) responses
+  if (!isSubagent && isMainLog && onSuggestionsGenerated && projectId && chatId && logId) {
+    generateSuggestions({
+      settings,
+      model,
+      initialMessages,
+      assistantMessage: finalAssistantMessage,
+      onSuggestionsGenerated,
+    }).catch((error) => {
+      console.debug('Suggestion generation failed:', error);
+    });
+  }
+
   onFinish?.();
 
   return { finalMessage: finalAssistantMessage, allMessages, stats: finalAssistantMessage.stats || null };
+}
+
+async function generateSuggestions(options: {
+  settings: ResolvedServerSettings;
+  model: string;
+  initialMessages: ChatMessage[];
+  assistantMessage: ChatMessageWithToolCalls;
+  onSuggestionsGenerated: (suggestions: string[]) => void;
+}): Promise<void> {
+  const { settings, model, initialMessages, assistantMessage, onSuggestionsGenerated } = options;
+
+  // Build API messages with conversation history, excluding the last assistant message
+  // (which is the response we're generating suggestions for)
+  const messagesWithoutLastAssistant = initialMessages.slice(0, -1);
+  const { messages: apiMessages } = buildApiMessages(messagesWithoutLastAssistant, undefined);
+
+  // Add the assistant's final response
+  const apiMessagesWithResponse = [...apiMessages, {
+    role: "assistant" as const,
+    content: assistantMessage.content || null,
+  }];
+
+  // Create a follow-up prompt asking for suggestions
+  const suggestionsPrompt: ChatMessage = {
+    id: crypto.randomUUID(),
+    role: "user" as const,
+    content: "Based on the conversation above, suggest up to 4 concise follow-up prompts the user might want to try. Each suggestion should be a complete, actionable prompt. Return ONLY the suggestions, one per line, numbered 1-4. Do not include any other text or explanations.",
+    timestamp: Date.now(),
+  };
+
+  const fullApiMessages = [...apiMessagesWithResponse, {
+    role: "user" as const,
+    content: suggestionsPrompt.content,
+  }];
+
+  try {
+    const response = await makeSilentApiCall(
+      settings,
+      fullApiMessages,
+      model,
+      undefined,
+      undefined,
+      false,
+      'none' // No thinking for suggestions
+    );
+
+    // Parse the response into suggestions
+    const parsedSuggestions = parseSuggestions(response);
+    if (parsedSuggestions.length > 0) {
+      onSuggestionsGenerated(parsedSuggestions);
+    }
+  } catch {
+    // Silently ignore suggestion generation failures
+  }
+}
+
+function parseSuggestions(response: string): string[] {
+  if (!response || !response.trim()) return [];
+
+  const lines = response
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  // Extract numbered suggestions (1., 2., etc.)
+  const suggestions: string[] = [];
+  for (const line of lines) {
+    const match = line.match(/^\d+[.)]\s+(.+)$/);
+    if (match) {
+      const suggestion = match[1].trim();
+      if (suggestion.length > 0 && suggestion.length < 500) {
+        suggestions.push(suggestion);
+      }
+    } else if (line.length > 10 && line.length < 500 && !line.startsWith('```') && /^[A-Z]/.test(line)) {
+      // If no numbered format, only treat lines as suggestions if they:
+      // - Start with uppercase (sentence case)
+      // - Are at least 10 characters (filter out short fragments)
+      // - Are not code blocks
+      suggestions.push(line);
+    }
+  }
+
+  // Limit to 4 suggestions
+  return suggestions.slice(0, 4);
 }
 
 export function useChatApi(
@@ -386,6 +487,8 @@ export function useChatApi(
   reasoningEffort?: ReasoningEffort,
   customTools?: FlowCustomTool[],
   enabledToolNames?: string[],
+  isMainLog?: boolean,
+  onSuggestionsGenerated?: (suggestions: string[]) => void,
 ) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -525,6 +628,7 @@ export function useChatApi(
           projectId,
           chatId,
           logId,
+          isMainLog,
           agentId: resolvedAgentId,
           agent,
           allAgents,
@@ -533,6 +637,7 @@ export function useChatApi(
           enabledToolNames,
           onChatUpdated,
           onValidate,
+          onSuggestionsGenerated,
         });
 
         return toolCallResult.finalMessage;
@@ -556,7 +661,7 @@ export function useChatApi(
         }
       }
     },
-    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, folderPath, agentId, onValidate, customTools, enabledToolNames, allAgents, logId, onChatUpdated, reasoningEffort]
+    [settings, projectId, chatId, projectMeta, agentSystemPrompt, generateTitle, folderPath, agentId, onValidate, customTools, enabledToolNames, allAgents, logId, onChatUpdated, reasoningEffort, isMainLog, onSuggestionsGenerated]
   );
 
   const stopGeneration = useCallback(() => {

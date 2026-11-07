@@ -107,6 +107,8 @@ export default function ChatPanel({
     effectiveAgent,
     effectiveToolNames,
     isMainLog,
+    suggestedFollowUps,
+    insertSuggestion,
   } = useChats();
 
   const [extensionStatus, setExtensionStatus] = useState<string | null>(null);
@@ -568,6 +570,8 @@ export default function ChatPanel({
               isStreaming={isLoading}
               isLastVisible={idx >= Math.max(0, responseTurns.length - 3)}
               isMainLog={isMainLog}
+              suggestedFollowUps={idx === responseTurns.length - 1 ? suggestedFollowUps : []}
+              onSuggestionClick={(suggestion) => insertSuggestion(suggestion, setDraft)}
             />
           ))}
             {isProcessing && (

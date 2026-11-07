@@ -209,9 +209,11 @@ interface ResponseTurnGroupProps {
   isStreaming: boolean;
   isLastVisible: boolean;
   isMainLog: boolean;
+  suggestedFollowUps?: string[];
+  onSuggestionClick?: (suggestion: string) => void;
 }
 
-export default function ResponseTurnGroup({ turnGroup, modelAliases, selectedChatId, onUserMessageAction, isStreaming, isLastVisible: _isLastVisible, isMainLog }: ResponseTurnGroupProps) {
+export default function ResponseTurnGroup({ turnGroup, modelAliases, selectedChatId, onUserMessageAction, isStreaming, isLastVisible: _isLastVisible, isMainLog, suggestedFollowUps = [], onSuggestionClick }: ResponseTurnGroupProps) {
   const { userMessage, intermediateMessages, finalAssistantMessage, isCompleted } = turnGroup;
 
   // During streaming, show intermediate messages for the active turn
@@ -321,6 +323,22 @@ export default function ResponseTurnGroup({ turnGroup, modelAliases, selectedCha
       {finalAssistantMessage.id !== userMessage.id && (
         <div className={`${styles.message} ${styles.assistant}`}>
           <MessageBubble message={finalAssistantMessage} modelAliases={modelAliases} />
+          {/* Suggested follow-ups */}
+          {suggestedFollowUps.length > 0 && (
+            <div className={styles.suggestionPills}>
+              {suggestedFollowUps.map((suggestion, idx) => (
+                <button
+                  key={`suggestion-${idx}`}
+                  className={styles.suggestionPill}
+                  onClick={() => onSuggestionClick?.(suggestion)}
+                  type="button"
+                  title={suggestion}
+                >
+                  {suggestion.length > 60 ? suggestion.slice(0, 60) + '...' : suggestion}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

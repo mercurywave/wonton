@@ -56,6 +56,10 @@ interface ChatsContextValue {
   isMainLog: boolean;
   // Whether a workflow hook is currently executing (for stop button)
   isWorkflowExecuting: boolean;
+  // Suggested follow-up prompts for the current chat
+  suggestedFollowUps: string[];
+  clearSuggestedFollowUps: () => void;
+  insertSuggestion: (suggestion: string, setDraft: (draft: string) => void) => void;
 }
 
 const ChatsContext = createContext<ChatsContextValue | null>(null);
@@ -272,6 +276,59 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     return agent?.systemPrompt;
   }, [selectedChatMeta, allAgents]);
 
+  // Suggested follow-up prompts - derived from chat meta
+  // This is the persisted suggestions from the chat's metadata
+  const persistedSuggestedFollowUps = useMemo(() => {
+    return selectedChatMeta?.suggestedFollowUps || [];
+  }, [selectedChatMeta?.suggestedFollowUps]);
+
+  // Track when suggestions were cleared (to avoid showing stale suggestions after clear)
+  const [clearedTimestamp, setClearedTimestamp] = useState<number>(0);
+
+  // Epoch counter to prevent race conditions where background suggestion generation
+  // overwrites cleared or newer state
+  const [suggestionEpoch, setSuggestionEpoch] = useState<number>(0);
+
+  // The active suggestions shown to the user (persisted or empty if cleared)
+  // When clearedTimestamp is set, we return empty array until chat meta refreshes
+  const suggestedFollowUps = useMemo(() => {
+    if (clearedTimestamp > 0 && persistedSuggestedFollowUps.length > 0) {
+      // If we just cleared and the persisted suggestions haven't refreshed yet, show empty
+      // Once the chat meta refreshes, suggestedFollowUps will update automatically
+      return [];
+    }
+    return persistedSuggestedFollowUps;
+  }, [persistedSuggestedFollowUps, clearedTimestamp]);
+
+  // Persist suggestions to chat meta
+  const persistSuggestions = useCallback(async (suggestions: string[]) => {
+    if (!resolvedChatId || !activeProjectId) return;
+    await projectChatsUpdateChatMeta(resolvedChatId, { suggestedFollowUps: suggestions.length > 0 ? suggestions : undefined });
+  }, [resolvedChatId, activeProjectId, projectChatsUpdateChatMeta]);
+
+  const setSuggestedFollowUps = useCallback(async (suggestions: string[], epoch?: number) => {
+    // Ignore stale suggestions that were generated before the current epoch
+    if (epoch !== undefined && epoch < suggestionEpoch) return;
+    
+    // Update the chat meta directly
+    await persistSuggestions(suggestions);
+    // Clear the clearedTimestamp so the new suggestions are shown
+    setClearedTimestamp(0);
+  }, [persistSuggestions, suggestionEpoch]);
+
+  const clearSuggestedFollowUps = useCallback(async () => {
+    setClearedTimestamp(Date.now());
+    // Increment epoch to invalidate any in-flight suggestion generation
+    setSuggestionEpoch(e => e + 1);
+    await persistSuggestions([]);
+  }, [persistSuggestions]);
+
+  const insertSuggestion = useCallback((suggestion: string, setDraft: (draft: string) => void) => {
+    setDraft(suggestion);
+    // Increment epoch to invalidate any in-flight suggestion generation from previous turn
+    setSuggestionEpoch(e => e + 1);
+  }, []);
+
   const refreshAndNotify = useCallback(async () => {
     await refreshChats();
   }, [refreshChats]);
@@ -360,6 +417,10 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
     activeReasoningEffort,
     workflowCustomTools,
     enabledToolNames,
+    isMainLog,
+    async (suggestions: string[]) => {
+      await setSuggestedFollowUps(suggestions, suggestionEpoch);
+    },
   );
 
   // Track previous isLoading to detect completion of user-initiated chats
@@ -383,6 +444,9 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   const wrappedSendMessage = useCallback(
     async (content: string, modelId: string) => {
       if (!activeProjectId || !resolvedChatId) return;
+      
+      // Clear suggestions before sending a new message
+      await clearSuggestedFollowUps();
       
       // Create abort controller if workflow is active and none exists yet
       if (isWorkflowActive && !workflowAbortRef.current) {
@@ -414,7 +478,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
         setIsWorkflowExecuting(false);
       }
     },
-    [activeProjectId, resolvedChatId, wrappedShowFeedback, sendMessage, isWorkflowActive]
+    [activeProjectId, resolvedChatId, wrappedShowFeedback, sendMessage, isWorkflowActive, clearSuggestedFollowUps]
   );
 
   const [historyMessages, setHistoryMessages] = useState<Record<string, ChatMessage[]>>({});
@@ -567,8 +631,11 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       effectiveToolNames,
       isMainLog,
       isWorkflowExecuting,
+      suggestedFollowUps,
+      clearSuggestedFollowUps,
+      insertSuggestion,
     }),
-    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, resolvedChatId, setSelectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowOnActionButtonClick, wrappedExecuteCommand, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange, effectiveAgent, effectiveToolNames, isMainLog, isWorkflowExecuting, projectChatsUpdateChatMeta, workflowExecuteAdjustPrompt]
+    [chats, messages, isLoading, isLoadingHistoryMessages, historyMessages, loadHistoryMessages, getIsProcessing, wrappedCreateChat, wrappedDeleteChat, wrappedRenameChat, loadChatMessages, refreshChats, wrappedSendMessage, stopGeneration, onUserMessageAction, resolvedChatId, setSelectedChatId, wrappedSetWorkflowId, setSelectedChatWorkflowId, workflowOnActionButtonClick, wrappedExecuteCommand, activeAgentId, activeModel, onAgentChange, onModelChange, activeReasoningEffort, onReasoningEffortChange, enabledToolNames, onToolSetChange, effectiveAgent, effectiveToolNames, isMainLog, isWorkflowExecuting, projectChatsUpdateChatMeta, workflowExecuteAdjustPrompt, suggestedFollowUps, clearSuggestedFollowUps, insertSuggestion]
   );
 
   return <ChatsContext.Provider value={value}>{children}</ChatsContext.Provider>;

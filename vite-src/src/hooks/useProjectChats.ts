@@ -98,7 +98,8 @@ export function useProjectChats(projectId: string | undefined) {
   const updateChatMeta = useCallback(async (chatId: string, updates: Partial<ChatMeta>) => {
     if (!projectId) return;
     await chatStore.updateChatMeta(projectId, chatId, updates);
-    setChats(chatStore.getChatMetas(projectId));
+    // Create shallow copies of all meta objects to ensure React detects the change
+    setChats(chatStore.getChatMetas(projectId).map(m => ({ ...m })));
   }, [projectId]);
 
   return {

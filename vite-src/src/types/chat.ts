@@ -117,6 +117,8 @@ export interface ChatMeta {
   reservedTempFiles?: TempFileReservation[];
   versionCreatedAt?: number;
   versionHistory?: VersionHistoryEntry[];
+  /** Suggested follow-up prompts generated after a primary agent response. Up to 4. */
+  suggestedFollowUps?: string[];
 }
 
 export type FilePermission = "full" | "readonly" | "hidden" | "warn";
