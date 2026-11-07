@@ -62,6 +62,16 @@ export const filesystem = {
     await window.electronAPI.filesystem.writeFile(filePath, content);
   },
 
+  async readBinaryFile(filePath: string): Promise<Uint8Array> {
+    throwIfNotElectron();
+    return window.electronAPI.filesystem.readBinaryFile(filePath);
+  },
+
+  async writeBinaryFile(filePath: string, content: Uint8Array): Promise<void> {
+    throwIfNotElectron();
+    await window.electronAPI.filesystem.writeBinaryFile(filePath, content);
+  },
+
   async appendFile(filePath: string, content: string): Promise<void> {
     throwIfNotElectron();
     await window.electronAPI.filesystem.appendFile(filePath, content);

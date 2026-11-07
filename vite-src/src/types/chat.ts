@@ -29,6 +29,13 @@ export interface ToolResult {
   isError?: boolean;
 }
 
+export interface ImageAttachment {
+  id: string;
+  name: string;
+  mimeType: string;
+  projectId?: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: "user" | "assistant" | "system" | "tool";
@@ -40,6 +47,7 @@ export interface ChatMessage {
   toolCallId?: string;
   toolExecutionMs?: number;
   originalContent?: string;
+  attachments?: ImageAttachment[];
 }
 
 export interface ToolDefinition {
@@ -113,6 +121,7 @@ export interface ChatMeta {
   logId: string;
   queriesLogId?: string;
   draft?: string;
+  draftAttachments?: ImageAttachment[];
   subagents?: SubagentMeta[];
   reservedTempFiles?: TempFileReservation[];
   versionCreatedAt?: number;

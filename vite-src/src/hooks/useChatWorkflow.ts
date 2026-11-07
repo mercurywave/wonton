@@ -1,5 +1,5 @@
 import { useRef, useCallback, useMemo, useEffect } from "react";
-import { ChatMessage, ChatHistoryEntry, Flow, FlowState, FlowActionButton, Won, SubagentMeta, SubagentOptions, ReasoningEffort, FlowCustomTool } from "../types/chat";
+import { ChatMessage, ChatHistoryEntry, ImageAttachment, Flow, FlowState, FlowActionButton, Won, SubagentMeta, SubagentOptions, ReasoningEffort, FlowCustomTool } from "../types/chat";
 import { FeedbackPayload, addToast } from "../contexts";
 import { agentStore } from "../store/agents";
 import { resolveTempFilePath } from "../utils/platformUtils";
@@ -60,6 +60,7 @@ interface SubmitChatPromptOptions {
   projectId: string;
   chatId: string;
   prompt: string;
+  attachments?: ImageAttachment[];
   showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
   submit: (prompt: string, originalPrompt: string) => Promise<ChatMessage | undefined>;
   abortController?: AbortController;
@@ -104,27 +105,30 @@ export async function submitChatPrompt({
   projectId,
   chatId,
   prompt,
+  attachments,
   showFeedback,
   submit,
   abortController,
 }: SubmitChatPromptOptions): Promise<void> {
   const originalPrompt = prompt.trim().split("\n").map((line) => line.trim()).join("\n");
-  if (!originalPrompt) return;
+  if (!originalPrompt && !attachments?.length) return;
 
   const won = buildWon(projectId, chatId, undefined, showFeedback, abortController?.signal);
   const meta = chatStore.getChat(projectId, chatId);
   const flow = flowStore.getFlows().find((candidate) => candidate.id === meta?.workflowId);
   const state = flow?.states?.[meta?.workflowStateKey ?? ""];
 
-  await chatStore.setChatDraft(projectId, chatId, "", true);
-
   const adjustedPrompt = await runWorkflowPromptHook(won, projectId, chatId, "hookAdjustPrompt", originalPrompt);
   const processedPrompt = typeof adjustedPrompt === "string" ? adjustedPrompt.trim() : originalPrompt;
-  if (!processedPrompt) return;
+  if (!processedPrompt && !attachments?.length) return;
+
+  await chatStore.updateChatMeta(projectId, chatId, { draft: "", draftAttachments: [] }, true);
 
   const intercepted = Boolean(state?.hookInterceptPrompt);
   if (intercepted) {
-    await won.pushMessage({ role: 'user', content: processedPrompt });
+    await chatStore.appendMessage(projectId, chatId, chatStore.getLogId(projectId, chatId), {
+      id: crypto.randomUUID(), role: "user", content: processedPrompt, timestamp: Date.now(), attachments,
+    });
     await runWorkflowPromptHook(won, projectId, chatId, "hookInterceptPrompt", processedPrompt);
   }
   else {

@@ -134,6 +134,14 @@ async function fsWriteFile(_event: Electron.IpcMainInvokeEvent, filePath: string
   }
 }
 
+async function fsReadBinaryFile(_event: Electron.IpcMainInvokeEvent, filePath: string) {
+  return new Uint8Array(await fs.readFile(filePath));
+}
+
+async function fsWriteBinaryFile(_event: Electron.IpcMainInvokeEvent, filePath: string, content: Uint8Array) {
+  await fs.writeFile(filePath, content);
+}
+
 async function fsAppendFile(_event: Electron.IpcMainInvokeEvent, filePath: string, content: string) {
   try {
     await fs.appendFile(filePath, content, "utf-8");
@@ -239,6 +247,8 @@ ipcMain.handle("filesystem:tryReadFile", fsTryReadFile);
 ipcMain.handle("filesystem:doesFileExist", fsDoesFileExist);
 ipcMain.handle("filesystem:readFile", fsReadFile);
 ipcMain.handle("filesystem:writeFile", fsWriteFile);
+ipcMain.handle("filesystem:readBinaryFile", fsReadBinaryFile);
+ipcMain.handle("filesystem:writeBinaryFile", fsWriteBinaryFile);
 ipcMain.handle("filesystem:appendFile", fsAppendFile);
 ipcMain.handle("filesystem:remove", fsRemove);
 ipcMain.handle("filesystem:readDirectory", fsReadDirectory);

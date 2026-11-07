@@ -7,6 +7,8 @@ interface ElectronAPI {
     doesFileExist: (filePath: string) => Promise<boolean>;
     readFile: (filePath: string) => Promise<string>;
     writeFile: (filePath: string, content: string) => Promise<void>;
+    readBinaryFile: (filePath: string) => Promise<Uint8Array>;
+    writeBinaryFile: (filePath: string, content: Uint8Array) => Promise<void>;
     appendFile: (filePath: string, content: string) => Promise<void>;
     remove: (filePath: string) => Promise<void>;
     readDirectory: (dirPath: string) => Promise<{ entry: string }[]>;

@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef, useEffect } from "react";
-import { ChatMessage, LLMStats, ProjectMeta, ToolCall, Agent, ReasoningEffort } from "../types/chat";
+import { ChatMessage, ImageAttachment, LLMStats, ProjectMeta, ToolCall, Agent, ReasoningEffort } from "../types/chat";
 import { ResolvedServerSettings } from "./useChatSettings";
 import { runQuery } from "./useLLMQuery";
 import { buildApiMessages, makeApiCall, mergeStats, parseSSEChunk, makeSilentApiCall } from "../utils/llmApi";
@@ -77,9 +77,6 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
   const customToolDefs = customTools ? getCustomToolDefinitions({ tools: customTools }) : [];
   const tools = [...standardTools, ...customToolDefs];
 
-  const { messages: initialApiMessages } = buildApiMessages(initialMessages, systemPrompt, tools);
-
-  let currentApiMessages = initialApiMessages;
   const allAssistantMessages: ChatMessageWithToolCalls[] = [];
   let hasMoreToolCalls = true;
   let round = 0;
@@ -93,6 +90,9 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     await chatLogsStore.appendMessage(projectId, logId, userMessage);
     persistedMessageIds.add(userMessage.id);
   }
+
+  const { messages: initialApiMessages } = await buildApiMessages(initialMessages, systemPrompt, tools);
+  let currentApiMessages = initialApiMessages;
 
   if (projectId && logId) {
     chatLogsStore.setPendingMessage(projectId, logId, {
@@ -399,7 +399,7 @@ async function generateSuggestions(options: {
   // Build API messages with conversation history, excluding the last assistant message
   // (which is the response we're generating suggestions for)
   const messagesWithoutLastAssistant = initialMessages.slice(0, -1);
-  const { messages: apiMessages } = buildApiMessages(messagesWithoutLastAssistant, undefined);
+  const { messages: apiMessages } = await buildApiMessages(messagesWithoutLastAssistant, undefined);
 
   // Add the assistant's final response
   const apiMessagesWithResponse = [...apiMessages, {
@@ -581,7 +581,7 @@ export function useChatApi(
   );
 
   const sendMessage = useCallback(
-    async (content: string, modelId: string, originalContent?: string) => {
+    async (content: string, modelId: string, originalContent?: string, attachments?: ImageAttachment[]) => {
       const effectiveModel = modelId;
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
@@ -589,9 +589,8 @@ export function useChatApi(
         content,
         timestamp: Date.now(),
         originalContent: originalContent || undefined,
+        attachments: attachments?.length ? attachments : undefined,
       };
-
-      if(projectId && chatId) await chatStore.setChatDraft(projectId, chatId, "", true);
 
       setIsLoading(true);
 
@@ -609,7 +608,7 @@ export function useChatApi(
         // Generate title before kicking off the agent (only for first message)
         if (messagesRef.current.length === 0 && projectId && chatId) {
           const titleModel = modelId || projectMeta?.defaultModel || settings.defaultModel;
-          generateTitle(originalContent || content, titleModel).catch(() => {});
+          generateTitle(originalContent || content || "Image", titleModel).catch(() => {});
         }
 
         // Include userMessage since setMessages is async and messages state is stale

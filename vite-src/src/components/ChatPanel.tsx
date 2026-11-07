@@ -1,13 +1,13 @@
-import { useRef, useEffect, useCallback, useMemo, useState } from "react";
+import { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from "react";
 import React from "react";
 import { Send, StopCircle, GitBranch, X, Play, Utensils, Hammer, ChevronDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import styles from "../components/ChatPanel.module.css";
-import { ChatMessage as ChatMessageType, Flow, ToolDefinition } from "../types/chat";
+import { ChatMessage as ChatMessageType, Flow, ImageAttachment, ToolDefinition } from "../types/chat";
 import { useContextWindow } from "../hooks/useContextWindow";
 import { useSelectionBubble } from "../hooks/useSelectionBubble";
-import { useSettings, useAgentsContext, useChats, useProjects, useNav, useFlowsContext, useToolsContext, useEventBus } from "../contexts";
+import { useSettings, useAgentsContext, useChats, useProjects, useNav, useFlowsContext, useToolsContext, useEventBus, addToast } from "../contexts";
 import { chatStore } from "../store/chats";
 import { isBackendConnected } from "../utils/platformUtils";
 import ModelPicker from "./ModelPicker";
@@ -26,6 +26,8 @@ import { projectMetaStore } from "../store/projectMeta";
 import { ProjectMeta } from "../types/chat";
 import ResponseTurnGroup from "./ResponseTurnGroup";
 import { useResponseTurns } from "../hooks/useResponseTurns";
+import { saveImageAttachment } from "../utils/imageAttachments";
+import ImageAttachmentPill from "./ImageAttachmentPill";
 
 interface ChatPanelProps {
   messages: ChatMessageType[];
@@ -33,7 +35,7 @@ interface ChatPanelProps {
   isProcessing: boolean;
   isWorkflowExecuting: boolean;
   isWorkflowActive: boolean;
-  onSend: (content: string, modelId: string) => Promise<void>;
+  onSend: (content: string, modelId: string, attachments?: ImageAttachment[]) => Promise<void>;
   onStop: () => void;
   onFileSelect?: (uniqueName: string) => void;
   tempFileOptions?: Array<{ baseName: string; uniqueName: string }>;
@@ -115,6 +117,15 @@ export default function ChatPanel({
 
   // Chat draft state (migrated from useChatDraft hook)
   const [draft, setDraft] = useState("");
+  const [draftAttachments, setDraftAttachments] = useState<ImageAttachment[]>([]);
+  const [savingImages, setSavingImages] = useState(0);
+  const attachmentQueue = useRef<Promise<void>>(Promise.resolve());
+  const activeChatRef = useRef({ projectId: activeProjectId, chatId: selectedChatId });
+  const draftRef = useRef(draft);
+  useLayoutEffect(() => {
+    activeChatRef.current = { projectId: activeProjectId, chatId: selectedChatId };
+    draftRef.current = draft;
+  }, [activeProjectId, selectedChatId, draft]);
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [writeProjectId, setWriteProjectId] = useState<string | undefined>();
   const [writeChatId, setWriteChatId] = useState<string | undefined>();
@@ -122,6 +133,7 @@ export default function ChatPanel({
   // Load draft when chat changes
   useEffect(() => {
     if (!activeProjectId || !selectedChatId) return;
+    let cancelled = false;
 
     const loadDraft = async () => {
       if (!isBackendConnected()) {
@@ -130,9 +142,11 @@ export default function ChatPanel({
       }
 
       await chatStore.load(activeProjectId);
+      if (cancelled) return;
       const metas = chatStore.getChatMetas(activeProjectId);
       const chatMeta = metas.find((m) => m.id === selectedChatId);
       setDraft(chatMeta?.draft || "");
+      setDraftAttachments(chatMeta?.draftAttachments || []);
       setWriteProjectId(chatMeta?.projectId || activeProjectId);
       setWriteChatId(selectedChatId);
     };
@@ -148,12 +162,13 @@ export default function ChatPanel({
       const chatMeta = chatStore.getChat(activeProjectId, selectedChatId);
       if (chatMeta) {
         setDraft(chatMeta.draft || "");
+        setDraftAttachments(chatMeta.draftAttachments || []);
         setWriteProjectId(chatMeta.projectId || activeProjectId);
         setWriteChatId(selectedChatId);
       }
     });
 
-    return unsubscribe;
+    return () => { cancelled = true; unsubscribe(); };
   }, [activeProjectId, selectedChatId]);
 
   // Debounced save to file on interval
@@ -458,17 +473,60 @@ export default function ChatPanel({
     async (e: React.SyntheticEvent) => {
       e.preventDefault();
       const trimmed = draft.trim();
-      if (!trimmed || isLoading) return;
+      if ((!trimmed && !draftAttachments.length) || isLoading || savingImages) return;
       setDraft("");
-      await onSend(trimmed, activeModel);
+      setDraftAttachments([]);
+      await onSend(trimmed, activeModel, draftAttachments);
       setTimeout(() => {
         if (textareaRef.current) {
           textareaRef.current.style.height = "auto";
         }
       }, 0);
     },
-    [draft, isLoading, onSend, activeModel, setDraft]
+    [draft, draftAttachments, savingImages, isLoading, onSend, activeModel, setDraft]
   );
+
+  const handlePaste = useCallback((event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const files = Array.from(event.clipboardData.files).filter(file => file.type.startsWith("image/"));
+    if (!files.length) return;
+    if (!event.clipboardData.getData("text/plain")) event.preventDefault();
+    const projectId = activeProjectId;
+    const chatId = selectedChatId;
+    if (!projectId || !chatId) {
+      addToast("Select a chat before attaching an image.", "error");
+      return;
+    }
+    const draftAtPaste = draft;
+    setSavingImages(count => count + 1);
+    attachmentQueue.current = attachmentQueue.current.catch(() => {}).then(async () => {
+      const saved: ImageAttachment[] = [];
+      for (const file of files) {
+        try {
+          saved.push(await saveImageAttachment(file, projectId));
+        } catch (error) {
+          addToast(error instanceof Error ? error.message : "Could not save image.", "error");
+        }
+      }
+      if (!saved.length) return;
+      const meta = chatStore.getChat(projectId, chatId);
+      const attachments = [...(meta?.draftAttachments ?? []), ...saved];
+      const isCurrent = activeChatRef.current.projectId === projectId && activeChatRef.current.chatId === chatId;
+      await chatStore.updateChatMeta(projectId, chatId, { draft: isCurrent ? draftRef.current : draftAtPaste, draftAttachments: attachments }, true);
+      if (activeChatRef.current.projectId === projectId && activeChatRef.current.chatId === chatId) setDraftAttachments(attachments);
+    }).finally(() => setSavingImages(count => count - 1));
+  }, [activeProjectId, selectedChatId, draft]);
+
+  const detachImage = useCallback((id: string) => {
+    if (!activeProjectId || !selectedChatId) return;
+    const projectId = activeProjectId;
+    const chatId = selectedChatId;
+    setDraftAttachments(current => current.filter(attachment => attachment.id !== id));
+    setSavingImages(count => count + 1);
+    attachmentQueue.current = attachmentQueue.current.catch(() => {}).then(async () => {
+      const current = chatStore.getChat(projectId, chatId)?.draftAttachments ?? [];
+      await chatStore.updateChatMeta(projectId, chatId, { draftAttachments: current.filter(attachment => attachment.id !== id) }, true);
+    }).finally(() => setSavingImages(count => count - 1));
+  }, [activeProjectId, selectedChatId]);
 
   const shouldShowStopButton = isProcessing || isWorkflowExecuting;
 
@@ -641,6 +699,9 @@ export default function ChatPanel({
         </div>
       )}
 
+      {!!draftAttachments.length && <div className={styles.attachmentBar}><div className={styles.attachmentBox}>
+        {draftAttachments.map(attachment => <ImageAttachmentPill key={attachment.id} attachment={attachment} onRemove={() => detachImage(attachment.id)} />)}
+      </div></div>}
       <form className={styles.inputArea} onSubmit={handleSubmit}>
         <div className={styles.inputWrapper}>
           <textarea
@@ -648,6 +709,7 @@ export default function ChatPanel({
             className={styles.textarea}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
+            onPaste={handlePaste}
             onKeyDown={handleKeyDown}
             onBlur={() => {
               if (writeProjectId && writeChatId) {
@@ -670,7 +732,7 @@ export default function ChatPanel({
             <button
               type="submit"
               className={styles.sendButton}
-              disabled={!draft.trim()}
+              disabled={(!draft.trim() && !draftAttachments.length) || !!savingImages}
               title="Send message"
             >
               <Send size={18} />

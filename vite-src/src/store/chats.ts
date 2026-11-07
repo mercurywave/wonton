@@ -182,7 +182,26 @@ async function deleteChat(projectId: string, chatId: string): Promise<void> {
   }
 }
 
+const metaUpdateQueues = new Map<string, Promise<unknown>>();
+
 async function updateChatMeta(
+  projectId: string,
+  chatId: string,
+  updates: Partial<ChatMeta>,
+  silent?: boolean
+): Promise<ChatMeta | null> {
+  const key = `${projectId}/${chatId}`;
+  const previous = metaUpdateQueues.get(key) ?? Promise.resolve();
+  const next = previous.catch(() => {}).then(() => writeChatMeta(projectId, chatId, updates, silent));
+  metaUpdateQueues.set(key, next);
+  try {
+    return await next;
+  } finally {
+    if (metaUpdateQueues.get(key) === next) metaUpdateQueues.delete(key);
+  }
+}
+
+async function writeChatMeta(
   projectId: string,
   chatId: string,
   updates: Partial<ChatMeta>,

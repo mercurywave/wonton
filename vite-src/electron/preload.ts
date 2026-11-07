@@ -9,6 +9,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
     doesFileExist: (filePath: string) => ipcRenderer.invoke("filesystem:doesFileExist", filePath),
     readFile: (filePath: string) => ipcRenderer.invoke("filesystem:readFile", filePath),
     writeFile: (filePath: string, content: string) => ipcRenderer.invoke("filesystem:writeFile", filePath, content),
+    readBinaryFile: (filePath: string) => ipcRenderer.invoke("filesystem:readBinaryFile", filePath),
+    writeBinaryFile: (filePath: string, content: Uint8Array) => ipcRenderer.invoke("filesystem:writeBinaryFile", filePath, content),
     appendFile: (filePath: string, content: string) => ipcRenderer.invoke("filesystem:appendFile", filePath, content),
     remove: (filePath: string) => ipcRenderer.invoke("filesystem:remove", filePath),
     readDirectory: (dirPath: string) => ipcRenderer.invoke("filesystem:readDirectory", dirPath),

@@ -51,7 +51,7 @@ export async function runQuery(
   }
   const queriesLogId = chat.queriesLogId;
 
-  const { messages: apiMessages } = buildApiMessages(messages, systemPromptOrDefault, resolvedTools);
+  const { messages: apiMessages } = await buildApiMessages(messages, systemPromptOrDefault, resolvedTools);
 
   const requestStartTime = Date.now();
 

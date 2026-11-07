@@ -5,6 +5,7 @@ import { Brain, Copy, Undo2, ArrowRightLeft } from "lucide-react";
 import type { ChatMessage, LLMStats, ResponseTurnGroup as ResponseTurnGroupType } from "../types/chat";
 import ToolCallSection from "./ToolCallSection";
 import CollapsedSection from "./CollapsedSection";
+import ImageAttachmentPill from "./ImageAttachmentPill";
 import styles from "./ResponseTurnGroup.module.css";
 
 interface MessageStatsProps {
@@ -151,6 +152,7 @@ function MessageBubble({ message, modelAliases, toolResultMessages }: MessageBub
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
               </div>
             )}
+            {!!message.attachments?.length && <div className={styles.attachments}>{message.attachments.map(attachment => <ImageAttachmentPill key={attachment.id} attachment={attachment} />)}</div>}
             {hasStats && <MessageStats stats={message.stats!} modelAliases={modelAliases} />}
           </div>
         </div>
@@ -187,6 +189,7 @@ function MessageBubble({ message, modelAliases, toolResultMessages }: MessageBub
               <ReactMarkdown remarkPlugins={[remarkGfm]}>{displayContent}</ReactMarkdown>
             </div>
           )}
+          {!!message.attachments?.length && <div className={styles.attachments}>{message.attachments.map(attachment => <ImageAttachmentPill key={attachment.id} attachment={attachment} />)}</div>}
           {hasStats && <MessageStats stats={message.stats!} modelAliases={modelAliases} />}
         </div>
       </div>

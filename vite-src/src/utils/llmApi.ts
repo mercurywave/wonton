@@ -1,5 +1,8 @@
 import { ChatMessage, LLMStats, ReasoningEffort, ToolDefinition } from "../types/chat";
 import { ResolvedServerSettings } from "../hooks/useChatSettings";
+import { imageAttachmentDataUrl } from "./imageAttachments";
+
+type ApiContent = string | null | Array<{ type: "text"; text: string } | { type: "image_url"; image_url: { url: string } }>;
 
 interface SSEDelta {
   content?: string;
@@ -112,21 +115,21 @@ export function mergeStats(existing: LLMStats | null, incoming: LLMStats | null)
 interface ApiMessagesResult {
   messages: Array<{
     role: string;
-    content?: string | null;
+    content?: ApiContent;
     tool_calls?: { type: string; id: string; function: { name: string; arguments: string } }[];
     tool_call_id?: string;
   }>;
   tools?: ToolDefinition[];
 }
 
-export function buildApiMessages(
+export async function buildApiMessages(
   messages: ChatMessage[],
   systemPrompt?: string,
   tools?: ToolDefinition[]
-): ApiMessagesResult {
+): Promise<ApiMessagesResult> {
   const allMessages: Array<{
     role: string;
-    content?: string | null;
+    content?: ApiContent;
     tool_calls?: { type: string; id: string; function: { name: string; arguments: string } }[];
     tool_call_id?: string;
   }> = [];
@@ -138,12 +141,20 @@ export function buildApiMessages(
   for (const msg of messages) {
     const apiMsg: {
       role: string;
-      content?: string | null;
+      content?: ApiContent;
       tool_calls?: { type: string; id: string; function: { name: string; arguments: string } }[];
       tool_call_id?: string;
     } = { role: msg.role };
 
-    if (msg.role === "tool") {
+    if (msg.role === "user" && msg.attachments?.length) {
+      apiMsg.content = [
+        ...(msg.content ? [{ type: "text" as const, text: msg.content }] : []),
+        ...await Promise.all(msg.attachments.map(async (attachment) => ({
+          type: "image_url" as const,
+          image_url: { url: await imageAttachmentDataUrl(attachment) },
+        }))),
+      ];
+    } else if (msg.role === "tool") {
       apiMsg.tool_call_id = msg.toolCallId;
       apiMsg.content = msg.content;
     } else {
@@ -181,7 +192,7 @@ interface ApiRequestBody {
   model: string;
   messages: Array<{
     role: string;
-    content?: string | null;
+    content?: ApiContent;
     tool_calls?: { type: string; id: string; function: { name: string; arguments: string } }[];
     tool_call_id?: string;
   }>;

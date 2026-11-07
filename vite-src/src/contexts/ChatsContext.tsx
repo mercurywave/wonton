@@ -11,7 +11,7 @@ import { useToolsContext } from "./ToolsContext";
 import { FeedbackPayload, useFeedback } from "./FeedbackContext";
 import { useNotificationsContext } from "./NotificationsContext";
 import { isBackendConnected } from "../utils/platformUtils";
-import { Agent, ChatMessage, ChatMeta, FlowActionButton, ReasoningEffort, SubagentMeta } from "../types/chat";
+import { Agent, ChatMessage, ChatMeta, FlowActionButton, ImageAttachment, ReasoningEffort, SubagentMeta } from "../types/chat";
 import { combineCustomTools, getPresetCommandTools } from "../utils/customTools";
 import { chatLogsStore } from "../store/chatLogs";
 import { chatStore } from "../store/chats";
@@ -30,7 +30,7 @@ interface ChatsContextValue {
   renameChat: (chatId: string, name: string) => Promise<void>;
   loadChatMessages: (chatId: string) => Promise<ChatMessage[]>;
   refreshChats: () => Promise<ChatMeta[]>;
-  sendMessage: (content: string, modelId: string) => Promise<void>;
+  sendMessage: (content: string, modelId: string, attachments?: ImageAttachment[]) => Promise<void>;
   stopGeneration: () => void;
   updateChatMeta: (projectId: string, chatId: string, updates: Partial<ChatMeta>) => Promise<void>;
   setWorkflowId: (chatId: string, workflowId: string | undefined) => Promise<void>;
@@ -444,7 +444,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   }, [isLoading, resolvedChatId, showNotification, selectedChatId, activeProjectId, projectsCtx.projects]);
 
   const wrappedSendMessage = useCallback(
-    async (content: string, modelId: string) => {
+    async (content: string, modelId: string, attachments?: ImageAttachment[]) => {
       if (!activeProjectId || !resolvedChatId) return;
       
       // Clear suggestions before sending a new message
@@ -464,12 +464,14 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
           projectId: activeProjectId,
           chatId: resolvedChatId,
           prompt: content,
+          attachments,
           showFeedback: wrappedShowFeedback,
           submit: async (processedPrompt, originalPrompt) => (
             await sendMessage(
               processedPrompt,
               modelId,
               processedPrompt !== originalPrompt ? originalPrompt : undefined,
+              attachments,
             )
           ),
           abortController: workflowAbortRef.current || undefined,
@@ -585,7 +587,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       await chatLogsStore.replaceLog(activeProjectId, newLogId, truncatedMessages);
 
       // Set draft to the rollback message content for editing
-      await projectChatsUpdateChatMeta(actionChatId, { draft: rollbackMessage.content ?? "" });
+      await projectChatsUpdateChatMeta(actionChatId, { draft: rollbackMessage.content ?? "", draftAttachments: rollbackMessage.attachments ?? [] });
     }
   }, [chats, activeProjectId, activeLogId, projectChatsUpdateChatMeta]);
 
