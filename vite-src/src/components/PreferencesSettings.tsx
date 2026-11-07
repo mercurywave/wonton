@@ -27,6 +27,17 @@ export default function PreferencesSettings() {
             <option value="never">Never</option>
           </select>
         </div>
+
+        <div className={styles.field}>
+          <label className={styles.checkboxLabel}>
+            <input
+              type="checkbox"
+              checked={settings.disableSuggestedFollowUps}
+              onChange={(e) => onUpdate({ disableSuggestedFollowUps: e.target.checked })}
+            />
+            Disable suggested follow-ups
+          </label>
+        </div>
       </div>
     </div>
   );

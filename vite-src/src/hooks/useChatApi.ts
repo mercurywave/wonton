@@ -370,7 +370,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
   }
 
   // Generate follow-up suggestions for primary agent (non-subagent) responses
-  if (!isSubagent && isMainLog && onSuggestionsGenerated && projectId && chatId && logId) {
+  if (!settings.disableSuggestedFollowUps && !isSubagent && isMainLog && onSuggestionsGenerated && projectId && chatId && logId) {
     generateSuggestions({
       settings,
       model,

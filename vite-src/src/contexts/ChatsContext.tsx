@@ -291,14 +291,16 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   // The active suggestions shown to the user (persisted or empty if cleared)
   // When clearedTimestamp is set, we return empty array until chat meta refreshes
+  // When disableSuggestedFollowUps is enabled, always return empty
   const suggestedFollowUps = useMemo(() => {
+    if (settings.disableSuggestedFollowUps) return [];
     if (clearedTimestamp > 0 && persistedSuggestedFollowUps.length > 0) {
       // If we just cleared and the persisted suggestions haven't refreshed yet, show empty
       // Once the chat meta refreshes, suggestedFollowUps will update automatically
       return [];
     }
     return persistedSuggestedFollowUps;
-  }, [persistedSuggestedFollowUps, clearedTimestamp]);
+  }, [persistedSuggestedFollowUps, clearedTimestamp, settings.disableSuggestedFollowUps]);
 
   // Persist suggestions to chat meta
   const persistSuggestions = useCallback(async (suggestions: string[]) => {

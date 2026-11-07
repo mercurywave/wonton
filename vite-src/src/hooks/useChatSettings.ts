@@ -11,6 +11,7 @@ export interface ChatSettings {
   defaultContextWindow: number;
   reasoningEffort: ReasoningEffort;
   notificationBehavior: "always" | "unfocused" | "never";
+  disableSuggestedFollowUps: boolean;
   lastProjectId: string;
   porkbunServerUrl: string;
   porkbunApiKey: string;
@@ -27,6 +28,7 @@ export interface ResolvedServerSettings {
   contextWindows: Record<string, number>;
   modelAliases: Record<string, string>;
   reasoningEffort: ReasoningEffort;
+  disableSuggestedFollowUps: boolean;
 }
 
 interface ChatStateFile {
@@ -39,6 +41,7 @@ const DEFAULT_SETTINGS: Omit<ChatSettings, "servers" | "activeServerId"> = {
   defaultContextWindow: 131072,
   reasoningEffort: "none",
   notificationBehavior: "unfocused",
+  disableSuggestedFollowUps: false,
   lastProjectId: "default",
   porkbunServerUrl: "",
   porkbunApiKey: "",
@@ -204,6 +207,7 @@ export function resolveSettings(settings: ChatSettings): ResolvedServerSettings 
       contextWindows: {},
       modelAliases: {},
       reasoningEffort: DEFAULT_SETTINGS.reasoningEffort,
+      disableSuggestedFollowUps: DEFAULT_SETTINGS.disableSuggestedFollowUps,
     };
   }
 
@@ -216,6 +220,7 @@ export function resolveSettings(settings: ChatSettings): ResolvedServerSettings 
     contextWindows: server.contextWindows,
     modelAliases: server.modelAliases,
     reasoningEffort: settings.reasoningEffort,
+    disableSuggestedFollowUps: settings.disableSuggestedFollowUps,
   };
 }
 
