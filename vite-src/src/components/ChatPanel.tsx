@@ -26,8 +26,12 @@ import { projectMetaStore } from "../store/projectMeta";
 import { ProjectMeta } from "../types/chat";
 import ResponseTurnGroup from "./ResponseTurnGroup";
 import { useResponseTurns } from "../hooks/useResponseTurns";
-import { saveImageAttachment } from "../utils/imageAttachments";
+import {
+  saveImageAttachment,
+  imageAttachmentDataUrl,
+} from "../utils/imageAttachments";
 import ImageAttachmentPill from "./ImageAttachmentPill";
+import ImageEditorPopup from "./ImageEditorPopup";
 
 interface ChatPanelProps {
   messages: ChatMessageType[];
@@ -120,6 +124,14 @@ export default function ChatPanel({
   const [draftAttachments, setDraftAttachments] = useState<ImageAttachment[]>([]);
   const [savingImages, setSavingImages] = useState(0);
   const attachmentQueue = useRef<Promise<void>>(Promise.resolve());
+
+  // Image editing state
+  const [editingAttachment, setEditingAttachment] = useState<ImageAttachment | null>(null);
+  const [editingImageSrc, setEditingImageSrc] = useState<string | null>(null);
+  const editingAttachmentRef = useRef<ImageAttachment | null>(null);
+  useEffect(() => {
+    editingAttachmentRef.current = editingAttachment;
+  }, [editingAttachment]);
   const activeChatRef = useRef({ projectId: activeProjectId, chatId: selectedChatId });
   const draftRef = useRef(draft);
   useLayoutEffect(() => {
@@ -528,6 +540,52 @@ export default function ChatPanel({
     }).finally(() => setSavingImages(count => count - 1));
   }, [activeProjectId, selectedChatId]);
 
+  // Image editing handlers
+  const handleEditImage = useCallback(async (attachment: ImageAttachment) => {
+    if (!activeProjectId || !selectedChatId) return;
+    try {
+      const dataUrl = await imageAttachmentDataUrl(attachment);
+      setEditingAttachment(attachment);
+      setEditingImageSrc(dataUrl);
+    } catch {
+      addToast("Could not load image for editing.", "error");
+    }
+  }, [activeProjectId, selectedChatId]);
+
+  const handleSaveEditedImage = useCallback(
+    async (editedBlob: Blob) => {
+      const attachment = editingAttachmentRef.current;
+      if (!activeProjectId || !selectedChatId || !attachment) return;
+      const projectId = activeProjectId;
+      const chatId = selectedChatId;
+      const originalId = attachment.id;
+      const attachmentName = attachment.name;
+      setEditingAttachment(null);
+      setEditingImageSrc(null);
+      setSavingImages(count => count + 1);
+      try {
+        const newAttachment = await saveImageAttachment(
+          new File([editedBlob], attachmentName, { type: "image/png" }),
+          projectId
+        );
+        const current = chatStore.getChat(projectId, chatId)?.draftAttachments ?? [];
+        const updated = current.filter(a => a.id !== originalId).concat(newAttachment);
+        await chatStore.updateChatMeta(projectId, chatId, { draftAttachments: updated }, true);
+        setDraftAttachments(updated);
+      } catch (error) {
+        addToast(error instanceof Error ? error.message : "Could not save edited image.", "error");
+        setEditingAttachment(attachment);
+      }
+      setSavingImages(count => count - 1);
+    },
+    [activeProjectId, selectedChatId]
+  );
+
+  const handleCancelEdit = useCallback(() => {
+    setEditingAttachment(null);
+    setEditingImageSrc(null);
+  }, []);
+
   const shouldShowStopButton = isProcessing || isWorkflowExecuting;
 
   const handleKeyDown = useCallback(
@@ -652,6 +710,13 @@ export default function ChatPanel({
 
        <FeedbackPopup />
         <ToastPopup />
+        {editingAttachment && editingImageSrc && (
+          <ImageEditorPopup
+            imageSrc={editingImageSrc}
+            onClose={handleCancelEdit}
+            onSave={handleSaveEditedImage}
+          />
+        )}
 
        {extensionStatus && (
          <div className={styles.extensionStatusBar}>
@@ -700,7 +765,14 @@ export default function ChatPanel({
       )}
 
       {!!draftAttachments.length && <div className={styles.attachmentBar}><div className={styles.attachmentBox}>
-        {draftAttachments.map(attachment => <ImageAttachmentPill key={attachment.id} attachment={attachment} onRemove={() => detachImage(attachment.id)} />)}
+        {draftAttachments.map(attachment => (
+          <ImageAttachmentPill
+            key={attachment.id}
+            attachment={attachment}
+            onRemove={() => detachImage(attachment.id)}
+            onEdit={() => handleEditImage(attachment)}
+          />
+        ))}
       </div></div>}
       <form className={styles.inputArea} onSubmit={handleSubmit}>
         <div className={styles.inputWrapper}>

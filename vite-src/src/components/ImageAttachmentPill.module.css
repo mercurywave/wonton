@@ -20,6 +20,19 @@
   white-space: nowrap;
 }
 
+.edit {
+  display: flex;
+  flex-shrink: 0;
+  padding: 2px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #b7b7c8;
+  cursor: pointer;
+}
+
+.edit:hover { background: #47475f; color: white; }
+
 .remove {
   display: flex;
   flex-shrink: 0;
