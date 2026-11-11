@@ -661,7 +661,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       addToast(`onEnter hook failed in state "${stateKey}": ${msg}`, "error");
       console.error(`onEnter hook failed in state "${stateKey}":`, err);
     }
-  }, [flows, workflowId, chatId, projectId]);
+  }, [flows, workflowId, chatId, projectId, showFeedback]);
 
   const advance = useCallback(async (nextStateKey: string) => {
     await runOnEnterForState(nextStateKey);
@@ -693,7 +693,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       }
       return userContent;
     },
-    [currentState, chatId, workflowId, workflowStateKey, projectId]
+    [currentState, chatId, workflowId, workflowStateKey, projectId, showFeedback]
   );
 
   const onSendPrompt = useCallback(async () => {
@@ -711,7 +711,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       addToast(`onSendPrompt hook failed in state "${workflowStateKey}": ${msg}`, "error");
       console.error(`onSendPrompt hook failed in state "${workflowStateKey}":`, err);
     }
-  }, [flows, workflowId, chatId, workflowStateKey, projectId]);
+  }, [flows, workflowId, chatId, workflowStateKey, projectId, showFeedback]);
 
   const onChatResponse = useCallback(async (response: ChatMessage) => {
     const flow = flows.find((f) => f.id === workflowId);
@@ -728,7 +728,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       addToast(`onChatResponse hook failed in state "${workflowStateKey}": ${msg}`, "error");
       console.error(`onChatResponse hook failed in state "${workflowStateKey}":`, err);
     }
-  }, [flows, workflowId, chatId, workflowStateKey, projectId]);
+  }, [flows, workflowId, chatId, workflowStateKey, projectId, showFeedback]);
 
   const onActionButtonClick = useCallback(async (button: FlowActionButton, logId?: string) => {
     const flow = flows.find((f) => f.id === workflowId);
@@ -745,7 +745,7 @@ export function useChatWorkflow(options: UseChatWorkflowOptions): UseChatWorkflo
       addToast(`onActionButton hook failed in state "${workflowStateKey}": ${msg}`, "error");
       console.error(`onActionButton hook failed in state "${workflowStateKey}":`, err);
     }
-  }, [flows, workflowId, chatId, workflowStateKey, projectId]);
+  }, [flows, workflowId, chatId, workflowStateKey, projectId, showFeedback]);
 
   return {
     executeAdjustPrompt,
