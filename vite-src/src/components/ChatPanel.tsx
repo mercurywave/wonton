@@ -1,4 +1,4 @@
-import { useRef, useEffect, useLayoutEffect, useCallback, useMemo, useState } from "react";
+import { useRef, useEffect, useCallback, useMemo, useState, useSyncExternalStore } from "react";
 import React from "react";
 import { Send, StopCircle, GitBranch, X, Play, Utensils, Hammer, ChevronDown } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -9,7 +9,6 @@ import { useContextWindow } from "../hooks/useContextWindow";
 import { useSelectionBubble } from "../hooks/useSelectionBubble";
 import { useSettings, useAgentsContext, useChats, useProjects, useNav, useFlowsContext, useToolsContext, useEventBus, addToast } from "../contexts";
 import { chatStore } from "../store/chats";
-import { isBackendConnected } from "../utils/platformUtils";
 import ModelPicker from "./ModelPicker";
 import AgentPicker from "./AgentPicker";
 import ThinkingPicker from "./ThinkingPicker";
@@ -39,12 +38,14 @@ interface ChatPanelProps {
   isProcessing: boolean;
   isWorkflowExecuting: boolean;
   isWorkflowActive: boolean;
-  onSend: (content: string, modelId: string, attachments?: ImageAttachment[]) => Promise<void>;
+  onSend: (content: string, modelId: string, attachments?: ImageAttachment[]) => Promise<boolean>;
   onStop: () => void;
   onFileSelect?: (uniqueName: string) => void;
   tempFileOptions?: Array<{ baseName: string; uniqueName: string }>;
   activeTempFileUniqueName?: string | null;
 }
+
+const submittingChats = new Set<string>();
 
 function WorkflowSelector({ workflows, onSelect, selectedWorkflowId }: { workflows: Flow[]; onSelect: (id: string) => void; selectedWorkflowId?: string }) {
   if (workflows.length === 0) {
@@ -119,9 +120,23 @@ export default function ChatPanel({
 
   const [extensionStatus, setExtensionStatus] = useState<string | null>(null);
 
-  // Chat draft state (migrated from useChatDraft hook)
-  const [draft, setDraft] = useState("");
-  const [draftAttachments, setDraftAttachments] = useState<ImageAttachment[]>([]);
+  const subscribeDraft = useCallback((listener: () => void) => {
+    if (!activeProjectId || !selectedChatId) return () => {};
+    return chatStore.subscribeDraft(activeProjectId, selectedChatId, listener);
+  }, [activeProjectId, selectedChatId]);
+  const getDraft = useCallback(() => {
+    return chatStore.getDraft(activeProjectId ?? "", selectedChatId ?? "");
+  }, [activeProjectId, selectedChatId]);
+  const draftState = useSyncExternalStore(subscribeDraft, getDraft);
+  const draft = draftState.text;
+  const draftAttachments = draftState.attachments;
+  const setDraft = useCallback((value: React.SetStateAction<string>) => {
+    if (!activeProjectId || !selectedChatId || !chatStore.getChat(activeProjectId, selectedChatId)) return;
+    const current = chatStore.getDraft(activeProjectId, selectedChatId);
+    chatStore.updateDraft(activeProjectId, selectedChatId, {
+      text: typeof value === "function" ? value(current.text) : value,
+    });
+  }, [activeProjectId, selectedChatId]);
   const [savingImages, setSavingImages] = useState(0);
   const attachmentQueue = useRef<Promise<void>>(Promise.resolve());
 
@@ -132,75 +147,14 @@ export default function ChatPanel({
   useEffect(() => {
     editingAttachmentRef.current = editingAttachment;
   }, [editingAttachment]);
-  const activeChatRef = useRef({ projectId: activeProjectId, chatId: selectedChatId });
-  const draftRef = useRef(draft);
-  useLayoutEffect(() => {
-    activeChatRef.current = { projectId: activeProjectId, chatId: selectedChatId };
-    draftRef.current = draft;
-  }, [activeProjectId, selectedChatId, draft]);
-  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [writeProjectId, setWriteProjectId] = useState<string | undefined>();
-  const [writeChatId, setWriteChatId] = useState<string | undefined>();
-
-  // Load draft when chat changes
   useEffect(() => {
     if (!activeProjectId || !selectedChatId) return;
-    let cancelled = false;
-
-    const loadDraft = async () => {
-      if (!isBackendConnected()) {
-        setDraft("");
-        return;
-      }
-
-      await chatStore.load(activeProjectId);
-      if (cancelled) return;
-      const metas = chatStore.getChatMetas(activeProjectId);
-      const chatMeta = metas.find((m) => m.id === selectedChatId);
-      setDraft(chatMeta?.draft || "");
-      setDraftAttachments(chatMeta?.draftAttachments || []);
-      setWriteProjectId(chatMeta?.projectId || activeProjectId);
-      setWriteChatId(selectedChatId);
-    };
-
-    loadDraft();
-
+    void chatStore.load(activeProjectId);
     requestAnimationFrame(() => {
       textareaRef.current?.focus();
     });
-
-    // Subscribe to chat metadata changes (e.g. from extensions calling won.setChatDraft())
-    const unsubscribe = chatStore.subscribe(activeProjectId, () => {
-      const chatMeta = chatStore.getChat(activeProjectId, selectedChatId);
-      if (chatMeta) {
-        setDraft(chatMeta.draft || "");
-        setDraftAttachments(chatMeta.draftAttachments || []);
-        setWriteProjectId(chatMeta.projectId || activeProjectId);
-        setWriteChatId(selectedChatId);
-      }
-    });
-
-    return () => { cancelled = true; unsubscribe(); };
+    return () => { void chatStore.flushDraft(activeProjectId, selectedChatId); };
   }, [activeProjectId, selectedChatId]);
-
-  // Debounced save to file on interval
-  useEffect(() => {
-    if (!writeProjectId || !writeChatId) return;
-
-    if (saveTimerRef.current) {
-      clearTimeout(saveTimerRef.current);
-    }
-
-    saveTimerRef.current = setTimeout(() => {
-      chatStore.setChatDraft(writeProjectId, writeChatId, draft, true);
-    }, 5000);
-
-    return () => {
-      if (saveTimerRef.current) {
-        clearTimeout(saveTimerRef.current);
-      }
-    };
-  }, [draft, writeProjectId, writeChatId]);
   const { flows, enabledWorkflows, commandFlows, disabledFlows } = useFlowsContext();
   const { tools: projectTools } = useToolsContext();
   const { on: onEvent } = useEventBus();
@@ -434,7 +388,7 @@ export default function ChatPanel({
       }
     });
     dismissBubble();
-  }, [dismissBubble]);
+  }, [dismissBubble, setDraft]);
 
   // Listen for RE comments from FileViewerPanel via event bus
   useEffect(() => {
@@ -484,18 +438,45 @@ export default function ChatPanel({
   const handleSubmit = useCallback(
     async (e: React.SyntheticEvent) => {
       e.preventDefault();
-      const trimmed = draft.trim();
-      if ((!trimmed && !draftAttachments.length) || isLoading || savingImages) return;
-      setDraft("");
-      setDraftAttachments([]);
-      await onSend(trimmed, activeModel, draftAttachments);
-      setTimeout(() => {
-        if (textareaRef.current) {
-          textareaRef.current.style.height = "auto";
+      if (isLoading || savingImages || !activeProjectId || !selectedChatId) return;
+      const key = `${activeProjectId}/${selectedChatId}`;
+      if (submittingChats.has(key)) return;
+      const previous = chatStore.getDraft(activeProjectId, selectedChatId);
+      const trimmed = previous.text.trim();
+      if (!trimmed && !previous.attachments.length) return;
+      submittingChats.add(key);
+      chatStore.updateDraft(activeProjectId, selectedChatId, { text: "", attachments: [] });
+      const clearedRevision = chatStore.getDraft(activeProjectId, selectedChatId).revision;
+      const abortController = new AbortController();
+      const restoreDraft = () => {
+        abortController.abort();
+        if (chatStore.getDraft(activeProjectId, selectedChatId).revision === clearedRevision) {
+          chatStore.updateDraft(activeProjectId, selectedChatId, { text: previous.text, attachments: previous.attachments });
         }
-      }, 0);
+      };
+      let sendFailed = false;
+      try {
+        const flushOk = await chatStore.flushDraft(activeProjectId, selectedChatId, abortController.signal);
+        if (!flushOk) {
+          restoreDraft();
+          return;
+        }
+        const sendOk = await onSend(trimmed, activeModel, previous.attachments);
+        if (!sendOk) {
+          sendFailed = true;
+          restoreDraft();
+          addToast("Message was not sent.", "error");
+        }
+      } catch (error) {
+        addToast(error instanceof Error ? error.message : "Could not send message.", "error");
+      } finally {
+        submittingChats.delete(key);
+        if (sendFailed) {
+          abortController.abort();
+        }
+      }
     },
-    [draft, draftAttachments, savingImages, isLoading, onSend, activeModel, setDraft]
+    [savingImages, isLoading, onSend, activeModel, activeProjectId, selectedChatId]
   );
 
   const handlePaste = useCallback((event: React.ClipboardEvent<HTMLTextAreaElement>) => {
@@ -508,7 +489,6 @@ export default function ChatPanel({
       addToast("Select a chat before attaching an image.", "error");
       return;
     }
-    const draftAtPaste = draft;
     setSavingImages(count => count + 1);
     attachmentQueue.current = attachmentQueue.current.catch(() => {}).then(async () => {
       const saved: ImageAttachment[] = [];
@@ -520,23 +500,21 @@ export default function ChatPanel({
         }
       }
       if (!saved.length) return;
-      const meta = chatStore.getChat(projectId, chatId);
-      const attachments = [...(meta?.draftAttachments ?? []), ...saved];
-      const isCurrent = activeChatRef.current.projectId === projectId && activeChatRef.current.chatId === chatId;
-      await chatStore.updateChatMeta(projectId, chatId, { draft: isCurrent ? draftRef.current : draftAtPaste, draftAttachments: attachments }, true);
-      if (activeChatRef.current.projectId === projectId && activeChatRef.current.chatId === chatId) setDraftAttachments(attachments);
+      const current = chatStore.getDraft(projectId, chatId);
+      chatStore.updateDraft(projectId, chatId, { attachments: [...current.attachments, ...saved] });
+      await chatStore.flushDraft(projectId, chatId);
     }).finally(() => setSavingImages(count => count - 1));
-  }, [activeProjectId, selectedChatId, draft]);
+  }, [activeProjectId, selectedChatId]);
 
   const detachImage = useCallback((id: string) => {
     if (!activeProjectId || !selectedChatId) return;
     const projectId = activeProjectId;
     const chatId = selectedChatId;
-    setDraftAttachments(current => current.filter(attachment => attachment.id !== id));
+    const current = chatStore.getDraft(projectId, chatId);
+    chatStore.updateDraft(projectId, chatId, { attachments: current.attachments.filter(attachment => attachment.id !== id) });
     setSavingImages(count => count + 1);
     attachmentQueue.current = attachmentQueue.current.catch(() => {}).then(async () => {
-      const current = chatStore.getChat(projectId, chatId)?.draftAttachments ?? [];
-      await chatStore.updateChatMeta(projectId, chatId, { draftAttachments: current.filter(attachment => attachment.id !== id) }, true);
+      await chatStore.flushDraft(projectId, chatId);
     }).finally(() => setSavingImages(count => count - 1));
   }, [activeProjectId, selectedChatId]);
 
@@ -568,10 +546,11 @@ export default function ChatPanel({
           new File([editedBlob], attachmentName, { type: "image/png" }),
           projectId
         );
-        const current = chatStore.getChat(projectId, chatId)?.draftAttachments ?? [];
-        const updated = current.filter(a => a.id !== originalId).concat(newAttachment);
-        await chatStore.updateChatMeta(projectId, chatId, { draftAttachments: updated }, true);
-        setDraftAttachments(updated);
+        const current = chatStore.getDraft(projectId, chatId);
+        if (current.attachments.some(item => item.id === originalId)) {
+          chatStore.updateDraft(projectId, chatId, { attachments: current.attachments.filter(item => item.id !== originalId).concat(newAttachment) });
+          await chatStore.flushDraft(projectId, chatId);
+        }
       } catch (error) {
         addToast(error instanceof Error ? error.message : "Could not save edited image.", "error");
         setEditingAttachment(attachment);
@@ -779,13 +758,14 @@ export default function ChatPanel({
           <textarea
             ref={textareaRef}
             className={styles.textarea}
+            disabled={!activeProjectId || !selectedChatId || !chatStore.getChat(activeProjectId, selectedChatId)}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onPaste={handlePaste}
             onKeyDown={handleKeyDown}
             onBlur={() => {
-              if (writeProjectId && writeChatId) {
-                chatStore.setChatDraft(writeProjectId, writeChatId, draft, true);
+              if (activeProjectId && selectedChatId) {
+                void chatStore.flushDraft(activeProjectId, selectedChatId);
               }
             }}
             placeholder="Type a message..."

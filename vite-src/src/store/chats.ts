@@ -1,5 +1,5 @@
-import { ChatMeta, ChatMessage, SubagentMeta, TempFileReservation } from "../types/chat";
-import { FeedbackPayload } from "../contexts";
+import { ChatMeta, ChatMessage, ImageAttachment, SubagentMeta, TempFileReservation } from "../types/chat";
+import { FeedbackPayload, addToast } from "../contexts";
 import { chatLogsStore } from "./chatLogs";
 import {
   CHATS_DIR_NAME,
@@ -188,11 +188,17 @@ async function updateChatMeta(
   projectId: string,
   chatId: string,
   updates: Partial<ChatMeta>,
-  silent?: boolean
+  silent?: boolean,
+  draftRevision?: number,
+  abortSignal?: AbortSignal
 ): Promise<ChatMeta | null> {
   const key = `${projectId}/${chatId}`;
   const previous = metaUpdateQueues.get(key) ?? Promise.resolve();
-  const next = previous.catch(() => {}).then(() => writeChatMeta(projectId, chatId, updates, silent));
+  const next = previous.catch(() => {}).then(async () => {
+    if (abortSignal?.aborted) return null;
+    if (draftRevision !== undefined && drafts.get(key)?.revision !== draftRevision) return null;
+    return writeChatMeta(projectId, chatId, updates, silent);
+  });
   metaUpdateQueues.set(key, next);
   try {
     return await next;
@@ -209,10 +215,9 @@ async function writeChatMeta(
 ): Promise<ChatMeta | null> {
   if (!isBackendConnected()) return null;
 
-  const projectDir = await getProjectDataDir(projectId);
-  const metaPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.json`;
-
   try {
+    const projectDir = await getProjectDataDir(projectId);
+    const metaPath = `${projectDir}/${CHATS_DIR_NAME}/${chatId}.json`;
     const content = await filesystem.readFile(metaPath);
     const meta = JSON.parse(content) as ChatMeta;
     const effectiveUpdates = Object.fromEntries(
@@ -228,7 +233,7 @@ async function writeChatMeta(
     const current = state.get(projectId);
     if (current) {
       const metas = current.metas.map((c) =>
-        c.id === chatId ? next : c
+        c.id === chatId ? withCurrentDraft(projectId, next) : c
       );
       state.set(projectId, { metas, isLoaded: true });
       if(!silent) { dispatch(projectId); }
@@ -272,6 +277,10 @@ interface ChatsStore {
   ): Promise<void>;
   refresh(projectId: string): Promise<ChatMeta[]>;
   subscribe(projectId: string, listener: Listener): () => void;
+  getDraft(projectId: string, chatId: string): ChatDraft;
+  updateDraft(projectId: string, chatId: string, updates: Partial<Pick<ChatDraft, "text" | "attachments">>): void;
+  flushDraft(projectId: string, chatId: string, abortSignal?: AbortSignal): Promise<boolean>;
+  subscribeDraft(projectId: string, chatId: string, listener: Listener): () => void;
   getReservedTempFiles(projectId: string, chatId: string): Promise<TempFileReservation[] | undefined>;
   saveSubagentMeta(projectId: string, chatId: string, subagentMeta: SubagentMeta): Promise<void>;
   createNewVersionLog(projectId: string, chatId: string): Promise<string>;
@@ -280,6 +289,75 @@ interface ChatsStore {
 
 const state = new Map<string, ChatsState>();
 const listeners = new Map<string, Set<Listener>>();
+
+interface ChatDraft {
+  text: string;
+  attachments: ImageAttachment[];
+  revision: number;
+}
+
+const drafts = new Map<string, ChatDraft>();
+const savedDraftRevisions = new Map<string, number>();
+const draftListeners = new Map<string, Set<Listener>>();
+const draftTimers = new Map<string, ReturnType<typeof setTimeout>>();
+const emptyDraft: ChatDraft = { text: "", attachments: [], revision: 0 };
+
+function withCurrentDraft(projectId: string, meta: ChatMeta): ChatMeta {
+  const draft = drafts.get(`${projectId}/${meta.id}`);
+  return draft ? { ...meta, draft: draft.text, draftAttachments: draft.attachments } : meta;
+}
+
+function getDraft(projectId: string, chatId: string): ChatDraft {
+  const key = `${projectId}/${chatId}`;
+  let draft = drafts.get(key);
+  if (!draft) {
+    const meta = state.get(projectId)?.metas.find(chat => chat.id === chatId);
+    if (!meta) return emptyDraft;
+    draft = { text: meta?.draft ?? "", attachments: meta?.draftAttachments ?? [], revision: 0 };
+    drafts.set(key, draft);
+  }
+  return draft;
+}
+
+function updateDraft(projectId: string, chatId: string, updates: Partial<Pick<ChatDraft, "text" | "attachments">>): void {
+  const key = `${projectId}/${chatId}`;
+  const current = getDraft(projectId, chatId);
+  const next = { ...current, ...updates, revision: current.revision + 1 };
+  drafts.set(key, next);
+  const project = state.get(projectId);
+  if (project) {
+    state.set(projectId, { ...project, metas: project.metas.map(meta => meta.id === chatId ? withCurrentDraft(projectId, meta) : meta) });
+    if (Boolean(current.text) !== Boolean(next.text)) dispatch(projectId);
+  }
+  draftListeners.get(key)?.forEach(listener => listener());
+  const timer = draftTimers.get(key);
+  if (timer) clearTimeout(timer);
+  draftTimers.set(key, setTimeout(() => { void flushDraft(projectId, chatId); }, 5000));
+}
+
+async function flushDraft(projectId: string, chatId: string, abortSignal?: AbortSignal): Promise<boolean> {
+  const key = `${projectId}/${chatId}`;
+  const timer = draftTimers.get(key);
+  if (timer) clearTimeout(timer);
+  draftTimers.delete(key);
+  while (true) {
+    const draft = drafts.get(key);
+    if (!draft || draft.revision <= (savedDraftRevisions.get(key) ?? 0)) return true;
+    if (abortSignal?.aborted) return false;
+    const result = await updateChatMeta(projectId, chatId, {
+      draft: draft.text,
+      draftAttachments: draft.attachments,
+    }, true, draft.revision, abortSignal);
+    if (!result && drafts.get(key)?.revision === draft.revision) {
+      if (isBackendConnected()) {
+        addToast("Could not save chat draft.", "error");
+        return false;
+      }
+      return true;
+    }
+    if (result) savedDraftRevisions.set(key, Math.max(savedDraftRevisions.get(key) ?? 0, draft.revision));
+  }
+}
 
 function dispatch(projectId: string) {
   const set = listeners.get(projectId);
@@ -290,6 +368,19 @@ function dispatch(projectId: string) {
 }
 
 const chatStore: ChatsStore = {
+  getDraft,
+  updateDraft,
+  flushDraft,
+  subscribeDraft(projectId, chatId, listener) {
+    const key = `${projectId}/${chatId}`;
+    if (!draftListeners.has(key)) draftListeners.set(key, new Set());
+    draftListeners.get(key)!.add(listener);
+    return () => {
+      const current = draftListeners.get(key);
+      current?.delete(listener);
+      if (!current?.size) draftListeners.delete(key);
+    };
+  },
   getChatMetas(projectId: string) {
     return state.get(projectId)?.metas ?? [];
   },
@@ -307,9 +398,12 @@ const chatStore: ChatsStore = {
     const existing = state.get(projectId);
     if (existing?.isLoaded) return;
 
-    const metas = await listChatMeta(projectId);
+    const metas = (await listChatMeta(projectId)).map(meta => withCurrentDraft(projectId, meta));
     state.set(projectId, { metas, isLoaded: true });
     dispatch(projectId);
+    for (const meta of metas) {
+      draftListeners.get(`${projectId}/${meta.id}`)?.forEach(listener => listener());
+    }
   },
 
   async createChat(projectId, name?, workflowId?, workflowStateKey?) {
@@ -325,6 +419,13 @@ const chatStore: ChatsStore = {
   },
 
   async deleteChat(projectId, chatId) {
+    const key = `${projectId}/${chatId}`;
+    const timer = draftTimers.get(key);
+    if (timer) clearTimeout(timer);
+    draftTimers.delete(key);
+    drafts.delete(key);
+    savedDraftRevisions.delete(key);
+    await (metaUpdateQueues.get(key) ?? Promise.resolve()).catch(() => {});
     await deleteChat(projectId, chatId);
 
     const current = state.get(projectId);
@@ -342,15 +443,34 @@ const chatStore: ChatsStore = {
   },
 
   async setChatDraft(projectId, chatId, draft, silent?: boolean) {
-    await updateChatMeta(projectId, chatId, { draft }, silent);
+    await this.updateChatMeta(projectId, chatId, { draft }, silent);
   },
 
   async updateChatMeta(projectId, chatId, updates, silent?: boolean) {
-    await updateChatMeta(projectId, chatId, updates, silent);
+    const { draft, draftAttachments, ...otherUpdates } = updates;
+    const hasDraft = Object.prototype.hasOwnProperty.call(updates, "draft");
+    const hasAttachments = Object.prototype.hasOwnProperty.call(updates, "draftAttachments");
+    const hasOther = Object.keys(otherUpdates).length > 0;
+    if (hasDraft || hasAttachments || hasOther) {
+      if (!this.getChat(projectId, chatId)) await this.load(projectId);
+    }
+    let draftFailed = false;
+    if (hasDraft || hasAttachments) {
+      updateDraft(projectId, chatId, {
+        ...(hasDraft ? { text: draft ?? "" } : {}),
+        ...(hasAttachments ? { attachments: draftAttachments ?? [] } : {}),
+      });
+      draftFailed = !await flushDraft(projectId, chatId);
+      if (draftFailed && !silent) dispatch(projectId);
+    }
+    if (hasOther) {
+      await updateChatMeta(projectId, chatId, otherUpdates, silent);
+    }
+    if (draftFailed && !silent) throw new Error("Could not save chat draft.");
   },
 
   async refresh(projectId) {
-    const metas = await listChatMeta(projectId);
+    const metas = (await listChatMeta(projectId)).map(meta => withCurrentDraft(projectId, meta));
     state.set(projectId, { metas, isLoaded: true });
     dispatch(projectId);
     return metas;

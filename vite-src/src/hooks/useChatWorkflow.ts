@@ -62,7 +62,7 @@ interface SubmitChatPromptOptions {
   prompt: string;
   attachments?: ImageAttachment[];
   showFeedback?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
-  submit: (prompt: string, originalPrompt: string) => Promise<ChatMessage | undefined>;
+  submit: (prompt: string, originalPrompt: string, onAccepted: () => void) => Promise<ChatMessage | undefined>;
   abortController?: AbortController;
 }
 
@@ -109,9 +109,9 @@ export async function submitChatPrompt({
   showFeedback,
   submit,
   abortController,
-}: SubmitChatPromptOptions): Promise<void> {
+}: SubmitChatPromptOptions): Promise<boolean> {
   const originalPrompt = prompt.trim().split("\n").map((line) => line.trim()).join("\n");
-  if (!originalPrompt && !attachments?.length) return;
+  if (!originalPrompt && !attachments?.length) return false;
 
   const won = buildWon(projectId, chatId, undefined, showFeedback, abortController?.signal);
   const meta = chatStore.getChat(projectId, chatId);
@@ -120,9 +120,7 @@ export async function submitChatPrompt({
 
   const adjustedPrompt = await runWorkflowPromptHook(won, projectId, chatId, "hookAdjustPrompt", originalPrompt);
   const processedPrompt = typeof adjustedPrompt === "string" ? adjustedPrompt.trim() : originalPrompt;
-  if (!processedPrompt && !attachments?.length) return;
-
-  await chatStore.updateChatMeta(projectId, chatId, { draft: "", draftAttachments: [] }, true);
+  if (!processedPrompt && !attachments?.length) return false;
 
   const intercepted = Boolean(state?.hookInterceptPrompt);
   if (intercepted) {
@@ -133,9 +131,12 @@ export async function submitChatPrompt({
   }
   else {
     await runWorkflowPromptHook(won, projectId, chatId, "onSendPrompt", processedPrompt);
-    const response = await submit(processedPrompt, originalPrompt);
+    let accepted = false;
+    const response = await submit(processedPrompt, originalPrompt, () => { accepted = true; });
+    if (!accepted) return false;
     await runWorkflowPromptHook(won, projectId, chatId, "onChatResponse", processedPrompt, response);
   }
+  return true;
 }
 
 // logId is assumed to mean that this is running in a subagent/historic version
@@ -354,8 +355,7 @@ export function buildWon(
       return result.finalMessage.content ?? "";
     },
     getChatDraft(): string {
-      const meta = chatStore.getChat(projectId, chatId);
-      return meta?.draft ?? "";
+      return chatStore.getDraft(projectId, chatId).text;
     },
     async setChatDraft(draft: string) {
       await chatStore.setChatDraft(projectId, chatId, draft);
@@ -605,7 +605,8 @@ export function buildWon(
         chatId,
         prompt,
         showFeedback,
-        submit: async (processedPrompt) => {
+        submit: async (processedPrompt, _originalPrompt, onAccepted) => {
+          onAccepted();
           await buildWon(projectId, chatId, undefined, showFeedback).runPrompt(processedPrompt);
           const mainLogId = chatStore.getLogId(projectId, chatId);
           return mainLogId

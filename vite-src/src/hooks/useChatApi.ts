@@ -39,6 +39,7 @@ interface ToolCallLoopOptions {
   onValidate?: (projectId: string, chatId: string, logId: string, payload: FeedbackPayload) => Promise<number | string | void>;
   onFinish?: () => void;
   onSuggestionsGenerated?: (suggestions: string[]) => void;
+  onUserMessageAccepted?: () => void;
 }
 
 interface ToolCallLoopResult {
@@ -71,6 +72,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     onValidate,
     onFinish,
     onSuggestionsGenerated,
+    onUserMessageAccepted,
   } = options;
 
   const standardTools = await filterToAvailableTools(toolNames, folderPath, agent, allAgents, enabledToolNames);
@@ -90,6 +92,7 @@ export async function runToolCallLoop(options: ToolCallLoopOptions): Promise<Too
     await chatLogsStore.appendMessage(projectId, logId, userMessage);
     persistedMessageIds.add(userMessage.id);
   }
+  onUserMessageAccepted?.();
 
   const { messages: initialApiMessages } = await buildApiMessages(initialMessages, systemPrompt, tools);
   let currentApiMessages = initialApiMessages;
@@ -581,7 +584,7 @@ export function useChatApi(
   );
 
   const sendMessage = useCallback(
-    async (content: string, modelId: string, originalContent?: string, attachments?: ImageAttachment[]) => {
+    async (content: string, modelId: string, originalContent?: string, attachments?: ImageAttachment[], onUserMessageAccepted?: () => void) => {
       const effectiveModel = modelId;
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
@@ -637,6 +640,7 @@ export function useChatApi(
           onChatUpdated,
           onValidate,
           onSuggestionsGenerated,
+          onUserMessageAccepted,
         });
 
         return toolCallResult.finalMessage;

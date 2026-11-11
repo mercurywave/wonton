@@ -30,7 +30,7 @@ interface ChatsContextValue {
   renameChat: (chatId: string, name: string) => Promise<void>;
   loadChatMessages: (chatId: string) => Promise<ChatMessage[]>;
   refreshChats: () => Promise<ChatMeta[]>;
-  sendMessage: (content: string, modelId: string, attachments?: ImageAttachment[]) => Promise<void>;
+  sendMessage: (content: string, modelId: string, attachments?: ImageAttachment[]) => Promise<boolean>;
   stopGeneration: () => void;
   updateChatMeta: (projectId: string, chatId: string, updates: Partial<ChatMeta>) => Promise<void>;
   setWorkflowId: (chatId: string, workflowId: string | undefined) => Promise<void>;
@@ -445,7 +445,7 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
 
   const wrappedSendMessage = useCallback(
     async (content: string, modelId: string, attachments?: ImageAttachment[]) => {
-      if (!activeProjectId || !resolvedChatId) return;
+      if (!activeProjectId || !resolvedChatId) return false;
       
       // Clear suggestions before sending a new message
       await clearSuggestedFollowUps();
@@ -460,18 +460,19 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
       setIsWorkflowExecuting(true);
       
       try {
-        await submitChatPrompt({
+        return await submitChatPrompt({
           projectId: activeProjectId,
           chatId: resolvedChatId,
           prompt: content,
           attachments,
           showFeedback: wrappedShowFeedback,
-          submit: async (processedPrompt, originalPrompt) => (
+          submit: async (processedPrompt, originalPrompt, onAccepted) => (
             await sendMessage(
               processedPrompt,
               modelId,
               processedPrompt !== originalPrompt ? originalPrompt : undefined,
               attachments,
+              onAccepted,
             )
           ),
           abortController: workflowAbortRef.current || undefined,
