@@ -37,12 +37,6 @@ export default function ImageEditorPopup({ imageSrc, onClose, onSave }: ImageEdi
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [onClose]);
 
-  // Reset drawing state when tool, color, or brush size changes
-  useEffect(() => {
-    setIsDrawing(false);
-    setLastPos(null);
-  }, [color, brushSize, tool]);
-
   // Load image and set up canvas
   useEffect(() => {
     const img = new Image();
@@ -189,7 +183,11 @@ export default function ImageEditorPopup({ imageSrc, onClose, onSave }: ImageEdi
       <div className={styles.toolbar}>
         <button
           className={styles.toolButton}
-          onClick={() => setTool("brush")}
+          onClick={() => {
+            setTool("brush");
+            setIsDrawing(false);
+            setLastPos(null);
+          }}
           title="Brush tool"
           disabled={tool === "brush"}
         >
@@ -197,7 +195,11 @@ export default function ImageEditorPopup({ imageSrc, onClose, onSave }: ImageEdi
         </button>
         <button
           className={styles.toolButton}
-          onClick={() => setTool("eraser")}
+          onClick={() => {
+            setTool("eraser");
+            setIsDrawing(false);
+            setLastPos(null);
+          }}
           title="Eraser tool"
           disabled={tool === "eraser"}
         >
@@ -210,7 +212,11 @@ export default function ImageEditorPopup({ imageSrc, onClose, onSave }: ImageEdi
               key={c.value}
               className={`${styles.swatch} ${color === c.value ? styles.swatchActive : ""}`}
               style={{ backgroundColor: c.value }}
-              onClick={() => setColor(c.value)}
+              onClick={() => {
+                setColor(c.value);
+                setIsDrawing(false);
+                setLastPos(null);
+              }}
               title={c.name}
               type="button"
             />
@@ -223,7 +229,11 @@ export default function ImageEditorPopup({ imageSrc, onClose, onSave }: ImageEdi
             min="1"
             max="20"
             value={brushSize}
-            onChange={(e) => setBrushSize(Number(e.target.value))}
+            onChange={(e) => {
+              setBrushSize(Number(e.target.value));
+              setIsDrawing(false);
+              setLastPos(null);
+            }}
             aria-label="Brush size"
           />
         </div>
