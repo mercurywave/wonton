@@ -92,7 +92,6 @@ export default function Sidebar({
     { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => sidebarOpen },
     ...(batchesEnabled ? [{ page: "batches" as Page, icon: <Waypoints size={18} />, label: "Batches" }] : []),
     { page: "tasks", icon: <Flag size={18} />, label: "Tasks", filterOut: () => sidebarOpen },
-    { page: "projects", icon: <Folder size={18} />, label: "Projects" },
     { page: "references", icon: <Book size={18} />, label: "References" },
     { page: "history", icon: <Clock size={18} />, label: "History", filterOut: () => sidebarOpen },
     { page: "workflows", icon: <GitBranch size={18} />, label: "Workflows" },
@@ -243,6 +242,16 @@ export default function Sidebar({
         </div>
 
         <div className={styles.scrollable}>
+        {sidebarOpen && (
+          <button
+            className={`${styles.navItem} ${nav.page === "projects" ? styles.active : ""}`}
+            onClick={() => navigateToPage("projects")}
+            style={{ width: "100%", marginBottom: "8px" }}
+          >
+            <Folder size={18} />
+            <span>Projects</span>
+          </button>
+        )}
         {sidebarOpen && showProjectFeatures && !projectsLoading && (
           <div className={styles.projectSection}>
             <ProjectSelector
@@ -256,6 +265,14 @@ export default function Sidebar({
 
         {!sidebarOpen && (
           <div className={styles.chatActions}>
+            <button
+              className={`${styles.action} ${nav.page === "projects" ? styles.active : ""}`}
+              onClick={() => navigateToPage("projects")}
+              title="Projects"
+            >
+              <Folder size={16} />
+              <span>Projects</span>
+            </button>
             <button className={styles.action} onClick={onNewChat} title="New chat">
               <Plus size={16} />
               <span>New Chat</span>
