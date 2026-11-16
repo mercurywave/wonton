@@ -85,8 +85,8 @@ export default function ProjectSelector({
                   handleOpenFolder();
                 }
               }}
-              title="Open folder"
-              aria-label="Open folder"
+              title={`Open folder: ${folderPath}`}
+              aria-label={`Open folder: ${folderPath}`}
             >
               {isOpening ? (
                 <Loader2 size={14} className={styles.spinner} />
