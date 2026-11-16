@@ -291,7 +291,7 @@ export interface ResponseTurnGroup {
   isCompleted: boolean;
 }
 
-export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows" | "stats" | "batches" | "tasks" | "references";
+export type Page = "chat" | "chatList" | "projects" | "projectSettings" | "settings" | "history" | "workflows" | "stats" | "batches" | "tasks" | "references" | "versionControl";
 
 export interface ServerModel {
   id: string;

@@ -44,8 +44,41 @@ interface ElectronAPI {
   notification: {
     show: (title: string, body: string, behavior: string) => Promise<void>;
   };
+  git: {
+    isAvailable: (cwd: string) => Promise<boolean>;
+    getStatus: (cwd: string) => Promise<GitStatusEntry[]>;
+    commit: (cwd: string, message: string) => Promise<GitCommitResult>;
+    sync: (cwd: string) => Promise<GitSyncResult>;
+    getRemoteUrl: (cwd: string) => Promise<string>;
+  };
 }
 
-interface Window {
-  electronAPI: ElectronAPI;
+export interface GitStatusEntry {
+  status: "modified" | "added" | "deleted";
+  staged?: "staged";
+  unstaged?: "unstaged";
+  filePath: string;
+  renameFrom?: string;
 }
+
+export interface GitCommitResult {
+  stdout: string;
+  stderr: string;
+  success: boolean;
+  error?: string;
+}
+
+export interface GitSyncResult {
+  stdout: string;
+  stderr: string;
+  success: boolean;
+  error?: string;
+}
+
+declare global {
+  interface Window {
+    electronAPI: ElectronAPI;
+  }
+}
+
+export {};

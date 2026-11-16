@@ -66,10 +66,13 @@ export function NavProvider({ children }: { children: ReactNode }) {
     const lastId = settings.lastProjectId;
     const hasDefault = projects.some((p) => p.id === "default");
 
-    if (lastId && lastId !== "default" && projects.some((p) => p.id === lastId)) {
+    if (lastId && projects.some((p) => p.id === lastId)) {
       dispatch({ type: "PROJECT_SWITCH", projectId: lastId });
     } else if (hasDefault) {
       dispatch({ type: "PROJECT_SWITCH", projectId: "default" });
+    } else if (projects.length > 0) {
+      // Fallback: switch to the first available project
+      dispatch({ type: "PROJECT_SWITCH", projectId: projects[0].id });
     }
 
     dispatch({ type: "READY" });

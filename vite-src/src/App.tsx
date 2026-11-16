@@ -22,6 +22,7 @@ import SplitPanel from "./components/SplitPanel";
 import "./App.css";
 import FileViewerPanel from "./components/FileViewerPanel";
 import LoadingScreen from "./components/LoadingScreen";
+import VersionControlPage from "./components/VersionControlPage";
 
 function App() {
   const {
@@ -296,6 +297,9 @@ function App() {
         )}
         {nav.page === "references" && (
           <ReferencesPage />
+        )}
+        {nav.page === "versionControl" && (
+          <VersionControlPage />
         )}
       </div>
     </div>

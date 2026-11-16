@@ -51,6 +51,15 @@ contextBridge.exposeInMainWorld("electronAPI", {
     show: (title: string, body: string, behavior: string) => ipcRenderer.invoke("notification:show", title, body, behavior),
   },
 
+  // git module
+  git: {
+    isAvailable: (cwd: string) => ipcRenderer.invoke("git:isAvailable", cwd),
+    getStatus: (cwd: string) => ipcRenderer.invoke("git:getStatus", cwd),
+    commit: (cwd: string, message: string) => ipcRenderer.invoke("git:commit", cwd, message),
+    sync: (cwd: string) => ipcRenderer.invoke("git:sync", cwd),
+    getRemoteUrl: (cwd: string) => ipcRenderer.invoke("git:getRemoteUrl", cwd),
+  },
+
   // events module
   events: {
     on: (eventName: string, callback: (event: Electron.IpcRendererEvent, ...args: unknown[]) => void) => {

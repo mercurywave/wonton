@@ -19,6 +19,7 @@ import {
   Book,
   Bell,
   Waypoints,
+  GitCompare,
 } from "lucide-react";
 import styles from "../components/Sidebar.module.css";
 import { Page } from "../types/chat";
@@ -91,6 +92,7 @@ export default function Sidebar({
   const navItems: { page: Page; icon: React.ReactNode; label: string; filterOut?: () => boolean }[] = [
     { page: "chat", icon: <MessageSquare size={18} />, label: "Chat", filterOut: () => sidebarOpen },
     ...(batchesEnabled ? [{ page: "batches" as Page, icon: <Waypoints size={18} />, label: "Batches" }] : []),
+    { page: "versionControl", icon: <GitCompare size={18} />, label: "Version Control" },
     { page: "tasks", icon: <Flag size={18} />, label: "Tasks", filterOut: () => sidebarOpen },
     { page: "references", icon: <Book size={18} />, label: "References" },
     { page: "history", icon: <Clock size={18} />, label: "History", filterOut: () => sidebarOpen },

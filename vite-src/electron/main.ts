@@ -373,6 +373,101 @@ ipcMain.handle("notification:show", async (_event, title, body, _behavior) => {
   notify.show();
 });
 
+// Git module
+async function gitIsAvailable(_event: Electron.IpcMainInvokeEvent, cwd: string) {
+  try {
+    await execAsync("git --version", { cwd });
+    await execAsync("git rev-parse --is-inside-work-tree", { cwd });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function gitGetStatus(_event: Electron.IpcMainInvokeEvent, cwd: string) {
+  try {
+    const { stdout } = await execAsync("git status --porcelain", { cwd });
+    const entries = stdout.trim().split("\n").filter(line => line.length > 0).map(line => {
+      // Format: XY filepath (with optional renames)
+      const status = line.substring(0, 2);
+      const rest = line.substring(3);
+      const staged = status.charAt(0) !== " " ? status.charAt(0) : " ";
+      const unstaged = status.charAt(1) !== " " ? status.charAt(1) : " ";
+      let filePath = rest;
+      let renameFrom: string | undefined;
+      
+      // Handle rename format: Rxyz -> old -> new
+      if (status.startsWith("R")) {
+        const parts = rest.split(" -> ");
+        if (parts.length === 2) {
+          renameFrom = parts[0];
+          filePath = parts[1];
+        }
+      }
+      
+      return {
+        status: line.charAt(0) === " " ? "modified" : (status.charAt(0) === "A" ? "added" : "deleted"),
+        staged: staged !== " " ? "staged" : undefined,
+        unstaged: unstaged !== " " ? "unstaged" : undefined,
+        filePath,
+        renameFrom,
+      };
+    });
+    return entries;
+  } catch (err: unknown) {
+    const error = new Error(err instanceof Error ? err.message : "Failed to get git status");
+    Object.defineProperty(error, "code", { value: "E_GIT_STATUS" });
+    throw error;
+  }
+}
+
+async function gitCommit(_event: Electron.IpcMainInvokeEvent, cwd: string, message: string) {
+  try {
+    await execAsync("git add .", { cwd });
+    const { stdout, stderr } = await execAsync(`git commit -m "${message.replace(/"/g, '\\"')}"`, { cwd });
+    return { stdout, stderr, success: true };
+  } catch (err: unknown) {
+    const errnoErr = err as NodeJS.ErrnoException & { stdout?: string; stderr?: string; code?: string | number };
+    return {
+      stdout: errnoErr.stdout ?? "",
+      stderr: errnoErr.stderr ?? "",
+      success: false,
+      error: err instanceof Error ? err.message : "Commit failed",
+    };
+  }
+}
+
+async function gitSync(_event: Electron.IpcMainInvokeEvent, cwd: string) {
+  try {
+    const { stdout, stderr } = await execAsync("git push", { cwd });
+    return { stdout, stderr, success: true };
+  } catch (err: unknown) {
+    const errnoErr = err as NodeJS.ErrnoException & { stdout?: string; stderr?: string; code?: string | number };
+    return {
+      stdout: errnoErr.stdout ?? "",
+      stderr: errnoErr.stderr ?? "",
+      success: false,
+      error: err instanceof Error ? err.message : "Sync failed",
+    };
+  }
+}
+
+async function gitGetRemoteUrl(_event: Electron.IpcMainInvokeEvent, cwd: string) {
+  try {
+    const { stdout } = await execAsync("git remote get-url origin", { cwd });
+    return stdout.trim();
+  } catch {
+    return "";
+  }
+}
+
+// Register git IPC handlers
+ipcMain.handle("git:isAvailable", gitIsAvailable);
+ipcMain.handle("git:getStatus", gitGetStatus);
+ipcMain.handle("git:commit", gitCommit);
+ipcMain.handle("git:sync", gitSync);
+ipcMain.handle("git:getRemoteUrl", gitGetRemoteUrl);
+
 // events module - file watching
 // The renderer will request a file watch via 'watch:start', and the main process
 // will forward 'watch:change' events back to the renderer via the webContents.
