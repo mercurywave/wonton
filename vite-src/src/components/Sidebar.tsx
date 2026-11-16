@@ -264,20 +264,21 @@ export default function Sidebar({
         )}
 
         {!sidebarOpen && (
-          <div className={styles.chatActions}>
+          <>
             <button
-              className={`${styles.action} ${nav.page === "projects" ? styles.active : ""}`}
+              className={`${styles.projectsCollapsed} ${nav.page === "projects" ? styles.active : ""}`}
               onClick={() => navigateToPage("projects")}
               title="Projects"
             >
-              <Folder size={16} />
-              <span>Projects</span>
+              <Folder size={20} />
             </button>
-            <button className={styles.action} onClick={onNewChat} title="New chat">
-              <Plus size={16} />
-              <span>New Chat</span>
-            </button>
-          </div>
+            <div className={styles.chatActions}>
+              <button className={styles.action} onClick={onNewChat} title="New chat">
+                <Plus size={16} />
+                <span>New Chat</span>
+              </button>
+            </div>
+          </>
         )}
 
         {sidebarOpen && (

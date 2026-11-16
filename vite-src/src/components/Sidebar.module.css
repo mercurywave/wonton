@@ -524,6 +524,7 @@
 }
 
 .sidebar:not(.open) .actions .action span,
+.sidebar:not(.open) .chatActions .navItem span,
 .sidebar:not(.open) .nav span,
 .sidebar:not(.open) .footer .action span {
   display: none;
@@ -569,6 +570,70 @@
 
 .sidebar:not(.open) .navItem{
   padding: 16px;
+}
+
+.sidebar:not(.open) .chatActions .navItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 16px;
+  border-radius: 0;
+  font-size: 14px;
+  transition: all 0.15s ease;
+  justify-content: center;
+  margin: 0;
+}
+
+.sidebar:not(.open) .chatActions .navItem:hover {
+  background: #1a1a2e;
+  color: #d0d0e0;
+}
+
+.sidebar:not(.open) .chatActions .navItem.active {
+  background: #16162a;
+  color: #e0e0e0;
+}
+
+.projectsCollapsed {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 16px 8px;
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.projectsCollapsed:hover {
+  background: #1a1a2e;
+  color: #d0d0e0;
+}
+
+.projectsCollapsed.active {
+  background: #16162a;
+  color: #e0e0e0;
+}
+
+.projectsCollapsed svg {
+  width: 20px !important;
+  height: 20px !important;
+  display: block;
+}
+
+.iconWrapper svg {
+  width: 20px !important;
+  height: 20px !important;
+  display: block;
 }
 
 
