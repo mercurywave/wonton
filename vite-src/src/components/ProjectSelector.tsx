@@ -38,6 +38,15 @@ export default function ProjectSelector({
   const displayName = activeProject?.name ?? "Default";
   const folderPath = activeProject?.folderPath;
   const [isOpening, setIsOpening] = useState(false);
+  const [showAll, setShowAll] = useState(false);
+
+  const sortedProjects = [...projects].sort((a, b) => {
+    const aTime = a.updatedAt ?? a.createdAt ?? 0;
+    const bTime = b.updatedAt ?? b.createdAt ?? 0;
+    return bTime - aTime;
+  });
+
+  const displayedProjects = showAll ? sortedProjects : sortedProjects.slice(0, 6);
 
   const handleOpenFolder = async () => {
     if (!folderPath || isOpening) return;
@@ -94,7 +103,7 @@ export default function ProjectSelector({
         </button>
         {isDropdownOpen && (
           <div className={styles.menu}>
-            {projects.map((project) => (
+            {displayedProjects.map((project) => (
               <button
                 key={project.id}
                 className={`${styles.option} ${
@@ -111,7 +120,14 @@ export default function ProjectSelector({
                 )}
               </button>
             ))}
- 
+            {projects.length > 6 && !showAll && (
+              <button
+                className={`${styles.option} ${styles.showMore}`}
+                onClick={() => setShowAll(true)}
+              >
+                <span className={styles.optionLabel}>Show more...</span>
+              </button>
+            )}
           </div>
         )}
       </div>

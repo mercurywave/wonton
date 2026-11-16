@@ -508,8 +508,12 @@ export function ChatsProvider({ children }: { children: ReactNode }) {
   }, [chats, historyMessages, loadChatMessages]);
 
   const wrappedCreateChat = useCallback(async (workflowId?: string, workflowStateKey?: string): Promise<ChatMeta> => {
-    return await createChat(workflowId, workflowStateKey);
-  }, [createChat]);
+    const chat = await createChat(workflowId, workflowStateKey);
+    if (activeProjectId) {
+      await projectsCtx.updateProject(activeProjectId, { updatedAt: Date.now() });
+    }
+    return chat;
+  }, [createChat, activeProjectId]);
 
   const wrappedDeleteChat = useCallback(async (chatId: string) => {
     await deleteChat(chatId);

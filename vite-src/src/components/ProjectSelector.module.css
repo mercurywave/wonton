@@ -97,6 +97,15 @@
   margin-left: 8px;
 }
 
+.showMore {
+  color: #4a6cf7;
+  font-style: italic;
+}
+
+.showMore:hover {
+  background: rgba(74, 108, 247, 0.15);
+}
+
 .folderBtn {
   display: flex;
   align-items: center;
