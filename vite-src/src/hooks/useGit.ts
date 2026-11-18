@@ -78,7 +78,9 @@ export function useGit(cwd?: string) {
 
     try {
       const result = await window.electronAPI.git.sync(cwd);
-      if (!result.success) {
+      if (result.success) {
+        await refresh();
+      } else {
         setError(result.error || "Sync failed");
       }
       return result;
@@ -89,7 +91,7 @@ export function useGit(cwd?: string) {
     } finally {
       setLoading(false);
     }
-  }, [cwd]);
+  }, [cwd, refresh]);
 
   useEffect(() => {
     let cancelled = false;
