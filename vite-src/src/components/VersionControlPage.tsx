@@ -74,6 +74,7 @@ export default function VersionControlPage() {
     commit,
     sync,
     remoteUrl,
+    commitsAhead,
   } = useGit(cwd);
 
   const [commitMessage, setCommitMessage] = useState("");
@@ -274,14 +275,40 @@ export default function VersionControlPage() {
           </div>
         )}
 
-        {fileCount === 0 && (
+        {fileCount === 0 && commitsAhead === 0 && (
           <div className={styles.noChanges}>
             <CheckCircle size={24} />
             <p>No changes detected. Your repository is up to date.</p>
           </div>
         )}
 
-        {/* Commit Section */}
+        {fileCount === 0 && commitsAhead > 0 && (
+          <div className={styles.pushSection}>
+            <div className={styles.pushInfo}>
+              <ArrowUpCircle size={20} />
+              <span>{commitsAhead} local commit{commitsAhead === 1 ? "" : "s"} to push</span>
+            </div>
+            <button
+              className={`${styles.actionBtn} ${styles.syncBtn}`}
+              onClick={handleSync}
+              disabled={committing || syncing}
+            >
+              {syncing ? (
+                <>
+                  <Loader2 size={16} className={styles.spinner} />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <ArrowUpCircle size={16} />
+                  Push {commitsAhead} commit{commitsAhead === 1 ? "" : "s"}
+                </>
+              )}
+            </button>
+          </div>
+        )}
+
+        {/* Commit Section - only when there are changes */}
         {fileCount > 0 && (
           <div className={styles.commitSection}>
             <h3 className={styles.sectionTitle}>Commit Changes</h3>
@@ -308,23 +335,6 @@ export default function VersionControlPage() {
                   <>
                     <CheckCircle size={16} />
                     Commit
-                  </>
-                )}
-              </button>
-              <button
-                className={`${styles.actionBtn} ${styles.syncBtn}`}
-                onClick={handleSync}
-                disabled={committing || syncing}
-              >
-                {syncing ? (
-                  <>
-                    <Loader2 size={16} className={styles.spinner} />
-                    Syncing...
-                  </>
-                ) : (
-                  <>
-                    <ArrowUpCircle size={16} />
-                    Sync (Push)
                   </>
                 )}
               </button>

@@ -61,6 +61,8 @@ app.on("window-all-closed", () => {
   }
 });
 
+const TMP_PURGE_INTERVAL_MS = 60 * 60 * 1000;
+
 // IPC handlers
 
 // filesystem module
@@ -461,12 +463,23 @@ async function gitGetRemoteUrl(_event: Electron.IpcMainInvokeEvent, cwd: string)
   }
 }
 
+async function gitGetCommitsAheadCount(_event: Electron.IpcMainInvokeEvent, cwd: string) {
+  try {
+    const { stdout } = await execAsync("git rev-list --count @{u}..HEAD", { cwd });
+    const count = parseInt(stdout.trim(), 10);
+    return isNaN(count) ? 0 : count;
+  } catch {
+    return 0;
+  }
+}
+
 // Register git IPC handlers
 ipcMain.handle("git:isAvailable", gitIsAvailable);
 ipcMain.handle("git:getStatus", gitGetStatus);
 ipcMain.handle("git:commit", gitCommit);
 ipcMain.handle("git:sync", gitSync);
 ipcMain.handle("git:getRemoteUrl", gitGetRemoteUrl);
+ipcMain.handle("git:getCommitsAheadCount", gitGetCommitsAheadCount);
 
 // events module - file watching
 // The renderer will request a file watch via 'watch:start', and the main process
@@ -510,7 +523,6 @@ ipcMain.handle("watch:stop", async (_event, key) => {
 });
 
 const TMP_STALE_AGE_MS = 24 * 60 * 60 * 1000;
-const TMP_PURGE_INTERVAL_MS = 60 * 60 * 1000;
 
 async function purgeStaleTempFiles(tmpDir: string): Promise<number> {
   try {

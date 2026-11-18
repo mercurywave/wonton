@@ -50,6 +50,7 @@ interface ElectronAPI {
     commit: (cwd: string, message: string) => Promise<GitCommitResult>;
     sync: (cwd: string) => Promise<GitSyncResult>;
     getRemoteUrl: (cwd: string) => Promise<string>;
+    getCommitsAheadCount: (cwd: string) => Promise<number>;
   };
 }
 

@@ -9,6 +9,7 @@ export function useGit(cwd?: string) {
   const [error, setError] = useState<string | null>(null);
   const [remote, setRemote] = useState<{ cwd: string; url: string } | null>(null);
   const remoteUrl = remote && remote.cwd === cwd ? remote.url : "";
+  const [commitsAhead, setCommitsAhead] = useState<number>(0);
 
   const refresh = useCallback(async () => {
     if (!cwd || !isBackendConnected()) {
@@ -108,6 +109,24 @@ export function useGit(cwd?: string) {
     return () => { cancelled = true; };
   }, [cwd]);
 
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!cwd || !isBackendConnected()) {
+      return;
+    }
+
+    window.electronAPI.git.getCommitsAheadCount(cwd)
+      .then(count => {
+        if (!cancelled) setCommitsAhead(count);
+      })
+      .catch(() => {
+        if (!cancelled) setCommitsAhead(0);
+      });
+
+    return () => { cancelled = true; };
+  }, [cwd]);
+
   return {
     isAvailable,
     status,
@@ -117,5 +136,6 @@ export function useGit(cwd?: string) {
     commit,
     sync,
     remoteUrl,
+    commitsAhead,
   };
 }

@@ -58,6 +58,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     commit: (cwd: string, message: string) => ipcRenderer.invoke("git:commit", cwd, message),
     sync: (cwd: string) => ipcRenderer.invoke("git:sync", cwd),
     getRemoteUrl: (cwd: string) => ipcRenderer.invoke("git:getRemoteUrl", cwd),
+    getCommitsAheadCount: (cwd: string) => ipcRenderer.invoke("git:getCommitsAheadCount", cwd),
   },
 
   // events module
