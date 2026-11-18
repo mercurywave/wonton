@@ -15,6 +15,7 @@ export function useGit(cwd?: string) {
     if (!cwd || !isBackendConnected()) {
       setIsAvailable(null);
       setStatus([]);
+      setCommitsAhead(0);
       return;
     }
 
@@ -28,12 +29,16 @@ export function useGit(cwd?: string) {
       if (available) {
         const statusData = await window.electronAPI.git.getStatus(cwd);
         setStatus(statusData);
+
+        const count = await window.electronAPI.git.getCommitsAheadCount(cwd);
+        setCommitsAhead(count);
       }
     } catch (err) {
       console.error("Failed to get git status:", err);
       setError(err instanceof Error ? err.message : "Failed to get git status");
       setIsAvailable(false);
       setStatus([]);
+      setCommitsAhead(0);
     } finally {
       setLoading(false);
     }
