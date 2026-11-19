@@ -110,6 +110,11 @@ export async function submitChatPrompt({
   submit,
   abortController,
 }: SubmitChatPromptOptions): Promise<boolean> {
+  // Clear existing suggestions before processing any prompt submission.
+  // This ensures stale suggestions don't persist when workflows programmatically submit prompts,
+  // and also handles the case where runPrompt() is called directly without going through submitPrompt().
+  await chatStore.updateChatMeta(projectId, chatId, { suggestedFollowUps: undefined });
+
   const originalPrompt = prompt.trim().split("\n").map((line) => line.trim()).join("\n");
   if (!originalPrompt && !attachments?.length) return false;
 
