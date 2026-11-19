@@ -260,6 +260,7 @@ export default function Sidebar({
               projects={projects}
               activeProjectId={activeProjectId || undefined}
               onProjectSelect={onProjectSelect}
+              onShowMore={() => navigateToPage("projects")}
               isOpen={sidebarOpen}
             />
           </div>

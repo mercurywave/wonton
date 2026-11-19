@@ -7,6 +7,7 @@ interface ProjectSelectorProps {
   projects: Project[];
   activeProjectId?: string;
   onProjectSelect: (projectId: string) => void;
+  onShowMore?: () => void;
  
   isOpen: boolean;
 }
@@ -15,6 +16,7 @@ export default function ProjectSelector({
   projects,
   activeProjectId,
   onProjectSelect,
+  onShowMore,
  
   isOpen,
 }: ProjectSelectorProps) {
@@ -38,7 +40,6 @@ export default function ProjectSelector({
   const displayName = activeProject?.name ?? "Default";
   const folderPath = activeProject?.folderPath;
   const [isOpening, setIsOpening] = useState(false);
-  const [showAll, setShowAll] = useState(false);
 
   const sortedProjects = [...projects].sort((a, b) => {
     const aTime = a.updatedAt ?? a.createdAt ?? 0;
@@ -46,7 +47,7 @@ export default function ProjectSelector({
     return bTime - aTime;
   });
 
-  const displayedProjects = showAll ? sortedProjects : sortedProjects.slice(0, 6);
+  const displayedProjects = sortedProjects.slice(0, 6);
 
   const handleOpenFolder = async () => {
     if (!folderPath || isOpening) return;
@@ -120,10 +121,13 @@ export default function ProjectSelector({
                 )}
               </button>
             ))}
-            {projects.length > 6 && !showAll && (
+            {projects.length > 6 && onShowMore && (
               <button
                 className={`${styles.option} ${styles.showMore}`}
-                onClick={() => setShowAll(true)}
+                onClick={() => {
+                  onShowMore();
+                  setIsDropdownOpen(false);
+                }}
               >
                 <span className={styles.optionLabel}>Show more...</span>
               </button>
